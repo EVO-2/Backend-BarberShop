@@ -5,18 +5,23 @@ require('dotenv').config();
 
 const app = express();
 
+// Middleware para CORS y JSON
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // <--- Este es el que importa aquí
+app.use(bodyParser.json()); // Opcional si ya usas express.json()
 
+// Rutas
 app.get('/', (req, res) => {
   res.send('API funcionando 🚀');
 });
 
-// ✅ IMPORTAR Y USAR RUTAS DE USUARIOS
+const authRoutes = require('./routes/auth.routes');
+app.use('/api/auth', authRoutes);
+
 const usuariosRoutes = require('./routes/usuarios.routes');
 app.use('/api/usuarios', usuariosRoutes);
 
-// Conexión base de datos
+// Conexión DB
 const { poolConnect } = require('./config/db');
 const PORT = process.env.PORT || 3000;
 

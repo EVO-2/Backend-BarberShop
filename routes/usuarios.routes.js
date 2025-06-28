@@ -1,19 +1,27 @@
 // routes/usuarios.routes.js
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/db');
+const usuariosController = require('../controllers/usuariosController');
 
-// Ruta de prueba para verificar conexión a la base de datos
+// Rutas RESTful
+router.get('/', usuariosController.getUsuarios);
+router.get('/:id', usuariosController.getUsuarioPorId);
+router.post('/', usuariosController.crearUsuario);
+router.put('/:id', usuariosController.actualizarUsuario);
+router.delete('/:id', usuariosController.eliminarUsuario);
+
+// Ruta de prueba usando Sequelize
 router.get('/test-db', async (req, res) => {
   try {
-    const result = await pool.request().query('SELECT GETDATE() AS fecha_actual');
+    const { Usuario } = require('../models');
+    const test = await Usuario.findOne();
     res.json({
       mensaje: 'Conexión exitosa a la base de datos ✅',
-      resultado: result.recordset[0]
+      resultado: test ? test : 'No hay usuarios aún'
     });
   } catch (error) {
     res.status(500).json({
-      mensaje: '❌ Error al conectar con la base de datos',
+      mensaje: '❌ Error al conectar con Sequelize',
       error: error.message
     });
   }
