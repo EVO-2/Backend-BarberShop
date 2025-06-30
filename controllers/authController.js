@@ -1,7 +1,13 @@
 const { loginService } = require('../services/authService');
 
+// Validación sencilla de correo electrónico
+const esCorreoValido = (correo) => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(correo);
+};
+
 const loginController = async (req, res) => {
-  console.log('REQ BODY:', req.body); // <-- Aquí lo debes poner
+  //console.log('REQ BODY:', req.body); 
 
   const { correo, password } = req.body || {};
 
@@ -13,7 +19,8 @@ const loginController = async (req, res) => {
     const result = await loginService(correo, password);
     res.status(200).json(result);
   } catch (error) {
-    res.status(401).json({ mensaje: error.message });
+    res.status(401).json({ mensaje: error.message || 'Error en el login' });
+
   }
 };
 

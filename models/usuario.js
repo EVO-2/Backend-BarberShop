@@ -1,12 +1,10 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class Usuario extends Model {
     static associate(models) {
-      // Aquí se definirán asociaciones (hasMany, belongsTo, etc.)
+      // Relaciones aquí
     }
   }
 
@@ -36,16 +34,12 @@ module.exports = (sequelize, DataTypes) => {
     estado: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
-    },
-    creado_en: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
     }
   }, {
     sequelize,
     modelName: 'Usuario',
     tableName: 'Usuarios',
-    timestamps: false
+    timestamps: true // esto usará createdAt y updatedAt por defecto
   });
 
   return Usuario;

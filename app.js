@@ -7,8 +7,8 @@ const app = express();
 
 // Middleware para CORS y JSON
 app.use(cors());
-app.use(express.json()); // <--- Este es el que importa aquí
-app.use(bodyParser.json()); // Opcional si ya usas express.json()
+app.use(express.json()); 
+app.use(bodyParser.json()); 
 
 // Rutas
 app.get('/', (req, res) => {

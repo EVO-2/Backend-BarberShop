@@ -1,30 +1,50 @@
 const { Usuario } = require('../models');
 const bcrypt = require('bcryptjs');
 
+// ✅ Función reutilizable para cifrar contraseña
+const hashPassword = async (plainPassword) => {
+  return await bcrypt.hash(plainPassword, 10);
+};
+
+// ✅ Verifica si ya existe un usuario con el correo dado
+const obtenerPorCorreo = async (correo) => {
+  return await Usuario.findOne({ where: { correo } });
+};
+
+// ✅ Lista todos los usuarios activos
 const obtenerTodos = async () => {
   return await Usuario.findAll();
 };
 
+// ✅ Obtiene un usuario por ID
 const obtenerPorId = async (id) => {
   return await Usuario.findByPk(id);
 };
 
+// ✅ Crea un nuevo usuario con la contraseña encriptada
 const crear = async (data) => {
-  const hashedPassword = await bcrypt.hash(data.password, 10);
+  const existente = await obtenerPorCorreo(data.correo);
+  if (existente) {
+    throw new Error('El correo ya está registrado');
+  }
+
+  const hashedPassword = await hashPassword(data.password);
   return await Usuario.create({ ...data, password: hashedPassword });
 };
 
+// ✅ Actualiza un usuario y encripta si viene nueva contraseña
 const actualizar = async (id, data) => {
   const usuario = await Usuario.findByPk(id);
   if (!usuario) throw new Error('Usuario no encontrado');
 
   if (data.password) {
-    data.password = await bcrypt.hash(data.password, 10);
+    data.password = await hashPassword(data.password);
   }
 
   return await usuario.update(data);
 };
 
+// ✅ Elimina un usuario de forma permanente
 const eliminar = async (id) => {
   const usuario = await Usuario.findByPk(id);
   if (!usuario) throw new Error('Usuario no encontrado');
@@ -35,6 +55,7 @@ const eliminar = async (id) => {
 module.exports = {
   obtenerTodos,
   obtenerPorId,
+  obtenerPorCorreo,
   crear,
   actualizar,
   eliminar
