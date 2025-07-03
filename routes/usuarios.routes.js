@@ -32,4 +32,7 @@ router.put('/:id', verificarToken, validarRol('admin'), validarUsuario, manejarE
 
 router.delete('/:id', verificarToken, validarRol('admin'), usuariosController.eliminarUsuario);
 
+router.put('/:id/activar', usuariosController.activarUsuario);
+router.put('/:id/desactivar', usuariosController.desactivarUsuario);
+
 module.exports = router;

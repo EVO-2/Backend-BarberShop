@@ -32,16 +32,13 @@ exports.crearUsuario = async (req, res) => {
   }
 
   try {
-    // Verificar si ya existe el usuario con ese correo
     const existe = await usuariosService.obtenerPorCorreo(correo);
     if (existe) {
       return res.status(409).json({ mensaje: 'El correo ya está registrado' });
     }
 
-    // Encriptar la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Crear el nuevo usuario
     const nuevoUsuario = await usuariosService.crear({
       nombre,
       correo,
@@ -56,7 +53,8 @@ exports.crearUsuario = async (req, res) => {
         id: nuevoUsuario.id,
         nombre: nuevoUsuario.nombre,
         correo: nuevoUsuario.correo,
-        rol: nuevoUsuario.rol
+        rol: nuevoUsuario.rol,
+        estado: nuevoUsuario.estado
       }
     });
   } catch (error) {
@@ -67,8 +65,25 @@ exports.crearUsuario = async (req, res) => {
 
 exports.actualizarUsuario = async (req, res) => {
   try {
-    const usuarioActualizado = await usuariosService.actualizar(req.params.id, req.body);
-    res.json(usuarioActualizado);
+    const { nombre, correo, password, rol, estado } = req.body;
+    const actualizaciones = {};
+
+    if (nombre !== undefined) actualizaciones.nombre = nombre;
+    if (correo !== undefined) actualizaciones.correo = correo;
+    if (rol !== undefined) actualizaciones.rol = rol;
+    if (estado !== undefined) actualizaciones.estado = estado;
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      actualizaciones.password = hashedPassword;
+    }
+
+    const usuarioActualizado = await usuariosService.actualizar(req.params.id, actualizaciones);
+
+    res.json({
+      mensaje: 'Usuario actualizado correctamente',
+      usuario: usuarioActualizado
+    });
   } catch (error) {
     console.error('Error al actualizar usuario:', error.message);
     res.status(500).json({ mensaje: 'Error al actualizar usuario' });
@@ -82,5 +97,26 @@ exports.eliminarUsuario = async (req, res) => {
   } catch (error) {
     console.error('Error al eliminar usuario:', error.message);
     res.status(500).json({ mensaje: 'Error al eliminar usuario' });
+  }
+};
+
+
+exports.activarUsuario = async (req, res) => {
+  try {
+    const usuario = await usuariosService.activarUsuario(req.params.id);
+    res.json({ mensaje: 'Usuario activado correctamente', usuario });
+  } catch (error) {
+    console.error('Error al activar usuario:', error.message);
+    res.status(500).json({ mensaje: 'Error al activar usuario' });
+  }
+};
+
+exports.desactivarUsuario = async (req, res) => {
+  try {
+    const usuario = await usuariosService.desactivarUsuario(req.params.id);
+    res.json({ mensaje: 'Usuario desactivado correctamente', usuario });
+  } catch (error) {
+    console.error('Error al desactivar usuario:', error.message);
+    res.status(500).json({ mensaje: 'Error al desactivar usuario' });
   }
 };

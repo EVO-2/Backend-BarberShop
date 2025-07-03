@@ -11,7 +11,7 @@ const obtenerPorCorreo = async (correo) => {
   return await Usuario.findOne({ where: { correo } });
 };
 
-// ✅ Lista todos los usuarios activos
+// ✅ Lista todos los usuarios
 const obtenerTodos = async () => {
   return await Usuario.findAll();
 };
@@ -29,7 +29,11 @@ const crear = async (data) => {
   }
 
   const hashedPassword = await hashPassword(data.password);
-  return await Usuario.create({ ...data, password: hashedPassword });
+  return await Usuario.create({
+    ...data,
+    password: hashedPassword,
+    estado: true // Por defecto activo
+  });
 };
 
 // ✅ Actualiza un usuario y encripta si viene nueva contraseña
@@ -52,11 +56,33 @@ const eliminar = async (id) => {
   await usuario.destroy();
 };
 
+// ✅ Desactiva (estado = false)
+const desactivarUsuario = async (id) => {
+  const usuario = await Usuario.findByPk(id);
+  if (!usuario) throw new Error('Usuario no encontrado');
+
+  usuario.estado = false;
+  await usuario.save();
+  return usuario;
+};
+
+// ✅ Activa (estado = true)
+const activarUsuario = async (id) => {
+  const usuario = await Usuario.findByPk(id);
+  if (!usuario) throw new Error('Usuario no encontrado');
+
+  usuario.estado = true;
+  await usuario.save();
+  return usuario;
+};
+
 module.exports = {
   obtenerTodos,
   obtenerPorId,
   obtenerPorCorreo,
   crear,
   actualizar,
-  eliminar
+  eliminar,
+  activarUsuario,
+  desactivarUsuario
 };
