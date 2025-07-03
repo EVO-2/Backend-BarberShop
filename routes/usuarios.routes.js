@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
+
 const usuariosController = require('../controllers/usuariosController');
 const { validarUsuario, manejarErrores } = require('../middlewares/validarUsuario');
+const verificarToken = require('../middlewares/verificarToken');
+const validarRol = require('../middlewares/validarRol');
 
-// ✅ Ruta de prueba: debe ir antes de las rutas con parámetros dinámicos
+// ✅ Ruta de prueba sin autenticación
 router.get('/test-db', async (req, res) => {
   try {
     const { Usuario } = require('../models');
@@ -20,13 +23,13 @@ router.get('/test-db', async (req, res) => {
   }
 });
 
-// ✅ Rutas RESTful protegidas con validaciones donde aplica
-router.get('/', usuariosController.getUsuarios);
-router.get('/:id', usuariosController.getUsuarioPorId);
+// ✅ Rutas protegidas: Solo ADMIN puede acceder
+router.get('/', verificarToken, validarRol('admin'), usuariosController.getUsuarios);
+router.get('/:id', verificarToken, validarRol('admin'), usuariosController.getUsuarioPorId);
 
-router.post('/', validarUsuario, manejarErrores, usuariosController.crearUsuario);
-router.put('/:id', validarUsuario, manejarErrores, usuariosController.actualizarUsuario);
+router.post('/', verificarToken, validarRol('admin'), validarUsuario, manejarErrores, usuariosController.crearUsuario);
+router.put('/:id', verificarToken, validarRol('admin'), validarUsuario, manejarErrores, usuariosController.actualizarUsuario);
 
-router.delete('/:id', validarUsuario, usuariosController.eliminarUsuario);
+router.delete('/:id', verificarToken, validarRol('admin'), usuariosController.eliminarUsuario);
 
 module.exports = router;
