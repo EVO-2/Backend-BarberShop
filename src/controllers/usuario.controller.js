@@ -58,10 +58,31 @@ const eliminarUsuario = async (req, res) => {
   }
 };
 
+const cambiarEstadoUsuario = async (req, res) => {
+  const { id } = req.params;
+  const { estado } = req.body;
+
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    usuario.estado = estado;
+    await usuario.save();
+
+    res.json({ mensaje: 'Estado actualizado correctamente' });
+  } catch (error) {
+    console.error('Error al cambiar estado del usuario:', error);
+    res.status(500).json({ mensaje: 'Error al cambiar el estado del usuario' });
+  }
+};
+
 module.exports = {
-  crearUsuario,
   listarUsuarios,
   obtenerUsuario,
+  crearUsuario,
   actualizarUsuario,
-  eliminarUsuario
+  eliminarUsuario,
+  cambiarEstadoUsuario, 
 };

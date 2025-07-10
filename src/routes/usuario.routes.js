@@ -12,21 +12,18 @@ const validarJWT = require('../middlewares/validarJWT');
 const tieneRol = require('../middlewares/validarRol');
 const { emailExiste } = require('../helpers/dbValidators');
 
+// ✅ Importa directamente el modelo correcto
+const Usuario = require('../models/Usuario.model');
+
 const router = Router();
 
-/**
- * @route   GET /api/usuarios
- * @desc    Obtener todos los usuarios (solo admin)
- */
+// Obtener todos los usuarios
 router.get('/', [
   validarJWT,
   tieneRol('admin'),
 ], listarUsuarios);
 
-/**
- * @route   GET /api/usuarios/:id
- * @desc    Obtener un usuario por ID (solo admin)
- */
+// Obtener un usuario por ID
 router.get('/:id', [
   validarJWT,
   tieneRol('admin'),
@@ -34,29 +31,18 @@ router.get('/:id', [
   validarCampos
 ], obtenerUsuario);
 
-/**
- * @route   POST /api/usuarios
- * @desc    Crear un nuevo usuario (solo admin)
- */
+// Crear usuario
 router.post('/', [
   validarJWT,
   tieneRol('admin'),
-  body('nombre')
-    .notEmpty().withMessage('El nombre es obligatorio'),
-  body('correo')
-    .isEmail().withMessage('El correo no es válido')
-    .custom(emailExiste),
-  body('password')
-    .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-  body('rol')
-    .notEmpty().withMessage('El rol es obligatorio'),
+  body('nombre').notEmpty().withMessage('El nombre es obligatorio'),
+  body('correo').isEmail().withMessage('El correo no es válido').custom(emailExiste),
+  body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+  body('rol').notEmpty().withMessage('El rol es obligatorio'),
   validarCampos
 ], crearUsuario);
 
-/**
- * @route   PUT /api/usuarios/:id
- * @desc    Actualizar un usuario por ID (solo admin)
- */
+// Actualizar usuario
 router.put('/:id', [
   validarJWT,
   tieneRol('admin'),
@@ -67,15 +53,39 @@ router.put('/:id', [
   validarCampos
 ], actualizarUsuario);
 
-/**
- * @route   DELETE /api/usuarios/:id
- * @desc    Desactivar (soft delete) un usuario (solo admin)
- */
+// Eliminar usuario
 router.delete('/:id', [
   validarJWT,
   tieneRol('admin'),
   param('id').isMongoId().withMessage('El ID no es válido'),
   validarCampos
 ], eliminarUsuario);
+
+// ✅ Cambiar estado (activo/inactivo)
+router.patch('/:id/estado', [
+  validarJWT,
+  tieneRol('admin'),
+  param('id').isMongoId().withMessage('El ID no es válido'),
+  body('estado').isBoolean().withMessage('El estado debe ser booleano'),
+  validarCampos
+], async (req, res) => {
+  const { id } = req.params;
+  const { estado } = req.body;
+
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    usuario.estado = estado;
+    await usuario.save();
+
+    res.json({ mensaje: 'Estado actualizado correctamente' });
+  } catch (error) {
+    console.error('Error al actualizar el estado:', error);
+    res.status(500).json({ mensaje: 'Error al actualizar el estado del usuario' });
+  }
+});
 
 module.exports = router;
