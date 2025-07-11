@@ -1,14 +1,16 @@
 const { Router } = require('express');
-const { body } = require('express-validator');
+const { check } = require('express-validator');
 const { login } = require('../controllers/auth.controller');
 const validarCampos = require('../middlewares/validarCampos');
 
 const router = Router();
 
+// Ruta: POST /api/auth/login
 router.post('/login', [
-  body('correo', 'Correo obligatorio').isEmail(),
-  body('password', 'La contraseña es obligatoria').notEmpty(),
-  validarCampos
-], login);
+  check('correo', 'El correo es obligatorio').isEmail(),
+  check('password', 'La contraseña es obligatoria').notEmpty(),
+  validarCampos, 
+  login         
+]);
 
 module.exports = router;
