@@ -8,6 +8,10 @@ const crearUsuario = async (datos) => {
     throw new Error('El correo ya está registrado');
   }
 
+  // Encriptar la contraseña antes de guardar
+  const salt = bcrypt.genSaltSync(10);
+  datos.password = bcrypt.hashSync(datos.password, salt);
+
   const usuario = new Usuario(datos);
   return await usuario.save();
 };
