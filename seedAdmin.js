@@ -15,16 +15,13 @@ mongoose.connect(process.env.MONGODB_URI)
     if (existe) {
       console.log('ℹ️ El usuario admin ya existe');
     } else {
-      const passwordPlano = 'admin123';
-      const hash = bcrypt.hashSync(passwordPlano, 10);
-
       await Usuario.create({
-        nombre: 'Administrador',
-        correo,
-        password: hash,
-        rol: 'admin',
-        estado: true
-      });
+      nombre: 'Edward',
+      correo,
+      password: 'admin123', // el modelo se encarga de hashearla
+      rol: 'admin',
+      estado: true
+     });
 
       console.log('✅ Usuario admin creado con éxito');
     }
