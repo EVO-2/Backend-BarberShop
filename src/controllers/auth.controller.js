@@ -2,6 +2,7 @@ const Usuario = require('../models/Usuario.model');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 
+
 const login = async (req, res) => {
   try {
     // 1. Buscar usuario y traer password
@@ -20,7 +21,7 @@ const login = async (req, res) => {
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
     }
 
-    // 3. Generar token (10 s solo para pruebas)
+    
     const token = jwt.sign(
   {
     uid: usuario._id,
