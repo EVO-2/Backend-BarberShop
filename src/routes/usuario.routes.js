@@ -11,6 +11,7 @@ const validarCampos = require('../middlewares/validarCampos');
 const validarJWT = require('../middlewares/validarJWT');
 const tieneRol = require('../middlewares/validarRol');
 const { emailExiste } = require('../helpers/dbValidators');
+const upload = require('../middlewares/uploadFoto');
 
 // ✅ Importa directamente el modelo correcto
 const Usuario = require('../models/Usuario.model');
@@ -73,7 +74,7 @@ router.patch('/:id/estado', [
   const { estado } = req.body;
 
   try {
-    const usuario = await Usuario.findByPk(id);
+    const usuario = await Usuario.findById(id); // ← CORREGIDO: era findByPk
     if (!usuario) {
       return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
@@ -81,11 +82,37 @@ router.patch('/:id/estado', [
     usuario.estado = estado;
     await usuario.save();
 
-    res.json({ mensaje: 'Estado actualizado correctamente' });
+    res.json({ mensaje: 'Estado actualizado correctamente', usuario });
   } catch (error) {
-    console.error('Error al actualizar el estado:', error);
+    console.error('❌ Error al actualizar el estado:', error);
     res.status(500).json({ mensaje: 'Error al actualizar el estado del usuario' });
   }
 });
+
+// Ruta para subir la foto de perfil
+router.post('/:id/foto', [
+  validarJWT,
+  tieneRol('admin', 'cliente', 'barbero'), // todos los roles pueden cambiar su foto
+  param('id').isMongoId().withMessage('ID inválido'),
+  validarCampos,
+  upload.single('foto') // usa el middleware de multer
+], async (req, res) => {
+  try {
+    const { id } = req.params;
+    const usuario = await Usuario.findById(id);
+    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+
+    // Guardar ruta de la imagen en el usuario
+    usuario.foto = `uploads/${req.file.filename}`;
+    await usuario.save();
+
+    res.json({ mensaje: 'Foto actualizada correctamente', foto: usuario.foto });
+
+  } catch (error) {
+    console.error('❌ Error al subir la foto:', error);
+    res.status(500).json({ mensaje: 'Error al subir la foto', error: error.message });
+  }
+});
+
 
 module.exports = router;

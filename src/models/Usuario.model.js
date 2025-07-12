@@ -6,6 +6,7 @@ const UsuarioSchema = new Schema({
   correo: { type: String, required: true, unique: true },
   password: { type: String, required: true, select: false },
   rol: { type: String, required: true },
+  foto: { type: String, default: '' },
   estado: { type: Boolean, default: true }
 }, {
   timestamps: true
