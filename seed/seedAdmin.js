@@ -2,7 +2,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const Usuario = require('./src/models/Usuario.model');
+const Usuario = require('../src/models/Usuario.model');
 
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -17,7 +17,7 @@ mongoose.connect(process.env.MONGODB_URI)
     } else {
       await Usuario.create({
       nombre: 'Edward',
-      correo,
+      correo: 'edward@gmail.com',
       password: 'admin123', // el modelo se encarga de hashearla
       rol: 'admin',
       estado: true
