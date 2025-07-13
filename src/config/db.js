@@ -1,5 +1,6 @@
 require('dotenv').config();
-
+//console.log('🔑 Todas las claves env disponibles:', Object.keys(process.env));
+//console.log('📦 URI:', process.env.MONGODB_URI); 
 const mongoose = require('mongoose');
 
 const conectarDB = async () => {
