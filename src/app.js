@@ -13,18 +13,22 @@ app.use(express.json());
 // Conectar DB
 conectarDB();
 
-// Rutas
+// Rutas públicas
 app.get('/', (req, res) => {
   res.send('API Barbería JEVO en funcionamiento');
 });
 
-// Ruta de usuarios
-const usuarioRoutes = require('./routes/usuario.routes');
-app.use('/api/usuarios', usuarioRoutes);
-const authRoutes = require('./routes/auth.routes');
-app.use('/api/auth', authRoutes);
-const citaRoutes = require('./routes/cita.routes');
-app.use('/api/citas', citaRoutes);
+// Rutas API
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/usuarios', require('./routes/usuario.routes'));
+app.use('/api/citas', require('./routes/cita.routes'));
+app.use('/api', require('./routes/catalogo.routes')); // sedes, puestos, peluqueros, servicios
+app.use('/api/clientes', require('./routes/cliente.routes'));
+app.use((req, res, next) => {
+  res.status(404).json({ mensaje: 'Ruta no encontrada' });
+ 
+
+});
 
 
 module.exports = app;

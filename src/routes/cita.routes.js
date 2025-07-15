@@ -1,28 +1,44 @@
 const express = require('express');
 const router = express.Router();
 
-// Importación desestructurada de funciones desde el controlador
 const {
   crearCita,
   obtenerCitas,
   obtenerCitaPorId,
   actualizarCita,
-  cancelarCita // ✅ Importaste correctamente
+  cancelarCita,
+  obtenerCitasDelCliente,
+  obtenerCitasDelPeluquero
 } = require('../controllers/cita.controller');
 
-// Cancelar (cambiar estado) de una cita — DEBE ir antes del `/:id`
-router.put('/:id/cancelar', cancelarCita);
+// Middlewares
+const validarJWT = require('../middlewares/validarJWT');
+const tieneRol = require('../middlewares/validarRol'); // ✅ IMPORTACIÓN CORRECTA
 
-// Crear una nueva cita
-router.post('/', crearCita);
+// ✅ Proteger todas las rutas con JWT
+router.use(validarJWT);
 
-// Obtener todas las citas
-router.get('/', obtenerCitas);
+// ================== Rutas protegidas por rol ==================
 
-// Obtener una cita por ID
-router.get('/:id', obtenerCitaPorId);
+// Crear nueva cita (cliente o admin)
+router.post('/', tieneRol('cliente', 'admin'), crearCita);
 
-// Actualizar una cita
-router.put('/:id', actualizarCita);
+// Obtener TODAS las citas (solo admin)
+router.get('/', tieneRol('admin'), obtenerCitas);
+
+// Ver citas del cliente autenticado
+router.get('/mis-citas', tieneRol('cliente'), obtenerCitasDelCliente);
+
+// Ver citas del peluquero autenticado
+router.get('/mis-citas-peluquero', tieneRol('peluquero'), obtenerCitasDelPeluquero);
+
+// Ver cita por ID (todos los roles)
+router.get('/:id', tieneRol('admin', 'cliente', 'peluquero'), obtenerCitaPorId);
+
+// Actualizar cita (solo admin)
+router.put('/:id', tieneRol('admin'), actualizarCita);
+
+// Cancelar cita (admin, cliente, peluquero)
+router.put('/:id/cancelar', tieneRol('admin', 'cliente', 'peluquero'), cancelarCita);
 
 module.exports = router;
