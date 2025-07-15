@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
+const Usuario = require('../models/Usuario.model');
 
-const validarJWT = (req, res, next) => {
-  const authHeader = req.header('Authorization');
+const validarJWT = async (req, res, next) => {
+  const authHeader = req.header('Authorization') || req.header('authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ mensaje: 'Token no proporcionado o formato incorrecto' });
@@ -10,9 +11,18 @@ const validarJWT = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const { uid, rol } = jwt.verify(token, process.env.JWT_SECRET);
+    const { uid } = jwt.verify(token, process.env.JWT_SECRET);
+
+    const usuario = await Usuario.findById(uid).populate('rol');
+
+    if (!usuario) {
+      return res.status(401).json({ mensaje: 'Token no válido - usuario no existe' });
+    }
+
+    req.usuario = usuario;
     req.uid = uid;
-    req.rol = rol;
+    req.rol = usuario.rol.nombre || usuario.rol; // 👈 esto es crucial
+
     next();
   } catch (error) {
     return res.status(401).json({ mensaje: 'Token no válido', error: error.message });

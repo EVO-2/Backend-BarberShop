@@ -1,2 +1,28 @@
+# Node modules
 node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Entorno
 .env
+.env.*.local
+
+# Directorios de subida de archivos
+uploads/
+
+# Caché
+.cache/
+dist/
+coverage/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Visual Studio Code
+.vscode/
