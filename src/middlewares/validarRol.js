@@ -1,18 +1,17 @@
 const tieneRol = (...rolesPermitidos) => {
   return (req, res, next) => {
-    if (!req.rol) {
-      return res.status(500).json({ mensaje: 'Se requiere validar el token primero' });
-    }
+    const rolUsuario = req.rol;
 
-    // 👀 Log para depurar el rol recibido y los permitidos
-    console.log(`🛡️ Rol detectado: '${req.rol}' | Permitidos: [${rolesPermitidos.join(', ')}]`);
-
-    if (!rolesPermitidos.includes(req.rol)) {
-      return res.status(403).json({ mensaje: `Rol '${req.rol}' no autorizado` });
+    if (!rolesPermitidos.includes(rolUsuario)) {
+      return res.status(403).json({
+        mensaje: `🛑 Rol '${rolUsuario}' no autorizado. Se requiere uno de: [${rolesPermitidos.join(', ')}]`
+      });
     }
 
     next();
   };
 };
 
-module.exports = tieneRol;
+module.exports = {
+  tieneRol, // 👈 export nombrado
+};

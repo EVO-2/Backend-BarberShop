@@ -8,8 +8,8 @@ const {
   eliminarUsuario
 } = require('../controllers/usuario.controller');
 const validarCampos = require('../middlewares/validarCampos');
-const validarJWT = require('../middlewares/validarJWT');
-const tieneRol = require('../middlewares/validarRol');
+const { validarJWT } = require('../middlewares/validarJWT');  
+const { tieneRol }   = require('../middlewares/validarRol'); 
 const { emailExiste } = require('../helpers/dbValidators');
 const upload = require('../middlewares/uploadFoto');
 
