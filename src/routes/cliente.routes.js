@@ -2,6 +2,9 @@
 const { Router } = require('express');
 const ctr = require('../controllers/cliente.controller');
 const router = Router();
+const { validarJWT } = require('../middlewares/validarJWT');  
+const { tieneRol }   = require('../middlewares/validarRol');  
+
 
 router.get('/', ctr.listarClientes);
 router.get('/:id', ctr.obtenerCliente);

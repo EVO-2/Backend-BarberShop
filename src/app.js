@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const conectarDB = require('./config/db');
+const citaRoutes = require('./routes/cita.routes');
 
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/usuarios', require('./routes/usuario.routes'));
 app.use('/api/citas', require('./routes/cita.routes'));
 app.use('/api', require('./routes/catalogo.routes')); // sedes, puestos, peluqueros, servicios
 app.use('/api/clientes', require('./routes/cliente.routes'));
+app.use('/api/citas', citaRoutes);
 app.use((req, res, next) => {
   res.status(404).json({ mensaje: 'Ruta no encontrada' });
  
