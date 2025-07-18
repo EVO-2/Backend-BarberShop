@@ -13,5 +13,5 @@ const tieneRol = (...rolesPermitidos) => {
 };
 
 module.exports = {
-  tieneRol, // 👈 export nombrado
+  tieneRol, 
 };

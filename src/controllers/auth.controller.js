@@ -3,18 +3,18 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 
 const login = async (req, res) => {
-  console.log('📥 req.body:', req.body);
+  //console.log('📥 req.body:', req.body);
   try {
     const usuario = await Usuario.findOne({ correo: req.body.correo })
       .select('+password')
-      .populate('rol', 'nombre'); // ✅ importante para obtener el nombre del rol
+      .populate('rol', 'nombre'); 
 
     if (!usuario || !usuario.estado) {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
     const validPassword = await bcrypt.compare(req.body.password, usuario.password);
-    console.log('¿Contraseña válida?', validPassword);
+    //console.log('¿Contraseña válida?', validPassword);
 
     if (!validPassword) {
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
@@ -40,9 +40,9 @@ const login = async (req, res) => {
     const { exp } = jwt.decode(token);
     const expDate = new Date(exp * 1000);
 
-    console.log('Token generado:', token);
-    console.log('📦 Payload decodificado:', jwt.decode(token));
-    console.log('🕒 Token expirará el:', expDate.toLocaleString('es-CO'));
+    //console.log('Token generado:', token);
+    //console.log('📦 Payload decodificado:', jwt.decode(token));
+    //console.log('🕒 Token expirará el:', expDate.toLocaleString('es-CO'));
 
     res.json({
       usuario,

@@ -9,131 +9,72 @@ const Cita           = require('../models/Cita.model');
 
 // ===================== crear una nueva cita =============================
 const crearCita = async (req, res) => {
-  console.log('📩 [crearCita] Body recibido:', req.body);
-  console.log('👤 [crearCita] Usuario autenticado:', req.usuario);
-
   try {
-    const rolUsuario = req.rol;
-    const uidUsuario = req.uid;
+    const { cliente, peluquero, fecha, sede, puestoTrabajo } = req.body;
 
-    const {
-      cliente: clienteDesdeBody,
-      peluquero,
-      servicios,
+    // Validar cita duplicada en misma fecha/hora/peluquero/sede
+    const yaExiste = await Cita.findOne({ peluquero, fecha, sede });
+    if (yaExiste) {
+      return res.status(400).json({ msg: 'Ya existe una cita para ese peluquero en esa fecha y hora.' });
+    }
+
+    // Calcular turno: contar cuántas citas hay ese día en la sede
+    const fechaInicio = new Date(fecha);
+    fechaInicio.setHours(0, 0, 0, 0);
+    const fechaFin = new Date(fecha);
+    fechaFin.setHours(23, 59, 59, 999);
+
+    const citasDelDia = await Cita.find({
       sede,
-      puestoTrabajo,
-      fecha,
-      hora,
-      observaciones
-    } = req.body;
+      fecha: { $gte: fechaInicio, $lte: fechaFin }
+    }).sort({ turno: 1 });
 
-    // Validación de campos obligatorios
-    if (!peluquero || !servicios?.length || !sede || !puestoTrabajo || !fecha || !hora) {
-      return res.status(400).json({ mensaje: 'Todos los campos obligatorios deben ser enviados' });
-    }
+    const nuevoTurno = citasDelDia.length > 0
+      ? citasDelDia[citasDelDia.length - 1].turno + 1
+      : 1;
 
-    const fechaCita = new Date(fecha);
-    const ahora = new Date();
-    if (isNaN(fechaCita.getTime())) {
-      return res.status(400).json({ mensaje: 'Fecha inválida' });
-    }
-    if (fechaCita < ahora) {
-      return res.status(400).json({ mensaje: 'No se puede reservar citas en el pasado' });
-    }
+    // Crear cita
+    const nuevaCita = await Cita.create({ ...req.body, turno: nuevoTurno });
 
-    if (!['cliente', 'admin'].includes(rolUsuario)) {
-      return res.status(403).json({ mensaje: 'Solo clientes o administradores pueden reservar citas' });
-    }
-
-    // Determinar el cliente
-    let clienteDoc;
-    if (rolUsuario === 'admin') {
-      clienteDoc = await Cliente.findOne({ _id: clienteDesdeBody, estado: true });
-    } else {
-      clienteDoc = await Cliente.findOne({ usuario: uidUsuario, estado: true });
-    }
-
-    if (!clienteDoc) {
-      return res.status(400).json({ mensaje: 'Cliente no válido o inactivo' });
-    }
-
-    // Validar referencias
-    const [peluqueroExiste, sedeExiste, puestoExiste] = await Promise.all([
-      Peluquero.exists({ _id: peluquero, estado: true }),
-      Sede.exists({ _id: sede, estado: true }),
-      PuestoTrabajo.exists({ _id: puestoTrabajo, estado: true })
-    ]);
-
-    if (!peluqueroExiste) return res.status(400).json({ mensaje: 'Peluquero no válido o inactivo' });
-    if (!sedeExiste) return res.status(400).json({ mensaje: 'Sede no válida o inactiva' });
-    if (!puestoExiste) return res.status(400).json({ mensaje: 'Puesto de trabajo no válido o inactivo' });
-
-    // Validar servicios
-    const serviciosValidos = await Servicio.find({ _id: { $in: servicios }, estado: true });
-    if (serviciosValidos.length !== servicios.length) {
-      return res.status(400).json({ mensaje: 'Uno o más servicios no existen o están inactivos' });
-    }
-
-    // Calcular turno automáticamente
-    const inicioDelDia = new Date(fechaCita);
-    inicioDelDia.setHours(0, 0, 0, 0);
-    const finDelDia = new Date(fechaCita);
-    finDelDia.setHours(23, 59, 59, 999);
-
-    const citasDelDia = await Cita.countDocuments({
-      peluquero,
-      fecha: { $gte: inicioDelDia, $lte: finDelDia }
-    });
-
-    const turnoCalculado = citasDelDia + 1;
-
-    // Crear y guardar la cita
-    const nuevaCita = await Cita.create({
-      cliente: clienteDoc._id,
-      peluquero,
-      servicios,
-      sede,
-      puestoTrabajo,
-      fecha,
-      hora,
-      turno: turnoCalculado,
-      observaciones
-    });
-
-    console.log('✅ Cita guardada:', nuevaCita._id);
-    res.status(201).json(nuevaCita);
-
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        mensaje: 'Conflicto de agenda: ya existe una cita con ese peluquero o puesto en ese turno'
-      });
-    }
-    console.error('❌ Error al crear cita:', error);
-    res.status(500).json({ mensaje: 'Error al reservar la cita', error: error.message });
-  }
-};
-
-// ===================== obtener todas las citas ===========================
-const obtenerCitas = async (_req, res) => {
-  try {
-    const citas = await Cita.find()
-      .populate('cliente',    'usuario')
-      .populate('peluquero',  'usuario')
+    // Populate anidados correctamente
+    const citaConDatos = await Cita.findById(nuevaCita._id)
+      .populate({
+        path: 'cliente',
+        populate: {
+          path: 'usuario',
+          select: 'nombre correo'
+        }
+      })
+      .populate({
+        path: 'peluquero',
+        populate: {
+          path: 'usuario',
+          select: 'nombre correo'
+        }
+      })
       .populate('servicios sede puestoTrabajo pago');
-    res.json(citas);
+
+    // Log de depuración
+    console.log('📌 Cita creada con datos anidados:\n', JSON.stringify(citaConDatos, null, 2));
+
+    res.status(201).json(citaConDatos);
   } catch (error) {
-    console.error('❌ Error al obtener citas:', error);
-    res.status(500).json({ mensaje: 'Error al obtener citas' });
+    console.error('❌ Error al crear cita:', error);
+    res.status(500).json({ msg: 'Error interno del servidor' });
   }
 };
+
+module.exports = {
+  crearCita
+};
+
 
 // ===================== obtener una cita por ID ===========================
 const obtenerCitaPorId = async (req, res) => {
   try {
     const cita = await Cita.findById(req.params.id)
-      .populate('cliente', 'usuario')
-      .populate('peluquero', 'usuario')
+      .populate({ path: 'cliente', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario', select: 'nombre correo' } })
       .populate('servicios sede puestoTrabajo pago');
 
     if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
@@ -165,16 +106,16 @@ const actualizarCita = async (req, res) => {
     const citaActualizada = await Cita.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
-    });
+    })
+      .populate({ path: 'cliente', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate('servicios sede puestoTrabajo pago');
 
     if (!citaActualizada)
       return res.status(404).json({ mensaje: 'Cita no encontrada' });
 
     res.json(citaActualizada);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ mensaje: 'Conflicto de agenda: ya existe una cita con esos datos' });
-    }
     console.error('❌ Error al actualizar la cita:', error);
     res.status(500).json({ mensaje: 'Error al actualizar la cita' });
   }
@@ -187,7 +128,10 @@ const cancelarCita = async (req, res) => {
       req.params.id,
       { estado: 'cancelada' },
       { new: true }
-    );
+    )
+      .populate({ path: 'cliente', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate('servicios sede puestoTrabajo pago');
 
     if (!cita)
       return res.status(404).json({ mensaje: 'Cita no encontrada' });
@@ -202,33 +146,25 @@ const cancelarCita = async (req, res) => {
 // ===================== citas del cliente logueado ========================
 const obtenerCitasDelCliente = async (req, res) => {
   try {
-    const { page = 1, limit = 5, fecha, estado } = req.query;
-    const filtro = { cliente: req.uid };
+    const cliente = await Cliente.findOne({ usuario: req.uid });
+    if (!cliente) return res.status(404).json({ mensaje: 'Cliente no encontrado' });
 
-    if (estado) filtro.estado = estado;
-
-    if (fecha) {
-      const inicio = new Date(fecha);
-      inicio.setHours(0, 0, 0, 0);
-      const fin = new Date(fecha);
-      fin.setHours(23, 59, 59, 999);
-      filtro.fecha = { $gte: inicio, $lte: fin };
-    }
-
-    const total = await Cita.countDocuments(filtro);
-
-    const citas = await Cita.find(filtro)
-      .populate('peluquero', 'usuario')
+    const citas = await Cita.find({ cliente: cliente._id })
+      .populate({
+        path: 'cliente',
+        populate: { path: 'usuario', select: 'nombre correo' }
+      })
+      .populate({
+        path: 'peluquero',
+        populate: { path: 'usuario', select: 'nombre correo' }
+      })
       .populate('servicios sede puestoTrabajo pago')
-      .sort({ fecha: 1, hora: 1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .sort({ fecha: 1, hora: 1 });
 
-    res.json({
-      total,
-      totalPaginas: Math.ceil(total / limit),
-      citas
-    });
+    console.log('📌 Citas encontradas para el cliente logueado:');
+    console.dir(citas, { depth: null });
+
+    res.json(citas);
   } catch (error) {
     console.error('❌ Error al obtener citas del cliente:', error);
     res.status(500).json({ mensaje: 'Error al obtener citas del cliente' });
@@ -239,15 +175,74 @@ const obtenerCitasDelCliente = async (req, res) => {
 // ===================== citas del peluquero logueado ======================
 const obtenerCitasDelPeluquero = async (req, res) => {
   try {
-    const citas = await Cita.find({ peluquero: req.uid })
-      .populate('cliente', 'usuario')
+    const peluquero = await Peluquero.findOne({ usuario: req.uid });
+    if (!peluquero) return res.status(404).json({ mensaje: 'Peluquero no encontrado' });
+
+    const citas = await Cita.find({ peluquero: peluquero._id })
+      .populate({ path: 'cliente', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario', select: 'nombre correo' } })
       .populate('servicios sede puestoTrabajo pago');
+
     res.json(citas);
   } catch (error) {
     console.error('❌ Error al obtener citas del peluquero:', error);
     res.status(500).json({ mensaje: 'Error al obtener citas del peluquero' });
   }
 };
+
+// ===================== obtener todas las citas ===========================
+const obtenerCitas = async (_req, res) => {
+  try {
+    const citas = await Cita.find()
+      .populate({ path: 'cliente', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate('servicios sede puestoTrabajo pago');
+    res.json(citas);
+  } catch (error) {
+    console.error('❌ Error al obtener citas:', error);
+    res.status(500).json({ mensaje: 'Error al obtener citas' });
+  }
+};
+
+// ===================== obtener citas paginadas del usuario logueado ===========================
+const listarMisCitas = async (req, res) => {
+  try {
+    const usuarioId = req.uid;
+    const pagina = parseInt(req.query.pagina) || 1;
+    const limite = parseInt(req.query.limite) || 10;
+    const skip = (pagina - 1) * limite;
+
+    // Buscar si es cliente o peluquero
+    const cliente = await Cliente.findOne({ usuario: usuarioId });
+    const peluquero = await Peluquero.findOne({ usuario: usuarioId });
+
+    let filtro = {};
+    if (cliente) {
+      filtro = { cliente: cliente._id };
+    } else if (peluquero) {
+      filtro = { peluquero: peluquero._id };
+    } else {
+      return res.status(404).json({ mensaje: 'Usuario no registrado como cliente o peluquero' });
+    }
+
+    const total = await Cita.countDocuments(filtro);
+    const citas = await Cita.find(filtro)
+      .populate({ path: 'cliente', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario', select: 'nombre correo' } })
+      .populate('servicios sede puestoTrabajo pago')
+      .sort({ fecha: -1, hora: -1 })
+      .skip(skip)
+      .limit(limite);
+
+    const totalPaginas = Math.ceil(total / limite);
+
+    res.json({ citas, total, totalPaginas });
+  } catch (error) {
+    console.error('❌ Error en listarMisCitas:', error);
+    res.status(500).json({ mensaje: 'Error al obtener citas del usuario' });
+  }
+};
+
 
 // ===================== exports ==========================================
 module.exports = {
@@ -257,5 +252,6 @@ module.exports = {
   actualizarCita,
   cancelarCita,
   obtenerCitasDelCliente,
-  obtenerCitasDelPeluquero
+  obtenerCitasDelPeluquero,
+  listarMisCitas
 };
