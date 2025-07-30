@@ -5,23 +5,41 @@ const PeluqueroSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Usuario',
     required: true,
-    unique: true  // Relación uno a uno
+    unique: true 
   },
   especialidades: {
-    type: [String], // Ej: ["fade", "tinte"]
+    type: [String], 
     default: []
   },
   experiencia: {
-    type: Number, // Años de experiencia
+    type: Number, 
     default: 0
+  },
+  telefono_profesional: {
+    type: String,
+    default: ''
+  },
+  direccion: {
+    type: String,
+    default: ''
+  },
+  genero: {
+    type: String,
+    enum: ['masculino', 'femenino', 'otro'],
+    default: 'otro'
+  },
+  fecha_nacimiento: {
+    type: Date
   },
   sede: {
     type: Schema.Types.ObjectId,
-    ref: 'Sede'
+    ref: 'Sede',
+    default: null
   },
   puestoTrabajo: {
     type: Schema.Types.ObjectId,
-    ref: 'PuestoTrabajo'
+    ref: 'PuestoTrabajo',
+    default: null
   },
   estado: {
     type: Boolean,

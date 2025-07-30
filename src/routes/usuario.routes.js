@@ -5,16 +5,15 @@ const {
   obtenerUsuario,
   crearUsuario,
   actualizarUsuario,
-  eliminarUsuario
+  eliminarUsuario,
+  cambiarEstadoUsuario,
+  subirFotoPerfil
 } = require('../controllers/usuario.controller');
 const validarCampos = require('../middlewares/validarCampos');
 const { validarJWT } = require('../middlewares/validarJWT');  
 const { tieneRol }   = require('../middlewares/validarRol'); 
 const { emailExiste } = require('../helpers/dbValidators');
 const upload = require('../middlewares/uploadFoto');
-
-// ✅ Importa directamente el modelo correcto
-const Usuario = require('../models/Usuario.model');
 
 const router = Router();
 
@@ -62,57 +61,44 @@ router.delete('/:id', [
   validarCampos
 ], eliminarUsuario);
 
-// ✅ Cambiar estado (activo/inactivo)
+// Cambiar estado
 router.patch('/:id/estado', [
   validarJWT,
   tieneRol('admin'),
   param('id').isMongoId().withMessage('El ID no es válido'),
   body('estado').isBoolean().withMessage('El estado debe ser booleano'),
   validarCampos
-], async (req, res) => {
+], cambiarEstadoUsuario);
+
+// Subir foto de perfil
+router.post('/:id/foto', [
+  validarJWT,
+  tieneRol('admin', 'cliente', 'barbero'),
+  param('id').isMongoId().withMessage('ID inválido'),
+  validarCampos,
+  upload.single('foto')
+], subirFotoPerfil);
+
+router.patch('/:id/estado', async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
 
   try {
-    const usuario = await Usuario.findById(id); // ← CORREGIDO: era findByPk
-    if (!usuario) {
+    const usuarioActualizado = await Usuario.findByIdAndUpdate(
+      id,
+      { estado },
+      { new: true }
+    );
+
+    if (!usuarioActualizado) {
       return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     }
 
-    usuario.estado = estado;
-    await usuario.save();
-
-    res.json({ mensaje: 'Estado actualizado correctamente', usuario });
+    res.json({ mensaje: 'Estado actualizado', usuario: usuarioActualizado });
   } catch (error) {
-    console.error('❌ Error al actualizar el estado:', error);
-    res.status(500).json({ mensaje: 'Error al actualizar el estado del usuario' });
+    console.error(error);
+    res.status(500).json({ mensaje: 'Error al actualizar el estado' });
   }
 });
-
-// Ruta para subir la foto de perfil
-router.post('/:id/foto', [
-  validarJWT,
-  tieneRol('admin', 'cliente', 'barbero'), // todos los roles pueden cambiar su foto
-  param('id').isMongoId().withMessage('ID inválido'),
-  validarCampos,
-  upload.single('foto') // usa el middleware de multer
-], async (req, res) => {
-  try {
-    const { id } = req.params;
-    const usuario = await Usuario.findById(id);
-    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
-
-    // Guardar ruta de la imagen en el usuario
-    usuario.foto = `uploads/${req.file.filename}`;
-    await usuario.save();
-
-    res.json({ mensaje: 'Foto actualizada correctamente', foto: usuario.foto });
-
-  } catch (error) {
-    console.error('❌ Error al subir la foto:', error);
-    res.status(500).json({ mensaje: 'Error al subir la foto', error: error.message });
-  }
-});
-
 
 module.exports = router;
