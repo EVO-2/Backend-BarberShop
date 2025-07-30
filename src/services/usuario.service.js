@@ -1,64 +1,138 @@
-const bcrypt  = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const Usuario = require('../models/Usuario.model');
-const Rol     = require('../models/Rol.model');   // ⬅️  nuevo import
+const Rol = require('../models/Rol.model');
 
 /* ========================== */
-/*    Crear usuario           */
+/*       Crear Usuario        */
 /* ========================== */
 const crearUsuario = async (datos) => {
-  // 1. Validar correo duplicado
-  const existe = await Usuario.findOne({ correo: datos.correo });
-  if (existe) throw new Error('El correo ya está registrado');
+  try {
+    const { correo, password, rol } = datos;
 
-  // 2. Buscar el rol por nombre (ej. 'barbero', 'cliente')
-  const rolDoc = await Rol.findOne({ nombre: datos.rol });
-  if (!rolDoc) throw new Error(`Rol '${datos.rol}' no existe`);
+    // Verificar correo duplicado
+    const existe = await Usuario.findOne({ correo });
+    if (existe) {
+      throw new Error('El correo ya está registrado');
+    }
 
-  // 3. Encriptar contraseña
-  const salt = bcrypt.genSaltSync(10);
-  datos.password = bcrypt.hashSync(datos.password, salt);
+    // Obtener documento del rol
+    const rolDoc = await Rol.findOne({ nombre: rol });
+    if (!rolDoc) {
+      throw new Error(`El rol '${rol}' no existe`);
+    }
 
-  // 4. Reemplazar string 'rol' por su ObjectId
-  const usuario = new Usuario({
-    ...datos,
-    rol: rolDoc._id
-  });
+    // Encriptar contraseña
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
 
-  return await usuario.save();
+    // Crear usuario
+    const nuevoUsuario = new Usuario({
+      ...datos,
+      password: passwordHash,
+      rol: rolDoc._id
+    });
+
+    return await nuevoUsuario.save();
+  } catch (error) {
+    throw new Error(`Error al crear usuario: ${error.message}`);
+  }
 };
 
 /* ========================== */
-/*        Otros métodos       */
+/*     Obtener Usuarios       */
 /* ========================== */
-
 const obtenerUsuarios = async () => {
-  // populate opcional para devolver el nombre del rol
-  return await Usuario.find().populate('rol', 'nombre');
+  try {
+    return await Usuario.find()
+      .populate('rol', 'nombre')
+      .lean();
+  } catch (error) {
+    throw new Error(`Error al obtener usuarios: ${error.message}`);
+  }
 };
 
+/* ========================== */
+/*   Obtener Usuario por ID   */
+/* ========================== */
 const obtenerUsuarioPorId = async (id) => {
-  return await Usuario.findById(id).populate('rol', 'nombre');
+  try {
+    const usuario = await Usuario.findById(id).populate('rol', 'nombre').lean();
+    if (!usuario) throw new Error('Usuario no encontrado');
+    return usuario;
+  } catch (error) {
+    throw new Error(`Error al obtener usuario por ID: ${error.message}`);
+  }
 };
 
+/* ========================== */
+/*     Actualizar Usuario     */
+/* ========================== */
 const actualizarUsuario = async (id, datos) => {
-  // Validar correo duplicado si viene en la petición
-  if (datos.correo) {
-    const existe = await Usuario.findOne({ correo: datos.correo, _id: { $ne: id } });
-    if (existe) throw new Error('El correo ya está en uso por otro usuario');
-  }
+  try {
+    const { correo, rol } = datos;
 
-  // Si quieren cambiar de rol, traducir nombre → ObjectId
-  if (datos.rol) {
-    const rolDoc = await Rol.findOne({ nombre: datos.rol });
-    if (!rolDoc) throw new Error(`Rol '${datos.rol}' no existe`);
-    datos.rol = rolDoc._id;
-  }
+    // Validar si el correo ya está en uso por otro
+    if (correo) {
+      const existente = await Usuario.findOne({ correo, _id: { $ne: id } });
+      if (existente) {
+        throw new Error('El correo ya está en uso por otro usuario');
+      }
+    }
 
-  return await Usuario.findByIdAndUpdate(id, datos, { new: true }).populate('rol', 'nombre');
+    // Si se va a actualizar el rol
+    if (rol) {
+      const rolDoc = await Rol.findOne({ nombre: rol });
+      if (!rolDoc) {
+        throw new Error(`El rol '${rol}' no existe`);
+      }
+      datos.rol = rolDoc._id;
+    }
+
+    const actualizado = await Usuario.findByIdAndUpdate(id, datos, {
+      new: true,
+      runValidators: true
+    }).populate('rol', 'nombre');
+
+    if (!actualizado) throw new Error('Usuario no encontrado');
+
+    return actualizado;
+  } catch (error) {
+    throw new Error(`Error al actualizar usuario: ${error.message}`);
+  }
 };
 
+/* ========================== */
+/*     Eliminar (Desactivar) Usuario */
+/* ========================== */
 const eliminarUsuario = async (id) => {
-  return await Usuario.findByIdAndUpdate(id, { estado: false }, { new: true });
+  try {
+    const eliminado = await Usuario.findByIdAndUpdate(
+      id,
+      { estado: false },
+      { new: true }
+    );
+    if (!eliminado) throw new Error('Usuario no encontrado');
+    return eliminado;
+  } catch (error) {
+    throw new Error(`Error al eliminar usuario: ${error.message}`);
+  }
+};
+
+/* ========================== */
+/*     Cambiar Estado         */
+/* ========================== */
+const cambiarEstadoUsuario = async (id, estado) => {
+  try {
+    const actualizado = await Usuario.findByIdAndUpdate(
+      id,
+      { estado },
+      { new: true }
+    );
+    if (!actualizado) throw new Error('Usuario no encontrado');
+    return actualizado;
+  } catch (error) {
+    throw new Error(`Error al cambiar estado del usuario: ${error.message}`);
+  }
 };
 
 module.exports = {
@@ -66,5 +140,6 @@ module.exports = {
   obtenerUsuarios,
   obtenerUsuarioPorId,
   actualizarUsuario,
-  eliminarUsuario
+  eliminarUsuario,
+  cambiarEstadoUsuario
 };

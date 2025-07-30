@@ -1,10 +1,11 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path'); // ✅ necesario para construir rutas absolutas
 const app = express();
 
-// 👉 Para servir archivos estáticos (como las fotos subidas)
-app.use('/uploads', express.static('uploads'));
+// 👉 Servir archivos estáticos (como imágenes de perfil)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 👉 Importa y usa tu app principal (rutas, middlewares, etc.)
 const mainApp = require('./app');

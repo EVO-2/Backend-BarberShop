@@ -9,6 +9,12 @@ const ClienteSchema = new Schema({
   },
   telefono: { type: String },
   direccion: { type: String },
+  genero: {
+    type: String,
+    enum: ['masculino', 'femenino', 'otro'],
+    default: 'otro'
+  },
+  fecha_nacimiento: { type: Date },
   fechaAlta: { type: Date, default: Date.now },
   estado: { type: Boolean, default: true }
 }, {
