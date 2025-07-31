@@ -1,4 +1,3 @@
-// src/routes/auth.routes.js
 const { Router } = require('express');
 const { check } = require('express-validator');
 const {
@@ -7,11 +6,13 @@ const {
   obtenerPerfil,
   actualizarPerfil,
   obtenerPerfilPeluquero,
-  actualizarPerfilPeluquero
+  actualizarPerfilPeluquero,
+  verificarCorreoExistente
 } = require('../controllers/auth.controller');
+
 const validarCampos = require('../middlewares/validarCampos');
 const { validarJWT } = require('../middlewares/validarJWT');
-const upload = require('../middlewares/uploadFoto'); 
+const upload = require('../middlewares/uploadFoto');
 
 const router = Router();
 
@@ -30,16 +31,19 @@ router.post('/registro', [
   validarCampos
 ], registro);
 
-// 👤 Perfil de Usuario (general: cliente o peluquero)
+// 🔍 Verificar si el correo ya existe (asyncValidator desde Angular)
+router.post('/verificar-correo', verificarCorreoExistente);
+
+// 👤 Perfil general (cliente o peluquero)
 router.get('/perfil', validarJWT, obtenerPerfil);
 
-// ✅ Actualizar perfil con foto (cliente o peluquero)
+// 🔄 Actualizar perfil con foto (cliente o peluquero)
 router.put('/perfil', validarJWT, upload.single('foto'), actualizarPerfil);
 
 // ✂️ Perfil extendido de peluquero
 router.get('/peluquero', validarJWT, obtenerPerfilPeluquero);
 
-// ✂️ Actualizar perfil extendido de peluquero (incluye imagen)
+// ✂️ Actualizar perfil de peluquero (incluye imagen)
 router.put('/peluquero', validarJWT, upload.single('foto'), actualizarPerfilPeluquero);
 
 module.exports = router;

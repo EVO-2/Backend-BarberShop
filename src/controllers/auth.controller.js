@@ -128,6 +128,18 @@ const registro = async (req, res) => {
 };
 
 
+const verificarCorreoExistente = async (req, res) => {
+  const { correo } = req.body;
+
+  try {
+    const existe = await Usuario.findOne({ where: { correo } });
+    res.json({ existe: !!existe });
+  } catch (error) {
+    console.error('Error al verificar correo:', error);
+    res.status(500).json({ msg: 'Error al verificar el correo' });
+  }
+};
+
 // GET /api/auth/perfil
 const obtenerPerfil = async (req, res) => {
   try {
@@ -276,5 +288,6 @@ module.exports = {
   obtenerPerfil,
   actualizarPerfil,
   obtenerPerfilPeluquero,
-  actualizarPerfilPeluquero
+  actualizarPerfilPeluquero,
+  verificarCorreoExistente
 };
