@@ -48,6 +48,30 @@ const actualizarUsuario = async (req, res) => {
   }
 };
 
+// ======================= Actualizar usuario Id =======================
+const obtenerUsuarioPorId = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const usuario = await Usuario.findById(id).lean();
+
+    if (!usuario) return res.status(404).json({ msg: 'Usuario no encontrado' });
+
+    if (usuario.rol === 'barbero') {
+      const peluquero = await Peluquero.findOne({ usuario: id })
+        .populate('sede puestoTrabajo')
+        .lean();
+
+      usuario.peluquero = peluquero;
+    }
+
+    res.json(usuario);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ msg: 'Error al obtener el usuario' });
+  }
+};
+
 // ======================= Eliminar (Soft Delete) usuario =======================
 const eliminarUsuario = async (req, res) => {
   try {
@@ -102,6 +126,7 @@ module.exports = {
   crearUsuario,
   listarUsuarios,
   obtenerUsuario,
+  obtenerUsuarioPorId,
   actualizarUsuario,
   eliminarUsuario,
   cambiarEstadoUsuario,

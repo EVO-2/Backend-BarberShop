@@ -19,7 +19,7 @@ const PeluqueroSchema = new Schema({
     type: String,
     default: ''
   },
-  direccion: {
+  direccion_profesional: { 
     type: String,
     default: ''
   },
