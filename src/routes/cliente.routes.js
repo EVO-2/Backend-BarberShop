@@ -1,16 +1,18 @@
-// routes/cliente.routes.js
 const { Router } = require('express');
-const ctr = require('../controllers/cliente.controller');
+const { validarJWT } = require('../middlewares/validarJWT');
+const upload = require('../middlewares/uploadFoto');
+
+const {
+  obtenerPerfilCliente,
+  actualizarPerfilCliente
+} = require('../controllers/cliente.controller');
+
 const router = Router();
-const { validarJWT } = require('../middlewares/validarJWT');  
-const { tieneRol }   = require('../middlewares/validarRol');  
 
+// 📄 Obtener perfil cliente
+router.get('/perfil', validarJWT, obtenerPerfilCliente);
 
-router.get('/', ctr.listarClientes);
-router.get('/:id', ctr.obtenerCliente);
-router.post('/', ctr.crearCliente);
-router.put('/:id', ctr.actualizarCliente);
-router.patch('/:id/estado', ctr.actualizarEstado);
-router.delete('/:id', ctr.eliminarCliente);
+// 🔄 Actualizar perfil cliente (con imagen)
+router.put('/perfil', validarJWT, upload.single('foto'), actualizarPerfilCliente);
 
 module.exports = router;

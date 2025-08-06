@@ -4,34 +4,26 @@ const Cliente = require('../models/Cliente.model');
 const Peluquero = require('../models/Peluquero.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const path = require('path');
 
 const login = async (req, res) => {
   try {
-    console.log('🔐 Login payload:', req.body); // Muestra lo que llega desde Angular
     const usuario = await Usuario.findOne({ correo: req.body.correo })
       .select('+password')
       .populate('rol', 'nombre');
 
     if (!usuario || !usuario.estado) {
-      console.log('❌ Usuario no encontrado o inactivo');
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
     const validPassword = await bcrypt.compare(req.body.password, usuario.password);
-    console.log('🔑 Contraseña enviada:', req.body.password);
-    console.log('🔒 Contraseña hash:', usuario.password);
-    console.log('✅ ¿Contraseña válida?', validPassword);
     if (!validPassword) {
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
     }
 
-    const rolNombre = usuario.rol?.nombre;
-
     const token = jwt.sign(
       {
         uid: usuario._id,
-        rol: rolNombre,
+        rol: usuario.rol?.nombre,
         nombre: usuario.nombre,
         foto: usuario.foto
       },
@@ -46,7 +38,7 @@ const login = async (req, res) => {
       usuario: {
         id: usuario._id,
         nombre: usuario.nombre,
-        rol: rolNombre,
+        rol: usuario.rol?.nombre,
         foto: usuario.foto
       },
       token,
@@ -54,7 +46,6 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al iniciar sesión:', error);
     res.status(500).json({ mensaje: 'Error al iniciar sesión', error: error.message });
   }
 };
@@ -84,18 +75,16 @@ const registro = async (req, res) => {
       return res.status(500).json({ mensaje: 'No se encontró el rol cliente' });
     }
 
-    // ⚠️ No hashees manualmente la contraseña
     const nuevoUsuario = new Usuario({
       nombre,
       correo,
-      password, // 🔐 Será hasheada automáticamente por el middleware pre('save')
+      password,
       rol: rolCliente._id
     });
 
     await nuevoUsuario.save();
 
-    const nuevoCliente = new Cliente({ usuario: nuevoUsuario._id });
-    await nuevoCliente.save();
+    await Cliente.create({ usuario: nuevoUsuario._id });
 
     const token = jwt.sign(
       {
@@ -122,110 +111,82 @@ const registro = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al registrar usuario:', error);
     res.status(500).json({ mensaje: 'Error al registrar usuario', error: error.message });
   }
 };
-
 
 const verificarCorreoExistente = async (req, res) => {
   const { correo } = req.body;
 
   try {
-    const existe = await Usuario.findOne({ where: { correo } });
+    const existe = await Usuario.findOne({ correo });
     res.json({ existe: !!existe });
   } catch (error) {
-    console.error('Error al verificar correo:', error);
-    res.status(500).json({ msg: 'Error al verificar el correo' });
+    res.status(500).json({ mensaje: 'Error al verificar el correo', error: error.message });
   }
 };
 
-// GET /api/auth/perfil
 const obtenerPerfil = async (req, res) => {
   try {
     const usuario = await Usuario.findById(req.uid).select('-password').populate('rol');
 
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
 
-    const rolNombre = usuario.rol?.nombre;
     let datosRol = null;
+    const rol = usuario.rol?.nombre;
 
-    if (rolNombre === 'cliente') {
+    if (rol === 'cliente') {
       datosRol = await Cliente.findOne({ usuario: usuario._id });
-    } else if (rolNombre === 'peluquero') {
+    } else if (rol === 'barbero') {
       datosRol = await Peluquero.findOne({ usuario: usuario._id });
     }
 
     return res.json({ usuario, datosRol });
   } catch (error) {
-    return res.status(500).json({ mensaje: 'Error al obtener perfil', error });
+    return res.status(500).json({ mensaje: 'Error al obtener perfil', error: error.message });
   }
 };
 
-// PUT /api/auth/perfil
 const actualizarPerfil = async (req, res) => {
   try {
-    const usuarioId = req.usuario.id;
-    const usuario = await Usuario.findByPk(usuarioId, {
-      include: ['cliente', 'peluquero']
-    });
+    const usuario = await Usuario.findById(req.uid).populate('rol');
+    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
 
-    if (!usuario) {
-      return res.status(404).json({ msg: 'Usuario no encontrado' });
-    }
-
-    // Actualizar datos comunes
     const { nombre, password } = req.body;
-    if (nombre) usuario.nombre = nombre;
-    if (password) usuario.password = await Usuario.hashPassword(password);
 
-    // Foto
-    if (req.file) {
-      usuario.foto = req.file.filename;
-    }
+    if (nombre) usuario.nombre = nombre;
+    if (password) usuario.password = password;
+    if (req.file) usuario.foto = req.file.filename;
 
     await usuario.save();
 
-    // Actualizar datos específicos por rol
-    const rol = usuario.rol;
+    const rolNombre = usuario.rol?.nombre;
 
-    if (rol === 'cliente') {
+    if (rolNombre === 'cliente') {
       const { telefono, direccion } = req.body;
-      if (usuario.cliente) {
-        if (telefono) usuario.cliente.telefono = telefono;
-        if (direccion) usuario.cliente.direccion = direccion;
-        await usuario.cliente.save();
+      const cliente = await Cliente.findOne({ usuario: usuario._id });
+      if (cliente) {
+        if (telefono) cliente.telefono = telefono;
+        if (direccion) cliente.direccion = direccion;
+        await cliente.save();
+      }
+    } else if (rolNombre === 'barbero') {
+      const { especialidades, telefono_profesional, direccion_profesional } = req.body;
+      const peluquero = await Peluquero.findOne({ usuario: usuario._id });
+      if (peluquero) {
+        if (especialidades) peluquero.especialidades = especialidades;
+        if (telefono_profesional) peluquero.telefono_profesional = telefono_profesional;
+        if (direccion_profesional) peluquero.direccion_profesional = direccion_profesional;
+        await peluquero.save();
       }
     }
 
-    if (rol === 'peluquero') {
-      const { especialidades, telefono, bio } = req.body;
-      if (usuario.peluquero) {
-        if (especialidades) usuario.peluquero.especialidades = especialidades;
-        if (telefono) usuario.peluquero.telefono = telefono;
-        if (bio) usuario.peluquero.bio = bio;
-        await usuario.peluquero.save();
-      }
-    }
-
-    res.json({
-      msg: 'Perfil actualizado correctamente',
-      usuario: {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        foto: usuario.foto,
-        rol: usuario.rol,
-        ...(usuario.cliente && { cliente: usuario.cliente }),
-        ...(usuario.peluquero && { peluquero: usuario.peluquero })
-      }
-    });
+    res.json({ mensaje: 'Perfil actualizado correctamente' });
   } catch (error) {
-    console.error('Error al actualizar perfil:', error);
-    res.status(500).json({ msg: 'Error interno al actualizar perfil' });
+    res.status(500).json({ mensaje: 'Error al actualizar perfil', error: error.message });
   }
 };
 
-// GET /api/auth/peluquero
 const obtenerPerfilPeluquero = async (req, res) => {
   try {
     const peluquero = await Peluquero.findOne({ usuario: req.uid })
@@ -239,19 +200,17 @@ const obtenerPerfilPeluquero = async (req, res) => {
 
     res.json({ peluquero });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: 'Error al obtener perfil de peluquero' });
+    res.status(500).json({ mensaje: 'Error al obtener perfil de peluquero', error: error.message });
   }
 };
 
-// PUT /api/auth/peluquero
 const actualizarPerfilPeluquero = async (req, res) => {
   try {
     const usuarioId = req.uid;
     const {
       especialidades,
       experiencia,
-      direccion,
+      direccion_profesional,
       telefono_profesional,
       sede,
       puestoTrabajo
@@ -265,20 +224,16 @@ const actualizarPerfilPeluquero = async (req, res) => {
 
     peluquero.especialidades = especialidades || peluquero.especialidades;
     peluquero.experiencia = experiencia ?? peluquero.experiencia;
-    peluquero.direccion = direccion || peluquero.direccion;
+    peluquero.direccion_profesional = direccion_profesional || peluquero.direccion_profesional;
     peluquero.telefono_profesional = telefono_profesional || peluquero.telefono_profesional;
     peluquero.sede = sede || peluquero.sede;
     peluquero.puestoTrabajo = puestoTrabajo || peluquero.puestoTrabajo;
 
     await peluquero.save();
 
-    res.json({
-      mensaje: 'Perfil de peluquero actualizado correctamente',
-      peluquero
-    });
+    res.json({ mensaje: 'Perfil de peluquero actualizado correctamente', peluquero });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: 'Error al actualizar perfil de peluquero' });
+    res.status(500).json({ mensaje: 'Error al actualizar perfil de peluquero', error: error.message });
   }
 };
 
