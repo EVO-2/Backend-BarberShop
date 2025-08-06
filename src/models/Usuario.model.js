@@ -2,16 +2,45 @@ const { Schema, model } = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UsuarioSchema = new Schema({
-  nombre:    { type: String, required: true },
-  correo:    { type: String, required: true, unique: true },
-  password:  { type: String, required: true }, // ← eliminamos select: false
-  rol:       { type: Schema.Types.ObjectId, ref: 'Rol', required: true },
-  foto:      { type: String, default: '' },
-  estado:    { type: Boolean, default: true },
+  nombre: {
+    type: String,
+    required: true,
+    match: [/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, 'El nombre solo debe contener letras y espacios']
+  },
+  correo: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  rol: {
+    type: Schema.Types.ObjectId,
+    ref: 'Rol',
+    required: true
+  },
+  foto: {
+    type: String,
+    default: ''
+  },
+  estado: {
+    type: Boolean,
+    default: true
+  },
 
   // Relaciones uno a uno con Cliente y Peluquero
-  cliente:   { type: Schema.Types.ObjectId, ref: 'Cliente', default: null },
-  peluquero: { type: Schema.Types.ObjectId, ref: 'Peluquero', default: null }
+  cliente: {
+    type: Schema.Types.ObjectId,
+    ref: 'Cliente',
+    default: null
+  },
+  peluquero: {
+    type: Schema.Types.ObjectId,
+    ref: 'Peluquero',
+    default: null
+  }
 
 }, {
   timestamps: true

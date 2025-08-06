@@ -7,7 +7,10 @@ const ClienteSchema = new Schema({
     required: true,
     unique: true // Uno a uno
   },
-  telefono: { type: String },
+  telefono: {
+    type: String,
+    match: [/^\d{10}$/, 'El número de teléfono debe tener exactamente 10 dígitos']
+  },
   direccion: { type: String },
   genero: {
     type: String,
