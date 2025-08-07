@@ -5,7 +5,7 @@ const {
   listarUsuarios,
   obtenerUsuarioPorId,
   crearUsuario,
-  actualizarUsuario,
+  actualizarUsuario, // ✅ Este es el que actualizará Usuario + Detalles (Peluquero)
   eliminarUsuario,
   cambiarEstadoUsuario,
   subirFotoPerfil
@@ -44,7 +44,7 @@ router.post('/', [
   validarCampos
 ], crearUsuario);
 
-// =================== Actualizar usuario ===================
+// =================== Actualizar usuario (INCLUYE DETALLES PELUQUERO) ===================
 router.put('/:id', [
   validarJWT,
   tieneRol('admin'),
@@ -52,8 +52,9 @@ router.put('/:id', [
   body('nombre').optional().notEmpty().withMessage('El nombre no puede estar vacío'),
   body('correo').optional().isEmail().withMessage('El correo no es válido'),
   body('rol').optional().notEmpty().withMessage('El rol no puede estar vacío'),
+  body('detalles').optional().isObject().withMessage('Los detalles deben ser un objeto válido'),
   validarCampos
-], actualizarUsuario);
+], actualizarUsuario); 
 
 // =================== Eliminar usuario (Soft Delete) ===================
 router.delete('/:id', [
@@ -80,5 +81,6 @@ router.post('/:id/foto', [
   validarCampos,
   upload.single('foto')
 ], subirFotoPerfil);
+
 
 module.exports = router;

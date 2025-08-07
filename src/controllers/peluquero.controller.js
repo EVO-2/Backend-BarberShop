@@ -1,11 +1,12 @@
 const Peluquero = require('../models/Peluquero.model');
 const Usuario = require('../models/Usuario.model');
+const PuestoTrabajo = require('../models/puestoTrabajo.model');
 
 // ✅ Crear Peluquero (asociado a un usuario existente)
 const crearPeluquero = async (req, res) => {
   try {
     const {
-      usuario,  // ID del usuario
+      usuario,
       especialidades,
       experiencia,
       telefono_profesional,
@@ -34,6 +35,9 @@ const crearPeluquero = async (req, res) => {
     });
 
     await nuevoPeluquero.save();
+
+    // Asignar puesto al peluquero
+    await PuestoTrabajo.findByIdAndUpdate(puestoTrabajo, { peluquero: nuevoPeluquero._id });
 
     res.status(201).json(nuevoPeluquero);
   } catch (error) {
@@ -70,7 +74,7 @@ const obtenerPeluqueroPorId = async (req, res) => {
   }
 };
 
-// ✅ Actualizar Peluquero
+// ✅ Actualizar Peluquero (con validación de puesto)
 const actualizarPeluquero = async (req, res) => {
   try {
     const {
@@ -89,6 +93,21 @@ const actualizarPeluquero = async (req, res) => {
       return res.status(404).json({ mensaje: 'Peluquero no encontrado' });
     }
 
+    const puestoAnteriorId = peluquero.puestoTrabajo ? peluquero.puestoTrabajo.toString() : null;
+
+    // Si el puesto cambia, validar si el nuevo puesto está ocupado por otro peluquero
+    if (puestoTrabajo !== puestoAnteriorId) {
+      const puestoOcupado = await PuestoTrabajo.findOne({
+        _id: puestoTrabajo,
+        peluquero: { $ne: peluquero._id }
+      });
+
+      if (puestoOcupado && puestoOcupado.peluquero) {
+        return res.status(400).json({ mensaje: 'El puesto seleccionado ya está ocupado por otro peluquero.' });
+      }
+    }
+
+    // Actualizar datos del peluquero
     peluquero.especialidades = especialidades ?? peluquero.especialidades;
     peluquero.experiencia = experiencia ?? peluquero.experiencia;
     peluquero.telefono_profesional = telefono_profesional ?? peluquero.telefono_profesional;
@@ -99,6 +118,14 @@ const actualizarPeluquero = async (req, res) => {
     peluquero.puestoTrabajo = puestoTrabajo ?? peluquero.puestoTrabajo;
 
     await peluquero.save();
+
+    // Si el puesto cambió, liberar el anterior y asignar el nuevo
+    if (puestoTrabajo !== puestoAnteriorId) {
+      if (puestoAnteriorId) {
+        await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
+      }
+      await PuestoTrabajo.findByIdAndUpdate(puestoTrabajo, { peluquero: peluquero._id });
+    }
 
     res.json({ mensaje: 'Peluquero actualizado correctamente', peluquero });
   } catch (error) {
