@@ -1,25 +1,25 @@
-const { Schema, model } = require('mongoose');
+const mongoose = require('mongoose');
 
-const PuestoTrabajoSchema = new Schema({
+const PuestoTrabajoSchema = new mongoose.Schema({
   nombre: {
     type: String,
     required: true
   },
   sede: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Sede',
     required: true
   },
   peluquero: {
-    type: Schema.Types.ObjectId,
-    ref: 'Peluquero'
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Peluquero',
+    default: null
   },
   estado: {
     type: Boolean,
     default: true
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-module.exports = model('PuestoTrabajo', PuestoTrabajoSchema);
+// ✅ Corrección para evitar OverwriteModelError:
+module.exports = mongoose.models.PuestoTrabajo || mongoose.model('PuestoTrabajo', PuestoTrabajoSchema);
