@@ -3,6 +3,7 @@ const Usuario = require('../models/Usuario.model');
 const Rol = require('../models/Rol.model');
 const Cliente = require('../models/Cliente.model');
 const Peluquero = require('../models/Peluquero.model');
+const PuestoTrabajo = require('../models/PuestoTrabajo');
 const usuarioController = require('../controllers/usuario.controller');
 const express = require('express');
 const router = express.Router();
@@ -181,6 +182,28 @@ const cambiarEstadoUsuario = async (id, estado) => {
   } catch (error) {
     throw new Error(`Error al cambiar estado del usuario: ${error.message}`);
   }
+};
+
+/* ========================== */
+/*     Verificar Puesto       */
+/* ========================== */
+const verificarPuesto = async (puestoId, usuarioId) => {
+  if (!mongoose.Types.ObjectId.isValid(puestoId)) {
+    throw new Error('ID de puesto inválido');
+  }
+
+  const puesto = await PuestoTrabajo.findById(puestoId).populate('peluquero');
+
+  if (!puesto) {
+    throw new Error('Puesto no encontrado');
+  }
+
+  // Disponible si no tiene peluquero asignado o si es del mismo usuario
+  if (!puesto.peluquero || puesto.peluquero.usuario.toString() === usuarioId) {
+    return { disponible: true };
+  }
+
+  return { disponible: false };
 };
 
 module.exports = {
