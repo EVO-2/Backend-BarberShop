@@ -46,7 +46,22 @@ const actualizarPerfilCliente = async (req, res) => {
   }
 };
 
+// Listar todos los clientes (para dropdown en reservas)
+const obtenerClientes = async (req, res) => {
+  try {
+    const clientes = await Cliente.find()
+      .populate('usuario', 'nombre correo')
+      .lean();
+
+    res.json(clientes);
+  } catch (error) {
+    console.error('❌ Error al obtener clientes:', error);
+    res.status(500).json({ mensaje: 'Error al obtener clientes' });
+  }
+};
+
 module.exports = {
   obtenerPerfilCliente,
-  actualizarPerfilCliente
+  actualizarPerfilCliente,
+  obtenerClientes
 };

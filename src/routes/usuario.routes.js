@@ -5,10 +5,11 @@ const {
   listarUsuarios,
   obtenerUsuarioPorId,
   crearUsuario,
-  actualizarUsuario, // ✅ Este es el que actualizará Usuario + Detalles (Peluquero)
+  actualizarUsuario, 
   eliminarUsuario,
   cambiarEstadoUsuario,
-  subirFotoPerfil
+  subirFotoPerfil,
+  verificarPuesto
 } = require('../controllers/usuario.controller');
 
 const validarCampos = require('../middlewares/validarCampos');
@@ -18,6 +19,11 @@ const { emailExiste } = require('../helpers/dbValidators');
 const upload = require('../middlewares/uploadFoto');
 
 const router = Router();
+
+router.get('/verificar-puesto/:puestoId', [
+   validarJWT,
+   tieneRol('admin'),
+], verificarPuesto);
 
 // =================== Obtener TODOS los usuarios ===================
 router.get('/', [

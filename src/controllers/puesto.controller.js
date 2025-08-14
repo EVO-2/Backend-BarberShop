@@ -1,49 +1,72 @@
-const PuestoTrabajo = require('../models/puestoTrabajo.model');
+const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const Peluquero = require('../models/Peluquero.model');
 
-// GET /api/puestos
+// GET /api/puestos/por-sede/:sedeId
 const obtenerPuestos = async (req, res) => {
   try {
-    const { sede_id, peluquero_id } = req.query;
+    const { sedeId } = req.params;
+    const { peluquero_id } = req.query;
 
-    if (!sede_id) {
-      return res.status(400).json({ message: 'El parámetro sede_id es obligatorio' });
+    if (!sedeId) {
+      return res.status(400).json({ message: 'El parámetro sedeId es obligatorio' });
     }
 
-    // Obtener todos los puestos activos de la sede, incluyendo sede y peluquero
-    const puestos = await PuestoTrabajo.find({ sede: sede_id, estado: true })
-      .populate('sede')
-      .populate('peluquero');
+    console.log(`📌 [obtenerPuestos] Sede: ${sedeId} | Peluquero en edición: ${peluquero_id || 'N/A'}`);
 
-    // Si no hay peluquero_id (modo crear), devolver puestos con flag "ocupado"
+    // Obtener todos los puestos activos de la sede
+    const puestos = await PuestoTrabajo.find({ sede: sedeId, estado: true })
+      .populate('sede', 'nombre')
+      .populate({ path: 'peluquero', select: '_id estado puestoTrabajo' });
+
+    console.log(`📋 [obtenerPuestos] Puestos encontrados: ${puestos.length}`);
+
+   // ========== MODO CREAR ==========
     if (!peluquero_id) {
-      const puestosLibres = puestos.map(p => ({
-        _id: p._id,
-        nombre: p.nombre,
-        sede: p.sede,
-        ocupado: !!p.peluquero // true si tiene peluquero asignado
-      }));
+      // 🔹 Filtrar solo puestos que tengan peluquero asignado y activo
+      const puestosConPeluquero = puestos.filter(
+        p => p.peluquero && p.peluquero._id && p.peluquero.estado === true
+      );
+
+      const puestosLibres = puestosConPeluquero.map(p => {
+        const peluqueroActivo = Boolean(p.peluquero && p.peluquero.estado === true);
+        const ocupado = peluqueroActivo;
+
+        console.log(
+          `🔍 [CREAR] Puesto "${p.nombre}" | Peluquero asignado: ${p.peluquero?._id || 'ninguno'} | Estado activo: ${p.peluquero?.estado || false} | Ocupado: ${ocupado}`
+        );
+
+        return {
+          _id: p._id,
+          nombre: p.nombre,
+          sede: p.sede,
+          ocupado
+        };
+      });
+
       return res.json(puestosLibres);
     }
 
-    // Obtener el peluquero en edición para permitir su propio puesto
-    const peluquero = await Peluquero.findById(peluquero_id).populate('puestoTrabajo');
-    const puestoActualId = peluquero?.puestoTrabajo?._id?.toString();
 
-    // Mapear puestos indicando si están ocupados (excepto su propio puesto actual)
+    // ========== MODO EDICIÓN ==========
     const puestosDisponibles = puestos.map(p => {
-      const peluqueroAsignado = p.peluquero?._id?.toString();
-      const esOcupadoPorOtro = peluqueroAsignado && peluqueroAsignado !== peluquero_id;
+      const esMismoPuesto = p.peluquero?._id?.toString() === peluquero_id;
+      const peluqueroActivo = Boolean(p.peluquero && p.peluquero.estado === true);
+      const ocupado = peluqueroActivo && !esMismoPuesto;
+
+      console.log(
+        `🔍 [EDITAR] Puesto "${p.nombre}" | Peluquero asignado: ${p.peluquero?._id || 'ninguno'} | Estado activo: ${p.peluquero?.estado || false} | Es mismo puesto: ${esMismoPuesto} | Ocupado: ${ocupado}`
+      );
 
       return {
         _id: p._id,
         nombre: p.nombre,
         sede: p.sede,
-        ocupado: esOcupadoPorOtro
+        ocupado
       };
     });
 
     return res.json(puestosDisponibles);
+
   } catch (error) {
     console.error('❌ Error obteniendo puestos:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });

@@ -16,9 +16,9 @@ router.use(validarJWT);
 // CRUD Peluquero
 router.post('/', crearPeluquero);
 router.get('/', obtenerPeluqueros);
-router.get('/:id', obtenerPeluqueroPorId);
-router.put('/:id', actualizarPeluquero);
 router.put('/desactivar/:id', desactivarPeluquero);
 router.put('/activar/:id', activarPeluquero);
+router.get('/:id', obtenerPeluqueroPorId); 
+router.put('/:id', actualizarPeluquero);   
 
 module.exports = router;

@@ -2,6 +2,7 @@ const Usuario = require('../models/Usuario.model');
 const Cliente = require('../models/Cliente.model');
 const Peluquero = require('../models/Peluquero.model');
 const Rol = require('../models/Rol.model');
+const PuestoTrabajo = require('../models/puestoTrabajo.model');
 const mongoose = require('mongoose');
 
 // ==========================
@@ -157,7 +158,9 @@ const actualizarUsuario = async (req, res) => {
 
     await usuario.save();
 
-    // Actualizar Cliente o Peluquero
+    // ==========================
+    //  Actualizar Cliente
+    // ==========================
     if (usuario.cliente && detalles) {
       await Cliente.findByIdAndUpdate(usuario.cliente, {
         telefono: detalles.telefono,
@@ -165,17 +168,60 @@ const actualizarUsuario = async (req, res) => {
         genero: detalles.genero,
         fecha_nacimiento: detalles.fecha_nacimiento
       });
-    } else if (usuario.peluquero && detalles) {
-      await Peluquero.findByIdAndUpdate(usuario.peluquero, {
-        telefono_profesional: detalles.telefono,
-        direccion_profesional: detalles.direccion,
-        genero: detalles.genero,
-        fecha_nacimiento: detalles.fecha_nacimiento,
-        especialidades: detalles.especialidades,
-        experiencia: detalles.experiencia,
-        sede: detalles.sede,
-        puestoTrabajo: detalles.puestoTrabajo
-      });
+    }
+
+    // ==========================
+    //  Actualizar Peluquero
+    // ==========================
+    else if (usuario.peluquero && detalles) {
+      const peluquero = await Peluquero.findById(usuario.peluquero);
+      if (!peluquero) {
+        return res.status(404).json({ message: 'Peluquero no encontrado' });
+      }
+
+      const puestoAnteriorId = peluquero.puestoTrabajo ? peluquero.puestoTrabajo.toString() : null;
+
+      // 🛑 Si el estado pasa a inactivo, liberar puesto
+      if (estado === false && peluquero.puestoTrabajo) {
+        await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
+        peluquero.puestoTrabajo = null;
+      }
+
+      // 🛑 Si el puesto cambia, validar que no esté ocupado
+      if (detalles.puestoTrabajo && detalles.puestoTrabajo !== puestoAnteriorId) {
+        const puestoOcupado = await PuestoTrabajo.findOne({
+          _id: detalles.puestoTrabajo,
+          peluquero: { $ne: peluquero._id }
+        });
+
+        if (puestoOcupado && puestoOcupado.peluquero) {
+          return res.status(400).json({ message: 'El puesto seleccionado ya está ocupado por otro peluquero.' });
+        }
+      }
+
+      // ✏️ Actualizar datos del peluquero
+      peluquero.telefono_profesional = detalles.telefono ?? peluquero.telefono_profesional;
+      peluquero.direccion_profesional = detalles.direccion ?? peluquero.direccion_profesional;
+      peluquero.genero = detalles.genero ?? peluquero.genero;
+      peluquero.fecha_nacimiento = detalles.fecha_nacimiento ?? peluquero.fecha_nacimiento;
+      peluquero.especialidades = detalles.especialidades ?? peluquero.especialidades;
+      peluquero.experiencia = detalles.experiencia ?? peluquero.experiencia;
+      peluquero.sede = detalles.sede ?? peluquero.sede;
+      peluquero.estado = estado !== undefined ? estado : peluquero.estado;
+
+      if (detalles.puestoTrabajo && estado !== false) {
+        peluquero.puestoTrabajo = detalles.puestoTrabajo;
+      }
+
+      await peluquero.save();
+
+      // 🔄 Si el puesto cambió, liberar el anterior y asignar el nuevo
+      if (detalles.puestoTrabajo && detalles.puestoTrabajo !== puestoAnteriorId && estado !== false) {
+        if (puestoAnteriorId) {
+          await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
+        }
+        await PuestoTrabajo.findByIdAndUpdate(detalles.puestoTrabajo, { peluquero: peluquero._id });
+      }
     }
 
     return res.status(200).json({ message: 'Usuario actualizado correctamente' });
@@ -246,6 +292,58 @@ const subirFotoPerfil = async (req, res) => {
   }
 };
 
+// =================== VERIFICAR PUESTO ===================
+const verificarPuesto = async (req, res) => {
+  try {
+    const { puestoId } = req.params;
+    const { usuarioId } = req.query;
+
+    console.log(`🔍 [verificarPuesto] puestoId=${puestoId} | usuarioId=${usuarioId}`);
+
+    if (!mongoose.Types.ObjectId.isValid(puestoId)) {
+      console.log('❌ [verificarPuesto] ID de puesto inválido:', puestoId);
+      return res.status(400).json({ mensaje: 'ID de puesto inválido' });
+    }
+
+    const puesto = await PuestoTrabajo.findById(puestoId)
+      .populate('peluquero', 'usuario estado'); // incluimos estado
+    if (!puesto) {
+      console.log('❌ [verificarPuesto] Puesto no encontrado:', puestoId);
+      return res.status(404).json({ mensaje: 'Puesto no encontrado' });
+    }
+
+    // Si no hay peluquero asignado
+    if (!puesto.peluquero) {
+      console.log('✅ [verificarPuesto] Puesto libre:', puestoId);
+      return res.json({ disponible: true });
+    }
+
+    // Si el peluquero asignado está inactivo => puesto libre
+    if (puesto.peluquero.estado === false) {
+      console.log('✅ [verificarPuesto] Puesto libre (peluquero inactivo):', puestoId);
+      return res.json({ disponible: true });
+    }
+
+    const peluqueroUsuarioId = puesto.peluquero.usuario
+      ? puesto.peluquero.usuario.toString()
+      : null;
+    if (usuarioId && peluqueroUsuarioId && peluqueroUsuarioId === usuarioId.toString()) {
+      console.log('✅ [verificarPuesto] Puesto asignado al mismo usuario (permitido):', puestoId);
+      return res.json({ disponible: true });
+    }
+
+    // Ocupado por otro peluquero activo
+    console.log('⚠️ [verificarPuesto] Puesto ocupado por otro peluquero activo:', puestoId);
+    return res.json({ disponible: false });
+
+  } catch (error) {
+    console.error('💥 [verificarPuesto] Error:', error);
+    return res.status(500).json({ mensaje: 'Error en el servidor' });
+  }
+};
+
+
+
 module.exports = {
   listarUsuarios,
   obtenerUsuarioPorId,
@@ -253,5 +351,6 @@ module.exports = {
   actualizarUsuario,
   eliminarUsuario,
   cambiarEstadoUsuario,
-  subirFotoPerfil
+  subirFotoPerfil,
+  verificarPuesto
 };
