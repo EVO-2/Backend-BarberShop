@@ -1,24 +1,29 @@
-const { Schema, model } = require('mongoose');
+const { Schema, model, models } = require('mongoose');
 
 const SedeSchema = new Schema({
   nombre: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    trim: true 
   },
   direccion: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   telefono: {
-    type: String
+    type: String,
+    trim: true
   },
   estado: {
     type: Boolean,
     default: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false 
 });
 
-module.exports = model('Sede', SedeSchema);
+// ✅ Corrección para evitar OverwriteModelError
+module.exports = models.Sede || model('Sede', SedeSchema);

@@ -1,6 +1,6 @@
 const Peluquero = require('../models/Peluquero.model');
 const Usuario = require('../models/Usuario.model');
-const PuestoTrabajo = require('../models/puestoTrabajo.model');
+const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 
 // ✅ Crear Peluquero (asociado a un usuario existente)
 const crearPeluquero = async (req, res) => {
