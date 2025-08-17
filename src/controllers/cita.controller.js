@@ -115,6 +115,8 @@ const crearCita = async (req, res) => {
       puestoTrabajo: puestoTrabajo || null,
       fechaInicio,
       fechaFin,
+      fecha: fechaInicio.toISOString(),      
+      fechaBase: fechaInicio.toISOString(),  
       turno,
       estado: 'pendiente',
     });
@@ -126,6 +128,7 @@ const crearCita = async (req, res) => {
     return res.status(500).json({ mensaje: error.message || 'Error interno del servidor' });
   }
 };
+
 
 // Obtener todas las citas
 const obtenerCitas = async (_req, res) => {

@@ -15,8 +15,16 @@ const obtenerPuestos = async (req, res) => {
 
     // Obtener todos los puestos activos de la sede
     const puestos = await PuestoTrabajo.find({ sede: sedeId, estado: true })
-      .populate('sede', 'nombre')
-      .populate({ path: 'peluquero', select: '_id estado puestoTrabajo' });
+    .populate('sede', 'nombre')
+    .populate({
+      path: 'peluquero',
+      select: '_id estado puestoTrabajo usuario',
+      populate: {
+        path: 'usuario',
+        select: 'nombre apellido'
+      }
+    });
+
 
     console.log(`📋 [obtenerPuestos] Puestos encontrados: ${puestos.length}`);
 

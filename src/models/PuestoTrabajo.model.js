@@ -1,17 +1,18 @@
-const mongoose = require('mongoose');
+const { Schema, model, models } = require('mongoose');
 
-const PuestoTrabajoSchema = new mongoose.Schema({
+const PuestoTrabajoSchema = new Schema({
   nombre: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   sede: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Sede',
     required: true
   },
   peluquero: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Peluquero',
     default: null
   },
@@ -19,7 +20,12 @@ const PuestoTrabajoSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   }
-}, { timestamps: true });
+}, {
+  timestamps: true,
+  versionKey: false
+});
 
-// ✅ Corrección para evitar OverwriteModelError:
-module.exports = mongoose.models.PuestoTrabajo || mongoose.model('PuestoTrabajo', PuestoTrabajoSchema);
+// ✅ índice compuesto nombre+sede
+PuestoTrabajoSchema.index({ nombre: 1, sede: 1 }, { unique: true });
+
+module.exports = models.PuestoTrabajo || model('PuestoTrabajo', PuestoTrabajoSchema);
