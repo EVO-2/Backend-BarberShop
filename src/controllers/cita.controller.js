@@ -1,139 +1,25 @@
 // controllers/cita.controller.js
 
-// ===================== imports =====================
-const Cliente        = require('../models/Cliente.model');
-const Peluquero      = require('../models/Peluquero.model');
-const Servicio       = require('../models/Servicio.model');
-const Sede           = require('../models/Sede.model');
-const PuestoTrabajo  = require('../models/PuestoTrabajo.model');
-const Pago           = require('../models/Pago.model');
-const Cita           = require('../models/Cita.model');
-
-const CITA_POPULATE = [
-  {
-    path: 'cliente',
-    select: 'telefono direccion',
-    populate: { path: 'usuario', select: 'nombre correo foto' },
-  },
-  {
-    path: 'peluquero',
-    populate: { path: 'usuario', select: 'nombre correo foto' },
-  },
-  { path: 'servicios', select: 'nombre precio duracion estado' },
-  { path: 'sede', select: 'nombre direccion' },
-  { path: 'puestoTrabajo', select: 'nombre' },
-  { path: 'pago', select: 'monto metodo estado' },
-];
-
-const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'en_proceso'];
-
-// ===================== funciones auxiliares =====================
-
-// Suma duración total en minutos
-async function calcularDuracionTotal(serviciosIds = []) {
-  if (!Array.isArray(serviciosIds) || serviciosIds.length === 0) return 0;
-  const servicios = await Servicio.find({ _id: { $in: serviciosIds }, estado: true }).lean();
-  if (servicios.length !== serviciosIds.length) {
-    throw new Error('Uno o más servicios no existen o están inactivos');
-  }
-  return servicios.reduce((acc, s) => acc + (s.duracion || 0), 0);
-}
-
-// Verifica solape [inicio, fin) para peluquero y/o puesto en la sede
-async function existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fechaFin, excluirId = null }) {
-  const or = [];
-  if (peluquero) or.push({ peluquero });
-  if (puestoTrabajo) or.push({ puestoTrabajo });
-
-  const base = {
-    sede,
-    estado: { $in: ESTADOS_ACTIVOS },
-    fechaInicio: { $lt: fechaFin },
-    fechaFin: { $gt: fechaInicio },
-  };
-  if (excluirId) base._id = { $ne: excluirId };
-  const filtro = or.length ? { ...base, $or: or } : base;
-
-  return Boolean(await Cita.exists(filtro));
-}
-
-// Validar referencias de cliente, peluquero, sede y puesto
-async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
-  const [cli, sed] = await Promise.all([
-    Cliente.findById(cliente).lean(),
-    Sede.findOne({ _id: sede, estado: true }).lean()
-  ]);
-  if (!cli) throw new Error('Cliente no válido');
-  if (!sed) throw new Error('Sede no válida o inactiva');
-
-  if (peluquero) {
-    const pel = await Peluquero.findById(peluquero).lean();
-    if (!pel) throw new Error('Peluquero no válido');
-  }
-
-  if (puestoTrabajo) {
-    const puesto = await PuestoTrabajo.findOne({ _id: puestoTrabajo, estado: true }).lean();
-    if (!puesto) throw new Error('Puesto de trabajo no válido o inactivo');
-    if (puesto.sede?.toString() !== sede.toString()) {
-      throw new Error('El puesto de trabajo no pertenece a la sede seleccionada');
-    }
-  }
-}
+const CitaService = require('../services/cita.service');
+const Servicio = require('../models/Servicio.model'); // <--- agregado para obtenerServicios
 
 // ===================== controladores =====================
 
 // Crear nueva cita
 const crearCita = async (req, res) => {
   try {
-    const { cliente, peluquero, servicios = [], sede, puestoTrabajo, fecha } = req.body;
-    if (!cliente || !sede || !fecha) {
-      return res.status(400).json({ mensaje: 'cliente, sede y fecha son obligatorios' });
-    }
-
-    await validarReferencias({ cliente, peluquero, sede, puestoTrabajo });
-
-    const duracionMin = await calcularDuracionTotal(servicios);
-    const fechaInicio = new Date(fecha);
-    const fechaFin = new Date(fechaInicio.getTime() + (duracionMin || 30) * 60 * 1000);
-
-    const haySolape = await existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fechaFin });
-    if (haySolape) return res.status(400).json({ mensaje: 'Horario no disponible (solapado con otra cita)' });
-
-    const turno = await Cita.find({ 
-      sede, 
-      fechaInicio: { $gte: new Date(fechaInicio.setHours(0,0,0,0)), $lte: new Date(fechaInicio.setHours(23,59,59,999)) } 
-    })
-      .sort({ turno: -1 })
-      .limit(1)
-      .then(r => (r[0]?.turno || 0) + 1);
-
-    const nuevaCita = await Cita.create({
-      cliente,
-      peluquero: peluquero || null,
-      servicios,
-      sede,
-      puestoTrabajo: puestoTrabajo || null,
-      fechaInicio,
-      fechaFin,
-      fecha: fechaInicio.toISOString(),      
-      fechaBase: fechaInicio.toISOString(),  
-      turno,
-      estado: 'pendiente',
-    });
-
-    const citaConDatos = await Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
-    return res.status(201).json(citaConDatos);
+    const cita = await CitaService.crearCita(req.body);
+    return res.status(201).json(cita);
   } catch (error) {
     console.error('❌ Error al crear cita:', error);
-    return res.status(500).json({ mensaje: error.message || 'Error interno del servidor' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error interno del servidor' });
   }
 };
 
-
-// Obtener todas las citas
+// Obtener todas las citas (admin)
 const obtenerCitas = async (_req, res) => {
   try {
-    const citas = await Cita.find().populate(CITA_POPULATE).lean();
+    const citas = await CitaService.obtenerCitas();
     return res.json(citas);
   } catch (error) {
     console.error('❌ Error al obtener citas:', error);
@@ -141,194 +27,167 @@ const obtenerCitas = async (_req, res) => {
   }
 };
 
-// Obtener citas del usuario logueado (cliente, barbero o admin)
+// Obtener citas del usuario logueado
 const obtenerMisCitas = async (req, res) => {
   try {
-    const { rol, uid } = req;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    let filtro = {};
-    if (rol === 'cliente') {
-      const cliente = await Cliente.findOne({ usuario: uid }).lean();
-      if (!cliente) return res.status(404).json({ mensaje: 'Cliente no encontrado' });
-      filtro.cliente = cliente._id;
-    } else if (rol === 'barbero') {
-      const peluquero = await Peluquero.findOne({ usuario: uid }).lean();
-      if (!peluquero) return res.status(404).json({ mensaje: 'Peluquero no encontrado' });
-      filtro.peluquero = peluquero._id;
-    }
-
-    // filtro opcional por fecha
-    if (req.query.fecha) {
-      const fechaInicio = new Date(req.query.fecha);
-      fechaInicio.setHours(0, 0, 0, 0);
-      const fechaFin = new Date(req.query.fecha);
-      fechaFin.setHours(23, 59, 59, 999);
-      filtro.fechaInicio = { $gte: fechaInicio, $lte: fechaFin };
-    }
-
-    const total = await Cita.countDocuments(filtro);
-    const citas = await Cita.find(filtro)
-      .populate(CITA_POPULATE)
-      .sort({ fechaInicio: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-
-    return res.json({
-      total,
-      pagina: page,
-      totalPaginas: Math.ceil(total / limit),
-      citas
-    });
+    const { uid, rol } = req;
+    const { page = 1, limit = 10, fecha } = req.query;
+    const resultado = await CitaService.obtenerMisCitas({ uid, rol, page, limit, fecha });
+    return res.json(resultado);
   } catch (error) {
     console.error('❌ Error al obtenerMisCitas:', error);
     return res.status(500).json({ mensaje: 'Error al obtener citas' });
   }
 };
 
-// ===================== obtener una cita por ID ===========================
+// Obtener una cita por ID
 const obtenerCitaPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const cita = await Cita.findById(id).populate(CITA_POPULATE).lean();
-    if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    const cita = await CitaService.obtenerCitaPorId(id);
     return res.json(cita);
   } catch (error) {
     console.error('❌ Error al obtenerCitaPorId:', error);
-    return res.status(500).json({ mensaje: 'Error al obtener la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener la cita' });
   }
 };
 
-// ===================== actualizar una cita ===============================
+// Actualizar cita
 const actualizarCita = async (req, res) => {
   try {
     const { id } = req.params;
-    const { servicios, sede, puestoTrabajo, peluquero, fecha } = req.body;
-
-    // Verificar que la cita existe
-    const citaBase = await Cita.findById(id).lean();
-    if (!citaBase) return res.status(404).json({ mensaje: 'Cita no encontrada' });
-
-    // Validar referencias si se cambian
-    if (sede || puestoTrabajo || peluquero || servicios) {
-      await validarReferencias({
-        cliente: req.body.cliente || citaBase.cliente,
-        peluquero: peluquero ?? citaBase.peluquero,
-        sede: sede ?? citaBase.sede,
-        puestoTrabajo: puestoTrabajo ?? citaBase.puestoTrabajo,
-      });
-    }
-
-    // Recalcular fechaFin si cambia fecha o servicios
-    let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio);
-    let fechaFin = fechaInicio;
-    if (servicios) {
-      const duracion = await calcularDuracionTotal(servicios);
-      fechaFin = new Date(fechaInicio.getTime() + (duracion || 30) * 60 * 1000);
-    } else {
-      fechaFin = citaBase.fechaFin;
-    }
-
-    // Verificar solape
-    const haySolape = await existeSolape({
-      sede: sede ?? citaBase.sede,
-      peluquero: peluquero ?? citaBase.peluquero,
-      puestoTrabajo: puestoTrabajo ?? citaBase.puestoTrabajo,
-      fechaInicio,
-      fechaFin,
-      excluirId: id,
-    });
-    if (haySolape) return res.status(400).json({ mensaje: 'Horario no disponible (solapado con otra cita)' });
-
-    // Actualizar cita
-    const updateData = { ...req.body, fechaInicio, fechaFin };
-    const citaActualizada = await Cita.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
-      .populate(CITA_POPULATE);
-
+    const data = req.body;
+    const citaActualizada = await CitaService.actualizarCita(id, data);
     return res.json(citaActualizada);
   } catch (error) {
     console.error('❌ Error al actualizarCita:', error);
-    return res.status(500).json({ mensaje: error.message || 'Error al actualizar la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al actualizar la cita' });
   }
 };
 
-// ===================== cancelar una cita ================================
+// Cancelar cita
 const cancelarCita = async (req, res) => {
   try {
     const { id } = req.params;
-    const citaCancelada = await Cita.findByIdAndUpdate(id, { estado: 'cancelada' }, { new: true })
-      .populate(CITA_POPULATE);
-
-    if (!citaCancelada) return res.status(404).json({ mensaje: 'Cita no encontrada' });
-    return res.json({ mensaje: 'Cita cancelada exitosamente', cita: citaCancelada });
+    const cita = await CitaService.cancelarCita(id);
+    return res.json({ mensaje: 'Cita cancelada exitosamente', cita });
   } catch (error) {
     console.error('❌ Error al cancelarCita:', error);
-    return res.status(500).json({ mensaje: 'Error al cancelar la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al cancelar la cita' });
   }
 };
 
-// ===================== finalizar una cita =================================
+// Finalizar cita
 const finalizarCita = async (req, res) => {
   try {
     const { id } = req.params;
-    const cita = await Cita.findById(id);
-    if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
-
-    // Solo citas activas pueden finalizarse
-    if (!ESTADOS_ACTIVOS.includes(cita.estado)) {
-      return res.status(400).json({ mensaje: 'Solo citas activas pueden finalizarse' });
-    }
-
-    cita.estado = 'finalizada';
-    await cita.save();
-
-    const citaFinalizada = await Cita.findById(id).populate(CITA_POPULATE);
-    return res.json({ mensaje: 'Cita finalizada correctamente', cita: citaFinalizada });
+    const cita = await CitaService.finalizarCita(id);
+    return res.json({ mensaje: 'Cita finalizada correctamente', cita });
   } catch (error) {
     console.error('❌ Error al finalizarCita:', error);
-    return res.status(500).json({ mensaje: 'Error al finalizar la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al finalizar la cita' });
   }
 };
 
-
-// Obtener citas por sede y fecha (candado dinámico)
+// Obtener citas por sede y fecha
 const getCitasPorSedeYFecha = async (req, res) => {
   try {
     const { sedeId, fecha } = req.query;
-    if (!sedeId || !fecha) {
-      return res.status(400).json({ mensaje: 'sedeId y fecha son obligatorios' });
-    }
-
-    const fechaInicio = new Date(fecha);
-    fechaInicio.setHours(0, 0, 0, 0);
-    const fechaFin = new Date(fecha);
-    fechaFin.setHours(23, 59, 59, 999);
-
-    const citas = await Cita.find({
-      sede: sedeId,
-      estado: { $in: ESTADOS_ACTIVOS },
-      fechaInicio: { $lt: fechaFin },
-      fechaFin: { $gt: fechaInicio },
-    }).populate(CITA_POPULATE).lean();
-
-    res.json(citas);
+    const citas = await CitaService.getCitasPorSedeYFecha(sedeId, fecha);
+    return res.json(citas);
   } catch (error) {
     console.error('❌ Error en getCitasPorSedeYFecha:', error);
-    res.status(500).json({ mensaje: 'Error al obtener citas por sede y fecha' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener citas por sede y fecha' });
   }
 };
 
-// ===================== exports =====================
+// Obtener citas por fecha y hora exacta
+const obtenerCitasPorFechaYHora = async (req, res) => {
+  try {
+    const { fecha, hora } = req.query;
+    const citas = await CitaService.obtenerCitasPorFechaYHora(fecha, hora);
+    return res.json(citas);
+  } catch (error) {
+    console.error('❌ Error en obtenerCitasPorFechaYHora:', error);
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener citas por fecha y hora' });
+  }
+};
+
+// Obtener citas por rango
+const obtenerCitasPorRango = async (req, res) => {
+  try {
+    const citas = await CitaService.obtenerCitasPorRango(req.query);
+    res.json(citas);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: error.message });
+  }
+};
+
+
+// Obtener todos los servicios activos
+const obtenerServicios = async (req, res) => {
+  try {
+    const servicios = await Servicio.find({ estado: true }).lean();
+    res.json(servicios);
+  } catch (error) {
+    console.error('Error al obtener servicios:', error);
+    res.status(500).json({ message: 'Error al obtener servicios' });
+  }
+};
+
+// Repetir cita
+const repetirCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha } = req.body;
+    const nuevaCita = await CitaService.repetirCita(id, fecha);
+    return res.status(201).json(nuevaCita);
+  } catch (error) {
+    console.error('❌ Error al repetirCita:', error);
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al repetir la cita' });
+  }
+};
+
+// Reprogramar cita
+const reprogramarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha } = req.body;
+    const cita = await CitaService.reprogramarCita(id, fecha);
+    return res.json({ mensaje: 'Cita reprogramada correctamente', cita });
+  } catch (error) {
+    console.error('❌ Error al reprogramarCita:', error);
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al reprogramar la cita' });
+  }
+};
+
+// Pagar cita
+const pagarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { monto, metodo } = req.body;
+    const cita = await CitaService.pagarCita(id, monto, metodo);
+    return res.json({ mensaje: 'Pago registrado correctamente', cita });
+  } catch (error) {
+    console.error('❌ Error al pagarCita:', error);
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al pagar la cita' });
+  }
+};
+
 module.exports = {
   crearCita,
   obtenerCitas,
   obtenerMisCitas,
   obtenerCitaPorId,
+  obtenerServicios,  
   actualizarCita,
   cancelarCita,
   finalizarCita,
   getCitasPorSedeYFecha,
+  obtenerCitasPorFechaYHora,
+  obtenerCitasPorRango,
+  repetirCita,
+  reprogramarCita,
+  pagarCita
 };
