@@ -78,17 +78,10 @@ router.post(
   citaController.repetirCita
 );
 
-// Cliente: reprogramar una cita existente
-router.patch(
-  '/reprogramar/:id',
-  validarJWT,
-  tieneRol(ROLES.CLIENTE),
-  citaController.reprogramarCita
-);
 
-// Cliente: pagar una cita
+// Cliente: pagar una cita (ruta alternativa más RESTful: POST /:id/pago)
 router.post(
-  '/pagar/:id',
+  '/:id/pago',
   validarJWT,
   tieneRol(ROLES.CLIENTE),
   citaController.pagarCita
@@ -110,11 +103,10 @@ router.get(
   citaController.obtenerCitasPorRango
 );
 
-
 // 🔹  obtener todos los servicios activos
 router.get(
   '/servicios',
-  validarJWT, 
+  validarJWT,
   tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO), // roles permitidos
   citaController.obtenerServicios
 );
@@ -126,6 +118,5 @@ router.get(
   tieneRol(ROLES.ADMIN),
   citaController.obtenerCitaPorId
 );
-
 
 module.exports = router;
