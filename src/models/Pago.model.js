@@ -1,11 +1,12 @@
 const { Schema, model } = require('mongoose');
+const { MetodosPago, EstadosPago } = require('../constants');
 
 const PagoSchema = new Schema({
   cita: {
     type: Schema.Types.ObjectId,
     ref: 'Cita',
     required: true,
-    unique: true // Un pago por cita
+    unique: true
   },
   monto: {
     type: Number,
@@ -13,13 +14,13 @@ const PagoSchema = new Schema({
   },
   metodo: {
     type: String,
-    enum: ['efectivo', 'tarjeta', 'transferencia'],
+    enum: Object.values(MetodosPago),
     required: true
   },
   estado: {
     type: String,
-    enum: ['pendiente', 'pagado', 'fallido'],
-    default: 'pendiente'
+    enum: Object.values(EstadosPago),
+    default: EstadosPago.PENDIENTE
   },
   observaciones: {
     type: String

@@ -1,7 +1,7 @@
 // controllers/cita.controller.js
 
 const CitaService = require('../services/cita.service');
-const Servicio = require('../models/Servicio.model'); // <--- agregado para obtenerServicios
+const Servicio = require('../models/Servicio.model'); // <--- usado en obtenerServicios
 
 // ===================== controladores =====================
 
@@ -12,7 +12,9 @@ const crearCita = async (req, res) => {
     return res.status(201).json(cita);
   } catch (error) {
     console.error('❌ Error al crear cita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error interno del servidor' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error interno del servidor' });
   }
 };
 
@@ -32,7 +34,13 @@ const obtenerMisCitas = async (req, res) => {
   try {
     const { uid, rol } = req;
     const { page = 1, limit = 10, fecha } = req.query;
-    const resultado = await CitaService.obtenerMisCitas({ uid, rol, page, limit, fecha });
+    const resultado = await CitaService.obtenerMisCitas({
+      uid,
+      rol,
+      page,
+      limit,
+      fecha,
+    });
     return res.json(resultado);
   } catch (error) {
     console.error('❌ Error al obtenerMisCitas:', error);
@@ -45,10 +53,15 @@ const obtenerCitaPorId = async (req, res) => {
   try {
     const { id } = req.params;
     const cita = await CitaService.obtenerCitaPorId(id);
+    if (!cita) {
+      return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    }
     return res.json(cita);
   } catch (error) {
     console.error('❌ Error al obtenerCitaPorId:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener la cita' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error al obtener la cita' });
   }
 };
 
@@ -58,10 +71,15 @@ const actualizarCita = async (req, res) => {
     const { id } = req.params;
     const data = req.body;
     const citaActualizada = await CitaService.actualizarCita(id, data);
+    if (!citaActualizada) {
+      return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    }
     return res.json(citaActualizada);
   } catch (error) {
     console.error('❌ Error al actualizarCita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al actualizar la cita' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error al actualizar la cita' });
   }
 };
 
@@ -70,10 +88,15 @@ const cancelarCita = async (req, res) => {
   try {
     const { id } = req.params;
     const cita = await CitaService.cancelarCita(id);
+    if (!cita) {
+      return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    }
     return res.json({ mensaje: 'Cita cancelada exitosamente', cita });
   } catch (error) {
     console.error('❌ Error al cancelarCita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al cancelar la cita' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error al cancelar la cita' });
   }
 };
 
@@ -82,10 +105,15 @@ const finalizarCita = async (req, res) => {
   try {
     const { id } = req.params;
     const cita = await CitaService.finalizarCita(id);
+    if (!cita) {
+      return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    }
     return res.json({ mensaje: 'Cita finalizada correctamente', cita });
   } catch (error) {
     console.error('❌ Error al finalizarCita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al finalizar la cita' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error al finalizar la cita' });
   }
 };
 
@@ -97,7 +125,11 @@ const getCitasPorSedeYFecha = async (req, res) => {
     return res.json(citas);
   } catch (error) {
     console.error('❌ Error en getCitasPorSedeYFecha:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener citas por sede y fecha' });
+    return res
+      .status(error.status || 500)
+      .json({
+        mensaje: error.message || 'Error al obtener citas por sede y fecha',
+      });
   }
 };
 
@@ -109,7 +141,11 @@ const obtenerCitasPorFechaYHora = async (req, res) => {
     return res.json(citas);
   } catch (error) {
     console.error('❌ Error en obtenerCitasPorFechaYHora:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener citas por fecha y hora' });
+    return res
+      .status(error.status || 500)
+      .json({
+        mensaje: error.message || 'Error al obtener citas por fecha y hora',
+      });
   }
 };
 
@@ -124,9 +160,8 @@ const obtenerCitasPorRango = async (req, res) => {
   }
 };
 
-
 // Obtener todos los servicios activos
-const obtenerServicios = async (req, res) => {
+const obtenerServicios = async (_req, res) => {
   try {
     const servicios = await Servicio.find({ estado: true }).lean();
     res.json(servicios);
@@ -145,20 +180,9 @@ const repetirCita = async (req, res) => {
     return res.status(201).json(nuevaCita);
   } catch (error) {
     console.error('❌ Error al repetirCita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al repetir la cita' });
-  }
-};
-
-// Reprogramar cita
-const reprogramarCita = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fecha } = req.body;
-    const cita = await CitaService.reprogramarCita(id, fecha);
-    return res.json({ mensaje: 'Cita reprogramada correctamente', cita });
-  } catch (error) {
-    console.error('❌ Error al reprogramarCita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al reprogramar la cita' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error al repetir la cita' });
   }
 };
 
@@ -167,11 +191,26 @@ const pagarCita = async (req, res) => {
   try {
     const { id } = req.params;
     const { monto, metodo } = req.body;
+
+    // Validaciones mínimas
+    if (!monto || isNaN(monto) || monto <= 0) {
+      return res.status(400).json({ mensaje: 'Monto inválido' });
+    }
+    if (!metodo || typeof metodo !== 'string') {
+      return res.status(400).json({ mensaje: 'Método de pago requerido' });
+    }
+
     const cita = await CitaService.pagarCita(id, monto, metodo);
+    if (!cita) {
+      return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    }
+
     return res.json({ mensaje: 'Pago registrado correctamente', cita });
   } catch (error) {
     console.error('❌ Error al pagarCita:', error);
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al pagar la cita' });
+    return res
+      .status(error.status || 500)
+      .json({ mensaje: error.message || 'Error al pagar la cita' });
   }
 };
 
@@ -180,7 +219,7 @@ module.exports = {
   obtenerCitas,
   obtenerMisCitas,
   obtenerCitaPorId,
-  obtenerServicios,  
+  obtenerServicios,
   actualizarCita,
   cancelarCita,
   finalizarCita,
@@ -188,6 +227,5 @@ module.exports = {
   obtenerCitasPorFechaYHora,
   obtenerCitasPorRango,
   repetirCita,
-  reprogramarCita,
-  pagarCita
+  pagarCita,
 };

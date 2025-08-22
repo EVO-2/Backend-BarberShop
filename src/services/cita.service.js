@@ -1,4 +1,3 @@
-// src/services/cita.service.js
 
 // ===================== imports =====================
 const Cliente        = require('../models/Cliente.model');
@@ -32,7 +31,6 @@ const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'en_proceso'];
 async function calcularDuracionTotal(serviciosIds = []) {
   if (!Array.isArray(serviciosIds) || serviciosIds.length === 0) return 0;
 
-  // Convertir solo IDs válidos
   const validIds = serviciosIds.filter(id => id && typeof id === 'string');
 
   const servicios = await Servicio.find({ _id: { $in: validIds }, estado: true }).lean();
@@ -82,7 +80,6 @@ async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
     throw new Error('El puesto de trabajo no pertenece a la sede seleccionada');
   }
 }
-
 
 // ===================== servicios =====================
 const crearCita = async ({ cliente, peluquero, servicios = [], sede, puestoTrabajo, fecha }) => {
@@ -300,7 +297,7 @@ const repetirCita = async ({ id, fecha }) => {
   return Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
 };
 
-// ===================== NUEVA FUNCION: obtenerCitasPorRango =====================
+// =====================  obtenerCitasPorRango =====================
 const obtenerCitasPorRango = async ({ fechaInicio, fechaFin }) => {
   if (!fechaInicio || !fechaFin) throw new Error('Se requieren fechaInicio y fechaFin');
   const inicio = new Date(fechaInicio);
@@ -312,6 +309,33 @@ const obtenerCitasPorRango = async ({ fechaInicio, fechaFin }) => {
     fechaInicio: { $gte: inicio },
     fechaFin: { $lte: fin }
   }).populate(CITA_POPULATE).lean();
+};
+
+// =====================  pagarCita =====================
+const pagarCita = async ({ id, monto, metodo }) => {
+  if (!monto || !metodo) throw new Error('Monto y método de pago son obligatorios');
+
+  const cita = await Cita.findById(id);
+  if (!cita) throw { status: 404, message: 'Cita no encontrada' };
+
+  if (cita.estado === 'cancelada') throw new Error('No se puede pagar una cita cancelada');
+  if (cita.pago) throw new Error('La cita ya tiene un pago asociado');
+
+  // Crear registro de pago
+  const pago = await Pago.create({
+    cita: cita._id,
+    monto,
+    metodo,
+    estado: 'completado',
+    fecha: new Date()
+  });
+
+  // Asociar pago a la cita y actualizar estado
+  cita.pago = pago._id;
+  cita.estado = 'pagada';
+  await cita.save();
+
+  return Cita.findById(cita._id).populate(CITA_POPULATE);
 };
 
 // ===================== export =====================
@@ -326,5 +350,6 @@ module.exports = {
   getCitasPorSedeYFecha,
   obtenerCitasPorFechaYHora,
   repetirCita,
-  obtenerCitasPorRango 
+  obtenerCitasPorRango,
+  pagarCita
 };
