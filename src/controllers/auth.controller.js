@@ -28,7 +28,7 @@ const login = async (req, res) => {
         foto: usuario.foto
       },
       process.env.JWT_SECRET,
-      { expiresIn: '8h' }
+      { expiresIn: '4h' }
     );
 
     const { exp } = jwt.decode(token);
@@ -94,7 +94,7 @@ const registro = async (req, res) => {
         foto: nuevoUsuario.foto
       },
       process.env.JWT_SECRET,
-      { expiresIn: '8h' }
+      { expiresIn: '4h' }
     );
 
     const { exp } = jwt.decode(token);
