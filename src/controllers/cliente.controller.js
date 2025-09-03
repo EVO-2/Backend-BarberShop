@@ -2,11 +2,11 @@ const bcrypt = require('bcryptjs');
 const Cliente = require('../models/Cliente.model');
 const Usuario = require('../models/Usuario.model');
 
-/* ───────────── Obtener perfil extendido ───────────── */
+/* ───────────── Obtener perfil del cliente autenticado ───────────── */
 const obtenerPerfilCliente = async (req, res) => {
   try {
     const cliente = await Cliente.findOne({ usuario: req.uid })
-      .populate('usuario', '-password')
+      .populate('usuario', 'nombre correo foto estado') // 🔹 Traemos info del usuario
       .lean();
 
     if (!cliente) {
@@ -16,11 +16,15 @@ const obtenerPerfilCliente = async (req, res) => {
     return res.json({ ok: true, data: cliente });
   } catch (error) {
     console.error('❌ Error al obtener perfil cliente:', error);
-    return res.status(500).json({ ok: false, msg: 'Error al obtener perfil cliente', error: error.message });
+    return res.status(500).json({
+      ok: false,
+      msg: 'Error al obtener perfil cliente',
+      error: error.message,
+    });
   }
 };
 
-/* ───────────── Actualizar perfil extendido ───────────── */
+/* ───────────── Actualizar perfil del cliente ───────────── */
 const actualizarPerfilCliente = async (req, res) => {
   try {
     const cliente = await Cliente.findOne({ usuario: req.uid });
@@ -45,17 +49,17 @@ const actualizarPerfilCliente = async (req, res) => {
 
     await usuario.save();
 
-    // 🔹 Actualizar Cliente (manteniendo valores previos si no se envían)
-    cliente.telefono = telefono || cliente.telefono;
-    cliente.direccion = direccion || cliente.direccion;
-    cliente.genero = genero || cliente.genero;
-    cliente.fecha_nacimiento = fecha_nacimiento || cliente.fecha_nacimiento;
+    // 🔹 Actualizar Cliente
+    cliente.telefono = telefono ?? cliente.telefono;
+    cliente.direccion = direccion ?? cliente.direccion;
+    cliente.genero = genero ?? cliente.genero;
+    cliente.fecha_nacimiento = fecha_nacimiento ?? cliente.fecha_nacimiento;
 
     await cliente.save();
 
-    // 🔹 Devolver perfil actualizado en el mismo formato que login/perfil
+    // 🔹 Devolver perfil actualizado (usuario + cliente)
     const perfilActualizado = await Cliente.findOne({ usuario: req.uid })
-      .populate('usuario', '-password')
+      .populate('usuario', 'nombre correo foto estado')
       .lean();
 
     return res.json({
@@ -65,7 +69,11 @@ const actualizarPerfilCliente = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error al actualizar perfil cliente:', error);
-    return res.status(500).json({ ok: false, msg: 'Error al actualizar perfil cliente', error: error.message });
+    return res.status(500).json({
+      ok: false,
+      msg: 'Error al actualizar perfil cliente',
+      error: error.message,
+    });
   }
 };
 
@@ -73,13 +81,17 @@ const actualizarPerfilCliente = async (req, res) => {
 const obtenerClientes = async (req, res) => {
   try {
     const clientes = await Cliente.find()
-      .populate('usuario', 'nombre correo foto')
+      .populate('usuario', 'nombre correo foto estado')
       .lean();
 
     return res.json({ ok: true, data: clientes });
   } catch (error) {
     console.error('❌ Error al obtener clientes:', error);
-    return res.status(500).json({ ok: false, msg: 'Error al obtener clientes', error: error.message });
+    return res.status(500).json({
+      ok: false,
+      msg: 'Error al obtener clientes',
+      error: error.message,
+    });
   }
 };
 

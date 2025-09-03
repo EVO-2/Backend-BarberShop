@@ -9,7 +9,9 @@ const {
   eliminarUsuario,
   cambiarEstadoUsuario,
   subirFotoPerfil,
-  verificarPuesto
+  verificarPuesto,
+  actualizarPerfil,
+  obtenerPerfil
 } = require('../controllers/usuario.controller');
 
 const validarCampos = require('../middlewares/validarCampos');
@@ -20,26 +22,41 @@ const upload = require('../middlewares/uploadFoto');
 
 const router = Router();
 
+/* =================== RUTAS DE PERFIL (PRIMERO, para que no choquen con /:id) =================== */
+
+// 👤 Obtener perfil del usuario logueado
+router.get(
+  '/perfil',
+  [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'admin')],
+  (req, res) => {
+    console.log("🚀 Entró al endpoint /perfil con rol:", req.usuario.rol);
+    obtenerPerfil(req, res);
+  }
+);
+
+// ✏️ Actualizar perfil del usuario logueado
+router.put(
+  '/perfil',
+  [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'admin')],
+  upload.single('foto'),
+  actualizarPerfil
+);
+
+/* =================== RUTAS ADMIN =================== */
+
+// 🔍 Verificar puesto
 router.get('/verificar-puesto/:puestoId', [
-   validarJWT,
-   tieneRol('admin'),
+  validarJWT,
+  tieneRol('admin'),
 ], verificarPuesto);
 
-// =================== Obtener TODOS los usuarios ===================
+// 📋 Obtener TODOS los usuarios
 router.get('/', [
   validarJWT,
   tieneRol('admin'),
 ], listarUsuarios);
 
-// =================== Obtener UN usuario por ID ===================
-router.get('/:id', [
-  validarJWT,
-  tieneRol('admin'),
-  param('id').isMongoId().withMessage('El ID no es válido'),
-  validarCampos
-], obtenerUsuarioPorId);
-
-// =================== Crear usuario ===================
+// ➕ Crear usuario
 router.post('/', [
   validarJWT,
   tieneRol('admin'),
@@ -50,7 +67,7 @@ router.post('/', [
   validarCampos
 ], crearUsuario);
 
-// =================== Actualizar usuario (INCLUYE DETALLES PELUQUERO) ===================
+// ✏️ Actualizar usuario (INCLUYE DETALLES PELUQUERO)
 router.put('/:id', [
   validarJWT,
   tieneRol('admin'),
@@ -62,7 +79,7 @@ router.put('/:id', [
   validarCampos
 ], actualizarUsuario); 
 
-// =================== Eliminar usuario (Soft Delete) ===================
+// 🗑️ Eliminar usuario (Soft Delete)
 router.delete('/:id', [
   validarJWT,
   tieneRol('admin'),
@@ -70,7 +87,7 @@ router.delete('/:id', [
   validarCampos
 ], eliminarUsuario);
 
-// =================== Cambiar estado usuario ===================
+// 🔄 Cambiar estado usuario
 router.patch('/actualizar-estado/:id', [
   validarJWT,
   tieneRol('admin'),
@@ -79,7 +96,7 @@ router.patch('/actualizar-estado/:id', [
   validarCampos
 ], cambiarEstadoUsuario);
 
-// =================== Subir foto de perfil ===================
+// 📷 Subir foto de perfil de usuario por ID
 router.post('/:id/foto', [
   validarJWT,
   tieneRol('admin', 'cliente', 'barbero'),
@@ -88,5 +105,12 @@ router.post('/:id/foto', [
   upload.single('foto')
 ], subirFotoPerfil);
 
+// 📌 Obtener UN usuario por ID (debe ir al final para no chocar con /perfil)
+router.get('/:id', [
+  validarJWT,
+  tieneRol('admin'),
+  param('id').isMongoId().withMessage('El ID no es válido'),
+  validarCampos
+], obtenerUsuarioPorId);
 
 module.exports = router;

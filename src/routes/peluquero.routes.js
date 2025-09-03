@@ -11,7 +11,7 @@ const {
   desactivarPeluquero,
   activarPeluquero,
   obtenerPerfilPeluquero,
-  actualizarPerfilPeluquero
+  //actualizarPerfilPeluquero
 } = require('../controllers/peluquero.controller');
 
 // ✅ Todas las rutas protegidas con JWT
@@ -20,26 +20,10 @@ router.use(validarJWT);
 /* ───────────── Endpoints de PERFIL ───────────── */
 
 // 📄 Obtener perfil del peluquero autenticado
-router.get('/perfil', async (req, res) => {
-  try {
-    console.log('Solicitud GET /api/peluqueros/perfil - usuario:', req.usuarioId);
-    await obtenerPerfilPeluquero(req, res);
-  } catch (err) {
-    console.error('❌ Error al obtener perfil del peluquero:', err);
-    res.status(500).json({ ok: false, msg: 'Error al obtener perfil del peluquero' });
-  }
-});
+router.get('/perfil', obtenerPerfilPeluquero);
 
-// 🔄 Actualizar perfil peluquero (incluyendo foto)
-router.put('/perfil', upload.single('foto'), async (req, res) => {
-  try {
-    console.log('Solicitud PUT /api/peluqueros/perfil - usuario:', req.usuarioId);
-    await actualizarPerfilPeluquero(req, res);
-  } catch (err) {
-    console.error('❌ Error al actualizar perfil del peluquero:', err);
-    res.status(500).json({ ok: false, msg: 'Error al actualizar perfil del peluquero' });
-  }
-});
+/* 🔄 Actualizar perfil peluquero (incluyendo foto)
+router.put('/perfil', upload.single('foto'), actualizarPerfilPeluquero);*/
 
 /* ───────────── CRUD de Peluquero ───────────── */
 
