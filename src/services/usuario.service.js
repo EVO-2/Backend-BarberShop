@@ -61,11 +61,14 @@ const obtenerUsuarios = async () => {
   try {
     return await Usuario.find()
       .populate('rol', 'nombre')
+      .populate('cliente')   
+      .populate('peluquero') 
       .lean();
   } catch (error) {
     throw new Error(`Error al obtener usuarios: ${error.message}`);
   }
 };
+
 
 /* ========================== */
 /*   Obtener Usuario por ID   */
@@ -74,6 +77,8 @@ const obtenerUsuarioPorId = async (id) => {
   try {
     const usuario = await Usuario.findById(id)
       .populate('rol', 'nombre')
+      .populate('cliente')   
+      .populate('peluquero') 
       .lean();
 
     if (!usuario) throw new Error('Usuario no encontrado');
@@ -83,6 +88,7 @@ const obtenerUsuarioPorId = async (id) => {
     throw new Error(`Error al obtener usuario por ID: ${error.message}`);
   }
 };
+
 
 /* ========================== */
 /*     Actualizar Usuario     */
@@ -212,5 +218,6 @@ module.exports = {
   obtenerUsuarioPorId,
   actualizarUsuario,
   eliminarUsuario,
+  verificarPuesto,
   cambiarEstadoUsuario
 };

@@ -34,12 +34,23 @@ const login = async (req, res) => {
     const { exp } = jwt.decode(token);
     const expDate = new Date(exp * 1000);
 
+    // 👇 Cargar datos extra según el rol
+    let datosRol = null;
+    if (usuario.rol?.nombre === 'cliente') {
+      datosRol = await Cliente.findOne({ usuario: usuario._id });
+    } else if (usuario.rol?.nombre === 'barbero') {
+      datosRol = await Peluquero.findOne({ usuario: usuario._id });
+    }
+
     res.json({
       usuario: {
         id: usuario._id,
         nombre: usuario.nombre,
+        correo: usuario.correo,
         rol: usuario.rol?.nombre,
-        foto: usuario.foto
+        foto: usuario.foto,
+        cliente: usuario.rol?.nombre === 'cliente' ? datosRol : undefined,
+        peluquero: usuario.rol?.nombre === 'barbero' ? datosRol : undefined
       },
       token,
       expiraEn: expDate
@@ -49,6 +60,7 @@ const login = async (req, res) => {
     res.status(500).json({ mensaje: 'Error al iniciar sesión', error: error.message });
   }
 };
+
 
 const registro = async (req, res) => {
   try {
@@ -128,43 +140,90 @@ const verificarCorreoExistente = async (req, res) => {
 
 const obtenerPerfil = async (req, res) => {
   try {
-    const usuario = await Usuario.findById(req.uid).select('-password').populate('rol');
+    const usuario = await Usuario.findById(req.uid)
+      .select('-password')
+      .populate('rol');
 
-    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
 
-    let datosRol = null;
+    let datosRol = {};
     const rol = usuario.rol?.nombre;
 
     if (rol === 'cliente') {
-      datosRol = await Cliente.findOne({ usuario: usuario._id });
+      const cliente = await Cliente.findOne({ usuario: usuario._id }).populate('usuario');
+      if (cliente) {
+        datosRol = {
+          telefono: cliente.telefono,
+          direccion: cliente.direccion,
+        };
+      }
     } else if (rol === 'barbero') {
-      datosRol = await Peluquero.findOne({ usuario: usuario._id });
+      const peluquero = await Peluquero.findOne({ usuario: usuario._id }).populate('usuario');
+      if (peluquero) {
+        datosRol = {
+          especialidad: peluquero.especialidad,
+          experiencia: peluquero.experiencia,
+        };
+      }
     }
 
-    return res.json({ usuario, datosRol });
+    // respuesta consistente con login
+    const usuarioConFormato = {
+      uid: usuario._id,
+      nombre: usuario.nombre,
+      correo: usuario.correo,
+      rol: usuario.rol?.nombre,
+      foto: usuario.foto || null,
+      ...datosRol,
+    };
+
+    return res.json({ ok: true, usuario: usuarioConFormato });
   } catch (error) {
-    return res.status(500).json({ mensaje: 'Error al obtener perfil', error: error.message });
+    return res.status(500).json({
+      ok: false,
+      mensaje: 'Error al obtener perfil',
+      error: error.message,
+    });
   }
 };
 
 const actualizarPerfil = async (req, res) => {
   try {
-    const usuario = await Usuario.findById(req.uid).populate('rol');
-    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    // Buscar usuario autenticado
+    let usuario = await Usuario.findById(req.uid).populate('rol');
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
 
     const { nombre, password } = req.body;
 
-    if (nombre) usuario.nombre = nombre;
-    if (password) usuario.password = password;
-    if (req.file) usuario.foto = req.file.filename;
+    // Actualizar nombre
+    if (nombre && nombre.trim() !== '') {
+      usuario.nombre = nombre.trim();
+    }
+
+    // Actualizar contraseña con hash
+    if (password && password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      usuario.password = await bcrypt.hash(password, salt);
+    }
+
+    // Actualizar foto si se envió
+    if (req.file) {
+      usuario.foto = req.file.filename;
+    }
 
     await usuario.save();
 
+    // Dependiendo del rol, actualizar datos específicos
     const rolNombre = usuario.rol?.nombre;
 
     if (rolNombre === 'cliente') {
       const { telefono, direccion } = req.body;
-      const cliente = await Cliente.findOne({ usuario: usuario._id });
+      let cliente = await Cliente.findOne({ usuario: usuario._id });
+
       if (cliente) {
         if (telefono) cliente.telefono = telefono;
         if (direccion) cliente.direccion = direccion;
@@ -172,7 +231,8 @@ const actualizarPerfil = async (req, res) => {
       }
     } else if (rolNombre === 'barbero') {
       const { especialidades, telefono_profesional, direccion_profesional } = req.body;
-      const peluquero = await Peluquero.findOne({ usuario: usuario._id });
+      let peluquero = await Peluquero.findOne({ usuario: usuario._id });
+
       if (peluquero) {
         if (especialidades) peluquero.especialidades = especialidades;
         if (telefono_profesional) peluquero.telefono_profesional = telefono_profesional;
@@ -181,11 +241,20 @@ const actualizarPerfil = async (req, res) => {
       }
     }
 
-    res.json({ mensaje: 'Perfil actualizado correctamente' });
+    // Volvemos a traer usuario actualizado con populate
+    usuario = await Usuario.findById(req.uid).populate('rol');
+
+    res.json({
+      mensaje: 'Perfil actualizado correctamente',
+      usuario
+    });
+
   } catch (error) {
+    console.error('Error al actualizar perfil:', error);
     res.status(500).json({ mensaje: 'Error al actualizar perfil', error: error.message });
   }
 };
+
 
 const obtenerPerfilPeluquero = async (req, res) => {
   try {

@@ -227,16 +227,26 @@ const cambiarEstadoUsuario = async (req, res) => {
 const subirFotoPerfil = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!req.file) return res.status(400).json({ mensaje: 'No se subió ninguna foto' });
 
-    const usuario = await Usuario.findByIdAndUpdate(id, { foto: req.file.filename }, { new: true });
+    if (!req.file) {
+      return res.status(400).json({ mensaje: 'No se subió ninguna foto' });
+    }
+
+    const usuario = await Usuario.findByIdAndUpdate(
+      id,
+      { foto: req.file.filename },
+      { new: true }
+    );
+
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
 
-    res.status(200).json({ mensaje: 'Foto de perfil actualizada', usuario });
+    // Asegúrate de devolver el objeto correcto
+    res.status(200).json({ foto: usuario.foto, usuario });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al subir la foto de perfil', error: error.message });
+    return res.status(500).json({ mensaje: 'Error al subir la foto de perfil', error: error.message });
   }
 };
+
 
 // ===================
 //     Verificar Puesto
