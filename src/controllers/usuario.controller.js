@@ -4,6 +4,7 @@ const Peluquero = require('../models/Peluquero.model');
 const Rol = require('../models/Rol.model');
 const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 // ==========================
 //      Listar Usuarios
@@ -240,13 +241,11 @@ const subirFotoPerfil = async (req, res) => {
 
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
 
-    // Asegúrate de devolver el objeto correcto
     res.status(200).json({ foto: usuario.foto, usuario });
   } catch (error) {
     return res.status(500).json({ mensaje: 'Error al subir la foto de perfil', error: error.message });
   }
 };
-
 
 // ===================
 //     Verificar Puesto
@@ -276,6 +275,152 @@ const verificarPuesto = async (req, res) => {
   }
 };
 
+// ==========================
+// 👤 Obtener perfil
+// ==========================
+const obtenerPerfil = async (req, res) => {
+  try {
+    const usuario = await Usuario.findById(req.uid) // usamos req.uid del JWT
+      .populate('rol')
+      .populate({
+        path: 'cliente',
+        populate: { path: 'usuario' }
+      })
+      .populate({
+        path: 'peluquero',
+        populate: [
+          { path: 'sede' },
+          { path: 'puestoTrabajo' },
+          { path: 'usuario' }
+        ]
+      });
+
+    if (!usuario) {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
+
+    const rolNombre = usuario.rol?.nombre?.toLowerCase();
+
+    if (rolNombre === 'cliente' && usuario.cliente) {
+      return res.json({
+        tipo: 'cliente',
+        ...usuario.cliente.toObject(),
+        usuario: {
+          id: usuario._id,
+          nombre: usuario.nombre,
+          correo: usuario.correo,
+          rol: usuario.rol.nombre,
+          img: usuario.img,
+        }
+      });
+    }
+
+    if (rolNombre === 'barbero' && usuario.peluquero) {
+      return res.json({
+        tipo: 'barbero',
+        ...usuario.peluquero.toObject(),
+        usuario: {
+          id: usuario._id,
+          nombre: usuario.nombre,
+          correo: usuario.correo,
+          rol: usuario.rol.nombre,
+          img: usuario.img,
+        }
+      });
+    }
+
+    return res.json({
+      tipo: 'admin',
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: usuario.rol.nombre,
+        img: usuario.img,
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Error al obtener perfil' });
+  }
+};
+
+// ==========================
+// ✏️ Actualizar perfil
+// ==========================
+const actualizarPerfil = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id; // viene del JWT
+    const datos = req.body;
+
+    // 1. Actualizar datos básicos del usuario
+    const usuarioActualizado = await Usuario.findByIdAndUpdate(
+      usuarioId,
+      {
+        nombre: datos.nombre,
+        correo: datos.correo,
+        genero: datos.genero,
+        fecha_nacimiento: datos.fecha_nacimiento,
+        foto: datos.foto || ""
+      },
+      { new: true }
+    ).populate("rol");
+
+    let perfilExtra = null;
+
+    // 2. Según el rol, actualizamos la colección correspondiente
+    switch (usuarioActualizado.rol.nombre) {
+      case "barbero":
+        perfilExtra = await Peluquero.findOneAndUpdate(
+          { usuario: usuarioId },
+          {
+            especialidades: datos.especialidades,
+            experiencia: datos.experiencia,
+            direccion_profesional: datos.direccion_profesional,
+            telefono_profesional: datos.telefono_profesional
+          },
+          { new: true }
+        );
+        break;
+
+      case "cliente":
+        perfilExtra = await Cliente.findOneAndUpdate(
+          { usuario: usuarioId },
+          {
+            direccion: datos.direccion,
+            telefono: datos.telefono
+          },
+          { new: true }
+        );
+        break;
+
+      case "admin":
+        // en admin tal vez no tengas colección extra, pero igual podrías manejarlo
+        perfilExtra = { permisos: "completos" };
+        break;
+
+      default:
+        perfilExtra = null;
+    }
+
+    // 3. Respuesta unificada
+    const perfilCompleto = {
+      ...usuarioActualizado.toObject(),
+      [usuarioActualizado.rol.nombre]: perfilExtra // dinámico según rol
+    };
+
+    res.json({
+      mensaje: "Perfil actualizado correctamente",
+      usuario: perfilCompleto
+    });
+
+  } catch (error) {
+    console.error("[❌ actualizarPerfil]", error);
+    res.status(500).json({ mensaje: "Error al actualizar perfil" });
+  }
+};
+
 module.exports = {
   listarUsuarios,
   obtenerUsuarioPorId,
@@ -284,5 +429,7 @@ module.exports = {
   eliminarUsuario,
   cambiarEstadoUsuario,
   subirFotoPerfil,
-  verificarPuesto
+  verificarPuesto,
+  actualizarPerfil,
+  obtenerPerfil
 };

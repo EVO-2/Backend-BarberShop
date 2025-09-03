@@ -12,7 +12,6 @@ const crearPeluquero = async (req, res) => {
       return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
     }
 
-    // Validar que el puesto no esté ocupado
     if (puestoTrabajo) {
       const puestoOcupado = await PuestoTrabajo.findOne({ _id: puestoTrabajo, peluquero: { $ne: null } });
       if (puestoOcupado) {
@@ -94,13 +93,11 @@ const actualizarPeluquero = async (req, res) => {
 
     const puestoAnteriorId = peluquero.puestoTrabajo ? peluquero.puestoTrabajo.toString() : null;
 
-    // Desactivar -> liberar puesto
     if (estado === false && peluquero.puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
       peluquero.puestoTrabajo = null;
     }
 
-    // Validar nuevo puesto
     if (puestoTrabajo && puestoTrabajo !== puestoAnteriorId && estado !== false) {
       const puestoOcupado = await PuestoTrabajo.findOne({ _id: puestoTrabajo, peluquero: { $ne: null } });
       if (puestoOcupado) {
@@ -108,7 +105,6 @@ const actualizarPeluquero = async (req, res) => {
       }
     }
 
-    // Actualizar datos
     peluquero.especialidades = especialidades ?? peluquero.especialidades;
     peluquero.experiencia = experiencia ?? peluquero.experiencia;
     peluquero.telefono_profesional = telefono_profesional ?? peluquero.telefono_profesional;
@@ -124,7 +120,6 @@ const actualizarPeluquero = async (req, res) => {
 
     await peluquero.save();
 
-    // Liberar/Asignar puestos
     if (puestoTrabajo && puestoTrabajo !== puestoAnteriorId && estado !== false) {
       if (puestoAnteriorId) {
         await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
@@ -189,11 +184,47 @@ const activarPeluquero = async (req, res) => {
   }
 };
 
+/* ───────────── Obtener perfil del peluquero autenticado ───────────── */
+const obtenerPerfilPeluquero = async (req, res) => {
+  try {
+    const usuarioId = req.uid; // importante: usar req.uid que setea el middleware JWT
+    if (!usuarioId) return res.status(400).json({ ok: false, msg: 'Usuario no identificado' });
+
+    const peluquero = await Peluquero.findOne({ usuario: usuarioId })
+      .populate('usuario', 'nombre correo foto')
+      .populate('sede', 'nombre direccion')
+      .populate('puestoTrabajo', 'nombre');
+
+    if (!peluquero) return res.status(404).json({ ok: false, msg: 'Peluquero no encontrado' });
+
+    // respuesta organizada para Angular
+    res.json({
+      ok: true,
+      data: {
+        id: peluquero._id,
+        nombre: peluquero.usuario?.nombre,
+        correo: peluquero.usuario?.correo,
+        foto: peluquero.usuario?.foto,
+        especialidades: peluquero.especialidades,
+        experiencia: peluquero.experiencia,
+        telefono_profesional: peluquero.telefono_profesional,
+        direccion_profesional: peluquero.direccion_profesional,
+        sede: peluquero.sede?.nombre || '',
+        puestoTrabajo: peluquero.puestoTrabajo?.nombre || ''
+      }
+    });
+  } catch (err) {
+    console.error('Error en obtenerPerfilPeluquero:', err);
+    res.status(500).json({ ok: false, msg: 'Error interno del servidor' });
+  }
+};
+
 module.exports = {
   crearPeluquero,
   obtenerPeluqueros,
   obtenerPeluqueroPorId,
   actualizarPeluquero,
   desactivarPeluquero,
-  activarPeluquero
+  activarPeluquero,
+  obtenerPerfilPeluquero
 };
