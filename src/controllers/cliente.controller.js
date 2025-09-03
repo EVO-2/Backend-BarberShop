@@ -1,67 +1,90 @@
+const bcrypt = require('bcryptjs');
 const Cliente = require('../models/Cliente.model');
 const Usuario = require('../models/Usuario.model');
 
-// Obtener perfil extendido de cliente
+/* ───────────── Obtener perfil extendido ───────────── */
 const obtenerPerfilCliente = async (req, res) => {
   try {
-    const cliente = await Cliente.findOne({ usuario: req.uid }).populate('usuario', '-password');
+    const cliente = await Cliente.findOne({ usuario: req.uid })
+      .populate('usuario', '-password')
+      .lean();
+
     if (!cliente) {
-      return res.status(404).json({ mensaje: 'Perfil de cliente no encontrado' });
+      return res.status(404).json({ ok: false, msg: 'Perfil de cliente no encontrado' });
     }
-    res.json(cliente);
+
+    return res.json({ ok: true, data: cliente });
   } catch (error) {
     console.error('❌ Error al obtener perfil cliente:', error);
-    res.status(500).json({ mensaje: 'Error al obtener perfil cliente' });
+    return res.status(500).json({ ok: false, msg: 'Error al obtener perfil cliente', error: error.message });
   }
 };
 
-// Actualizar perfil extendido de cliente (foto incluida)
+/* ───────────── Actualizar perfil extendido ───────────── */
 const actualizarPerfilCliente = async (req, res) => {
   try {
     const cliente = await Cliente.findOne({ usuario: req.uid });
     if (!cliente) {
-      return res.status(404).json({ mensaje: 'Perfil de cliente no encontrado' });
+      return res.status(404).json({ ok: false, msg: 'Perfil de cliente no encontrado' });
     }
 
     const { telefono, direccion, genero, fecha_nacimiento, nombre, password } = req.body;
 
-    // Actualiza Usuario si es necesario
+    // 🔹 Actualizar Usuario
     const usuario = await Usuario.findById(req.uid);
+    if (!usuario) {
+      return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
+    }
+
     if (nombre) usuario.nombre = nombre;
-    if (password) usuario.password = password;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      usuario.password = await bcrypt.hash(password, salt);
+    }
     if (req.file) usuario.foto = req.file.filename;
+
     await usuario.save();
 
-    // Actualiza Cliente
-    cliente.telefono = telefono;
-    cliente.direccion = direccion;
-    cliente.genero = genero;
-    cliente.fecha_nacimiento = fecha_nacimiento;
+    // 🔹 Actualizar Cliente (manteniendo valores previos si no se envían)
+    cliente.telefono = telefono || cliente.telefono;
+    cliente.direccion = direccion || cliente.direccion;
+    cliente.genero = genero || cliente.genero;
+    cliente.fecha_nacimiento = fecha_nacimiento || cliente.fecha_nacimiento;
+
     await cliente.save();
 
-    res.json({ mensaje: 'Perfil de cliente actualizado correctamente' });
+    // 🔹 Devolver perfil actualizado en el mismo formato que login/perfil
+    const perfilActualizado = await Cliente.findOne({ usuario: req.uid })
+      .populate('usuario', '-password')
+      .lean();
+
+    return res.json({
+      ok: true,
+      msg: 'Perfil actualizado correctamente',
+      data: perfilActualizado,
+    });
   } catch (error) {
     console.error('❌ Error al actualizar perfil cliente:', error);
-    res.status(500).json({ mensaje: 'Error al actualizar perfil cliente' });
+    return res.status(500).json({ ok: false, msg: 'Error al actualizar perfil cliente', error: error.message });
   }
 };
 
-// Listar todos los clientes (para dropdown en reservas)
+/* ───────────── Listar todos los clientes ───────────── */
 const obtenerClientes = async (req, res) => {
   try {
     const clientes = await Cliente.find()
-      .populate('usuario', 'nombre correo')
+      .populate('usuario', 'nombre correo foto')
       .lean();
 
-    res.json(clientes);
+    return res.json({ ok: true, data: clientes });
   } catch (error) {
     console.error('❌ Error al obtener clientes:', error);
-    res.status(500).json({ mensaje: 'Error al obtener clientes' });
+    return res.status(500).json({ ok: false, msg: 'Error al obtener clientes', error: error.message });
   }
 };
 
 module.exports = {
   obtenerPerfilCliente,
   actualizarPerfilCliente,
-  obtenerClientes
+  obtenerClientes,
 };

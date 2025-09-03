@@ -12,27 +12,17 @@ const router = Router();
 /* ───────────── Rutas para Cliente ───────────── */
 
 // 📄 Obtener perfil del cliente autenticado
-router.get('/perfil', validarJWT, async (req, res) => {
-  try {
-    console.log('Solicitud GET /api/clientes/perfil - usuario:', req.usuarioId);
-    await obtenerPerfilCliente(req, res);
-  } catch (err) {
-    console.error('Error al obtener perfil del cliente:', err);
-    res.status(500).json({ ok: false, msg: 'Error al obtener perfil del cliente' });
-  }
-});
+router.get('/perfil', validarJWT, obtenerPerfilCliente);
 
 // 🔄 Actualizar perfil cliente (incluyendo foto)
-router.put('/perfil', validarJWT, upload.single('foto'), async (req, res) => {
-  try {
-    console.log('Solicitud PUT /api/clientes/perfil - usuario:', req.usuarioId);
-    await actualizarPerfilCliente(req, res);
-  } catch (err) {
-    console.error('Error al actualizar perfil del cliente:', err);
-    res.status(500).json({ ok: false, msg: 'Error al actualizar perfil del cliente' });
-  }
-});
+router.put(
+  '/perfil',
+  validarJWT,
+  upload.single('foto'),
+  actualizarPerfilCliente
+);
 
+// 📄 Obtener todos los clientes (solo admins/barberos según roles)
 router.get('/', validarJWT, obtenerClientes);
 
 module.exports = router;
