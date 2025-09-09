@@ -22,16 +22,13 @@ const upload = require('../middlewares/uploadFoto');
 
 const router = Router();
 
-/* =================== RUTAS DE PERFIL (PRIMERO, para que no choquen con /:id) =================== */
+/* =================== RUTAS DE PERFIL =================== */
 
 // 👤 Obtener perfil del usuario logueado
 router.get(
   '/perfil',
   [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'admin')],
-  (req, res) => {
-    console.log("🚀 Entró al endpoint /perfil con rol:", req.usuario.rol);
-    obtenerPerfil(req, res);
-  }
+  obtenerPerfil
 );
 
 // ✏️ Actualizar perfil del usuario logueado
@@ -45,72 +42,98 @@ router.put(
 /* =================== RUTAS ADMIN =================== */
 
 // 🔍 Verificar puesto
-router.get('/verificar-puesto/:puestoId', [
-  validarJWT,
-  tieneRol('admin'),
-], verificarPuesto);
+router.get(
+  '/verificar-puesto/:puestoId',
+  [validarJWT, tieneRol('admin')],
+  verificarPuesto
+);
 
 // 📋 Obtener TODOS los usuarios
-router.get('/', [
-  validarJWT,
-  tieneRol('admin'),
-], listarUsuarios);
+router.get(
+  '/',
+  [validarJWT, tieneRol('admin')],
+  listarUsuarios
+);
 
 // ➕ Crear usuario
-router.post('/', [
-  validarJWT,
-  tieneRol('admin'),
-  body('nombre').notEmpty().withMessage('El nombre es obligatorio'),
-  body('correo').isEmail().withMessage('El correo no es válido').custom(emailExiste),
-  body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-  body('rol').notEmpty().withMessage('El rol es obligatorio'),
-  validarCampos
-], crearUsuario);
+router.post(
+  '/',
+  [
+    validarJWT,
+    tieneRol('admin'),
+    body('nombre').notEmpty().withMessage('El nombre es obligatorio'),
+    body('correo').isEmail().withMessage('El correo no es válido').custom(emailExiste),
+    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+    body('rol').notEmpty().withMessage('El rol es obligatorio'),
+    validarCampos
+  ],
+  crearUsuario
+);
 
-// ✏️ Actualizar usuario (INCLUYE DETALLES PELUQUERO)
-router.put('/:id', [
-  validarJWT,
-  tieneRol('admin'),
-  param('id').isMongoId().withMessage('El ID no es válido'),
-  body('nombre').optional().notEmpty().withMessage('El nombre no puede estar vacío'),
-  body('correo').optional().isEmail().withMessage('El correo no es válido'),
-  body('rol').optional().notEmpty().withMessage('El rol no puede estar vacío'),
-  body('detalles').optional().isObject().withMessage('Los detalles deben ser un objeto válido'),
-  validarCampos
-], actualizarUsuario); 
+// ✏️ Actualizar usuario
+router.put(
+  '/:id',
+  [
+    validarJWT,
+    tieneRol('admin'),
+    param('id').isMongoId().withMessage('El ID no es válido'),
+    body('nombre').optional().notEmpty().withMessage('El nombre no puede estar vacío'),
+    body('correo').optional().isEmail().withMessage('El correo no es válido'),
+    body('rol').optional().notEmpty().withMessage('El rol no puede estar vacío'),
+    body('detalles').optional().isObject().withMessage('Los detalles deben ser un objeto válido'),
+    validarCampos
+  ],
+  actualizarUsuario
+); 
 
 // 🗑️ Eliminar usuario (Soft Delete)
-router.delete('/:id', [
-  validarJWT,
-  tieneRol('admin'),
-  param('id').isMongoId().withMessage('El ID no es válido'),
-  validarCampos
-], eliminarUsuario);
+router.delete(
+  '/:id',
+  [
+    validarJWT,
+    tieneRol('admin'),
+    param('id').isMongoId().withMessage('El ID no es válido'),
+    validarCampos
+  ],
+  eliminarUsuario
+);
 
 // 🔄 Cambiar estado usuario
-router.patch('/actualizar-estado/:id', [
-  validarJWT,
-  tieneRol('admin'),
-  param('id').isMongoId().withMessage('El ID no es válido'),
-  body('estado').isBoolean().withMessage('El estado debe ser booleano'),
-  validarCampos
-], cambiarEstadoUsuario);
+router.patch(
+  '/actualizar-estado/:id',
+  [
+    validarJWT,
+    tieneRol('admin'),
+    param('id').isMongoId().withMessage('El ID no es válido'),
+    body('estado').isBoolean().withMessage('El estado debe ser booleano'),
+    validarCampos
+  ],
+  cambiarEstadoUsuario
+);
 
 // 📷 Subir foto de perfil de usuario por ID
-router.post('/:id/foto', [
-  validarJWT,
-  tieneRol('admin', 'cliente', 'barbero'),
-  param('id').isMongoId().withMessage('ID inválido'),
-  validarCampos,
-  upload.single('foto')
-], subirFotoPerfil);
+router.post(
+  '/:id/foto',
+  [
+    validarJWT,
+    tieneRol('admin', 'cliente', 'barbero'),
+    param('id').isMongoId().withMessage('ID inválido'),
+    validarCampos,
+    upload.single('foto')
+  ],
+  subirFotoPerfil
+);
 
-// 📌 Obtener UN usuario por ID (debe ir al final para no chocar con /perfil)
-router.get('/:id', [
-  validarJWT,
-  tieneRol('admin'),
-  param('id').isMongoId().withMessage('El ID no es válido'),
-  validarCampos
-], obtenerUsuarioPorId);
+// 📌 Obtener UN usuario por ID
+router.get(
+  '/:id',
+  [
+    validarJWT,
+    tieneRol('admin'),
+    param('id').isMongoId().withMessage('El ID no es válido'),
+    validarCampos
+  ],
+  obtenerUsuarioPorId
+);
 
 module.exports = router;

@@ -1,18 +1,31 @@
+// routes/puestos.routes.js
 const express = require('express');
 const router = express.Router();
 const { validarJWT } = require('../middlewares/validarJWT');
+const { tieneRol } = require('../middlewares/validarRol');
 const PuestoController = require('../controllers/puesto.controller');
 
-// Todas las rutas protegidas con JWT
+// =============================
+// Middleware global: todas las rutas requieren JWT
+// =============================
 router.use(validarJWT);
 
-// Obtener puestos filtrados por sede y peluquero
+// =============================
+// GET /api/puestos/por-sede/:sedeId
+// Disponible para cualquier usuario autenticado
+// =============================
 router.get('/por-sede/:sedeId', PuestoController.obtenerPuestos);
 
-// Liberar puesto de trabajo (desasociar peluquero)
-router.put('/:id/liberar', PuestoController.liberarPuesto);
+// =============================
+// PUT /api/puestos/:id/liberar
+// Solo los administradores pueden liberar un puesto
+// =============================
+router.put('/:id/liberar', tieneRol('admin'), PuestoController.liberarPuesto);
 
-// Asignar peluquero a un puesto de trabajo
-router.put('/:id/asignar', PuestoController.asignarPuesto);
+// =============================
+// PUT /api/puestos/:id/asignar
+// Solo los administradores pueden asignar un puesto
+// =============================
+router.put('/:id/asignar', tieneRol('admin'), PuestoController.asignarPuesto);
 
 module.exports = router;

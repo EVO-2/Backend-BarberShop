@@ -7,6 +7,42 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 // ==========================
+// Helper para actualizar puesto de peluquero
+// ==========================
+const actualizarPuestoPeluquero = async (peluquero, nuevoPuestoId, estado) => {
+  const puestoAnteriorId = peluquero.puestoTrabajo ? peluquero.puestoTrabajo.toString() : null;
+
+  // Si el peluquero se desactiva, liberar su puesto
+  if (estado === false && peluquero.puestoTrabajo) {
+    await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
+    peluquero.puestoTrabajo = null;
+  }
+
+  // Si cambia de puesto y está activo
+  if (nuevoPuestoId && nuevoPuestoId !== puestoAnteriorId && estado !== false) {
+    // Validar que el puesto no esté ocupado por otro peluquero
+    const puestoOcupado = await PuestoTrabajo.findOne({
+      _id: nuevoPuestoId,
+      peluquero: { $ne: peluquero._id }
+    });
+    if (puestoOcupado && puestoOcupado.peluquero) {
+      throw new Error('El puesto seleccionado ya está ocupado por otro peluquero.');
+    }
+
+    // Liberar el puesto anterior
+    if (puestoAnteriorId) {
+      await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
+    }
+
+    // Asignar el nuevo puesto
+    await PuestoTrabajo.findByIdAndUpdate(nuevoPuestoId, { peluquero: peluquero._id });
+    peluquero.puestoTrabajo = nuevoPuestoId;
+  }
+
+  await peluquero.save();
+};
+
+// ==========================
 //      Listar Usuarios
 // ==========================
 const listarUsuarios = async (req, res) => {
@@ -111,6 +147,11 @@ const crearUsuario = async (req, res) => {
       });
       await nuevoPeluquero.save();
       nuevoUsuario.peluquero = nuevoPeluquero._id;
+
+      // Asignar puesto de inmediato si se indicó
+      if (detalles.puestoTrabajo) {
+        await PuestoTrabajo.findByIdAndUpdate(detalles.puestoTrabajo, { peluquero: nuevoPeluquero._id });
+      }
     }
 
     await nuevoUsuario.save();
@@ -151,23 +192,6 @@ const actualizarUsuario = async (req, res) => {
       const peluquero = await Peluquero.findById(usuario.peluquero);
       if (!peluquero) return res.status(404).json({ message: 'Peluquero no encontrado' });
 
-      const puestoAnteriorId = peluquero.puestoTrabajo ? peluquero.puestoTrabajo.toString() : null;
-
-      if (estado === false && peluquero.puestoTrabajo) {
-        await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
-        peluquero.puestoTrabajo = null;
-      }
-
-      if (detalles.puestoTrabajo && detalles.puestoTrabajo !== puestoAnteriorId) {
-        const puestoOcupado = await PuestoTrabajo.findOne({
-          _id: detalles.puestoTrabajo,
-          peluquero: { $ne: peluquero._id }
-        });
-        if (puestoOcupado && puestoOcupado.peluquero) {
-          return res.status(400).json({ message: 'El puesto seleccionado ya está ocupado por otro peluquero.' });
-        }
-      }
-
       peluquero.telefono_profesional = detalles.telefono ?? peluquero.telefono_profesional;
       peluquero.direccion_profesional = detalles.direccion ?? peluquero.direccion_profesional;
       peluquero.genero = detalles.genero ?? peluquero.genero;
@@ -177,13 +201,15 @@ const actualizarUsuario = async (req, res) => {
       peluquero.sede = detalles.sede ?? peluquero.sede;
       peluquero.estado = estado !== undefined ? estado : peluquero.estado;
 
-      if (detalles.puestoTrabajo && estado !== false) peluquero.puestoTrabajo = detalles.puestoTrabajo;
-
-      await peluquero.save();
-
-      if (detalles.puestoTrabajo && detalles.puestoTrabajo !== puestoAnteriorId && estado !== false) {
-        if (puestoAnteriorId) await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
-        await PuestoTrabajo.findByIdAndUpdate(detalles.puestoTrabajo, { peluquero: peluquero._id });
+      // 👇 usamos la función auxiliar
+      if (detalles.puestoTrabajo || estado === false) {
+        try {
+          await actualizarPuestoPeluquero(peluquero, detalles.puestoTrabajo, estado);
+        } catch (error) {
+          return res.status(400).json({ message: error.message });
+        }
+      } else {
+        await peluquero.save();
       }
     }
 
@@ -280,7 +306,7 @@ const verificarPuesto = async (req, res) => {
 // ==========================
 const obtenerPerfil = async (req, res) => {
   try {
-    const usuario = await Usuario.findById(req.uid) // usamos req.uid del JWT
+    const usuario = await Usuario.findById(req.uid)
       .populate('rol')
       .populate({
         path: 'cliente',
@@ -341,7 +367,6 @@ const obtenerPerfil = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ msg: 'Error al obtener perfil' });
   }
 };
@@ -351,10 +376,9 @@ const obtenerPerfil = async (req, res) => {
 // ==========================
 const actualizarPerfil = async (req, res) => {
   try {
-    const usuarioId = req.usuario.id; // viene del JWT
+    const usuarioId = req.usuario.id;
     const datos = req.body;
 
-    // 1. Actualizar datos básicos del usuario
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
       usuarioId,
       {
@@ -369,7 +393,6 @@ const actualizarPerfil = async (req, res) => {
 
     let perfilExtra = null;
 
-    // 2. Según el rol, actualizamos la colección correspondiente
     switch (usuarioActualizado.rol.nombre) {
       case "barbero":
         perfilExtra = await Peluquero.findOneAndUpdate(
@@ -396,7 +419,6 @@ const actualizarPerfil = async (req, res) => {
         break;
 
       case "admin":
-        // en admin tal vez no tengas colección extra, pero igual podrías manejarlo
         perfilExtra = { permisos: "completos" };
         break;
 
@@ -404,10 +426,9 @@ const actualizarPerfil = async (req, res) => {
         perfilExtra = null;
     }
 
-    // 3. Respuesta unificada
     const perfilCompleto = {
       ...usuarioActualizado.toObject(),
-      [usuarioActualizado.rol.nombre]: perfilExtra // dinámico según rol
+      [usuarioActualizado.rol.nombre]: perfilExtra
     };
 
     res.json({
@@ -416,7 +437,6 @@ const actualizarPerfil = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("[❌ actualizarPerfil]", error);
     res.status(500).json({ mensaje: "Error al actualizar perfil" });
   }
 };
