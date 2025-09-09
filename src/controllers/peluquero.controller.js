@@ -7,14 +7,19 @@ const crearPeluquero = async (req, res) => {
   try {
     const { usuario, especialidades, experiencia, telefono_profesional, direccion_profesional, genero, fecha_nacimiento, sede, puestoTrabajo } = req.body;
 
+    // Verificar que exista el usuario
     const usuarioDB = await Usuario.findById(usuario);
     if (!usuarioDB) {
       return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
     }
 
+    // Validación simple de puesto (ocupado/libre)
     if (puestoTrabajo) {
-      const puestoOcupado = await PuestoTrabajo.findOne({ _id: puestoTrabajo, peluquero: { $ne: null } });
-      if (puestoOcupado) {
+      const puesto = await PuestoTrabajo.findById(puestoTrabajo);
+      if (!puesto) {
+        return res.status(404).json({ ok: false, msg: 'Puesto no encontrado' });
+      }
+      if (puesto.peluquero) {
         return res.status(400).json({ ok: false, msg: 'El puesto seleccionado ya está ocupado.' });
       }
     }
@@ -33,6 +38,7 @@ const crearPeluquero = async (req, res) => {
 
     await nuevoPeluquero.save();
 
+    // Si tiene puesto, asignarlo
     if (puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(puestoTrabajo, { peluquero: nuevoPeluquero._id });
     }
@@ -91,20 +97,26 @@ const actualizarPeluquero = async (req, res) => {
       return res.status(404).json({ ok: false, msg: 'Peluquero no encontrado' });
     }
 
-    const puestoAnteriorId = peluquero.puestoTrabajo ? peluquero.puestoTrabajo.toString() : null;
+    const puestoAnteriorId = peluquero.puestoTrabajo?.toString();
 
+    // Si lo desactivo, libero su puesto
     if (estado === false && peluquero.puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
       peluquero.puestoTrabajo = null;
     }
 
+    // Si cambia de puesto y está activo, validar que el nuevo esté libre
     if (puestoTrabajo && puestoTrabajo !== puestoAnteriorId && estado !== false) {
-      const puestoOcupado = await PuestoTrabajo.findOne({ _id: puestoTrabajo, peluquero: { $ne: null } });
-      if (puestoOcupado) {
+      const puesto = await PuestoTrabajo.findById(puestoTrabajo);
+      if (!puesto) {
+        return res.status(404).json({ ok: false, msg: 'Puesto no encontrado' });
+      }
+      if (puesto.peluquero) {
         return res.status(400).json({ ok: false, msg: 'El puesto seleccionado ya está ocupado.' });
       }
     }
 
+    // Actualizar campos
     peluquero.especialidades = especialidades ?? peluquero.especialidades;
     peluquero.experiencia = experiencia ?? peluquero.experiencia;
     peluquero.telefono_profesional = telefono_profesional ?? peluquero.telefono_profesional;
@@ -120,6 +132,7 @@ const actualizarPeluquero = async (req, res) => {
 
     await peluquero.save();
 
+    // Si cambió de puesto, actualizar referencias
     if (puestoTrabajo && puestoTrabajo !== puestoAnteriorId && estado !== false) {
       if (puestoAnteriorId) {
         await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
@@ -147,6 +160,7 @@ const desactivarPeluquero = async (req, res) => {
       return res.status(404).json({ ok: false, msg: 'Peluquero no encontrado' });
     }
 
+    // Liberar puesto si tenía
     if (peluquero.puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
       peluquero.puestoTrabajo = null;
@@ -187,7 +201,7 @@ const activarPeluquero = async (req, res) => {
 /* ───────────── Obtener perfil del peluquero autenticado ───────────── */
 const obtenerPerfilPeluquero = async (req, res) => {
   try {
-    const usuarioId = req.uid; // importante: usar req.uid que setea el middleware JWT
+    const usuarioId = req.uid; // viene del JWT
     if (!usuarioId) return res.status(400).json({ ok: false, msg: 'Usuario no identificado' });
 
     const peluquero = await Peluquero.findOne({ usuario: usuarioId })
@@ -197,7 +211,6 @@ const obtenerPerfilPeluquero = async (req, res) => {
 
     if (!peluquero) return res.status(404).json({ ok: false, msg: 'Peluquero no encontrado' });
 
-    // respuesta organizada para Angular
     res.json({
       ok: true,
       data: {
