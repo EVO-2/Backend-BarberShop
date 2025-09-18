@@ -1,14 +1,28 @@
 const CitaService = require('../services/cita.service');
 const Servicio = require('../models/Servicio.model');
+const Cita = require('../models/Cita.model');
+const Cliente = require('../models/Cliente.model'); 
 
 // ===================== Controladores =====================
 
 // Crear nueva cita
 const crearCita = async (req, res) => {
   try {
-    const cita = await CitaService.crearCita(req.body);
+    const { rol, uid } = req; 
+    let datosCita = { ...req.body };
+
+    if (rol === 'cliente') {
+      const cliente = await Cliente.findOne({ usuario: uid });
+      if (!cliente) {
+        return res.status(400).json({ mensaje: 'El cliente no está registrado' });
+      }
+      datosCita.cliente = cliente._id; 
+    }
+
+    const cita = await CitaService.crearCita(datosCita);
     return res.status(201).json(cita);
   } catch (error) {
+    console.error('❌ Error en crearCita:', error);
     return res
       .status(error.status || 500)
       .json({ mensaje: error.message || 'Error interno del servidor' });
@@ -25,15 +39,27 @@ const obtenerCitas = async (_req, res) => {
   }
 };
 
-// Obtener citas del usuario logueado
+// Obtener todas las citas del usuario logueado
 const obtenerMisCitas = async (req, res) => {
   try {
     const { uid, rol } = req;
-    const { page = 1, limit = 10, fecha } = req.query;
-    const resultado = await CitaService.obtenerMisCitas({ uid, rol, page, limit, fecha });
+    const { page = 1, limit = 10, fecha, filtroGeneral } = req.query;
+
+    const resultado = await CitaService.obtenerMisCitas({
+      uid,
+      rol,
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      fecha,
+      filtroGeneral
+    });
+
     return res.json(resultado);
   } catch (error) {
-    return res.status(500).json({ mensaje: 'Error al obtener citas' });
+    console.error('❌ Error en obtenerMisCitas:', error);
+    const status = error.status || 500;
+    const mensaje = error.message || 'Error al obtener citas';
+    return res.status(status).json({ mensaje });
   }
 };
 
@@ -51,7 +77,7 @@ const obtenerCitaPorId = async (req, res) => {
   }
 };
 
-// Actualizar cita
+// Actualizar cita (admin/barbero)
 const actualizarCita = async (req, res) => {
   try {
     const { id } = req.params;
@@ -63,6 +89,42 @@ const actualizarCita = async (req, res) => {
     return res
       .status(error.status || 500)
       .json({ mensaje: error.message || 'Error al actualizar la cita' });
+  }
+};
+
+// Reprogramar cita (solo fecha y observación)
+const reprogramarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, observacion } = req.body;
+
+    if (!fecha) {
+      return res.status(400).json({ message: 'La nueva fecha es obligatoria' });
+    }
+
+    const fechaInicio = new Date(fecha);
+    const fechaFin = new Date(fechaInicio.getTime() + 45 * 60 * 1000);
+
+    const cita = await Cita.findByIdAndUpdate(
+      id,
+      {
+        fechaInicio,
+        fechaFin,
+        fecha: fechaInicio.toISOString(),
+        fechaBase: fechaInicio.toISOString(),
+        ...(observacion !== undefined ? { observacion } : {})
+      },
+      { new: true }
+    ).populate("cliente peluquero sede servicios puestoTrabajo");
+
+    if (!cita) {
+      return res.status(404).json({ message: 'Cita no encontrada' });
+    }
+
+    res.json(cita);
+  } catch (error) {
+    console.error('❌ Error reprogramarCita:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
@@ -98,12 +160,34 @@ const finalizarCita = async (req, res) => {
 const getCitasPorSedeYFecha = async (req, res) => {
   try {
     const { sedeId, fecha } = req.query;
-    const citas = await CitaService.getCitasPorSedeYFecha(sedeId, fecha);
-    return res.json(citas);
+
+    if (!sedeId || !fecha) {
+      return res.status(400).json({ mensaje: "❌ Falta sedeId o fecha" });
+    }
+
+    const fechaObj = new Date(fecha);
+    if (isNaN(fechaObj.getTime())) {
+      return res.status(400).json({ mensaje: "❌ Fecha inválida" });
+    }
+
+    const inicioDia = new Date(fechaObj);
+    inicioDia.setUTCHours(0, 0, 0, 0);
+
+    const finDia = new Date(fechaObj);
+    finDia.setUTCHours(23, 59, 59, 999);
+
+    const citas = await Cita.find({
+      sede: sedeId,
+      fecha: { $gte: inicioDia, $lte: finDia }
+    })
+      .populate("cliente", "nombre")
+      .populate("peluquero", "nombre")
+      .populate("servicios", "nombre duracion");
+
+    return res.json({ data: citas });
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al obtener citas por sede y fecha' });
+    console.error("❌ Error en getCitasPorSedeYFecha:", error);
+    return res.status(500).json({ mensaje: "❌ Error al obtener citas", error: error.message });
   }
 };
 
@@ -183,6 +267,7 @@ module.exports = {
   obtenerCitaPorId,
   obtenerServicios,
   actualizarCita,
+  reprogramarCita, 
   cancelarCita,
   finalizarCita,
   getCitasPorSedeYFecha,

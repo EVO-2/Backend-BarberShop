@@ -62,6 +62,14 @@ router.put(
   citaController.actualizarCita
 );
 
+// Cliente y admin: reprogramar cita (solo fecha y observación)
+router.put(
+  '/:id/reprogramar',
+  validarJWT,
+  tieneRol(ROLES.CLIENTE, ROLES.ADMIN),
+  citaController.reprogramarCita
+);
+
 // Cliente, barbero y admin: cancelar cita
 router.put(
   '/cancelar/:id',
@@ -77,7 +85,6 @@ router.post(
   tieneRol(ROLES.CLIENTE),
   citaController.repetirCita
 );
-
 
 // Cliente: pagar una cita (ruta alternativa más RESTful: POST /:id/pago)
 router.post(
@@ -103,7 +110,7 @@ router.get(
   citaController.obtenerCitasPorRango
 );
 
-// 🔹  obtener todos los servicios activos
+// 🔹 Obtener todos los servicios activos
 router.get(
   '/servicios',
   validarJWT,

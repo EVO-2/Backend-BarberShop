@@ -7,13 +7,11 @@ const crearPeluquero = async (req, res) => {
   try {
     const { usuario, especialidades, experiencia, telefono_profesional, direccion_profesional, genero, fecha_nacimiento, sede, puestoTrabajo } = req.body;
 
-    // Verificar que exista el usuario
     const usuarioDB = await Usuario.findById(usuario);
     if (!usuarioDB) {
       return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
     }
 
-    // Validación simple de puesto (ocupado/libre)
     if (puestoTrabajo) {
       const puesto = await PuestoTrabajo.findById(puestoTrabajo);
       if (!puesto) {
@@ -38,7 +36,6 @@ const crearPeluquero = async (req, res) => {
 
     await nuevoPeluquero.save();
 
-    // Si tiene puesto, asignarlo
     if (puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(puestoTrabajo, { peluquero: nuevoPeluquero._id });
     }
@@ -50,7 +47,6 @@ const crearPeluquero = async (req, res) => {
 
     return res.status(201).json({ ok: true, msg: 'Peluquero creado correctamente', data: peluqueroPopulado });
   } catch (error) {
-    console.error('❌ Error al crear peluquero:', error);
     return res.status(500).json({ ok: false, msg: 'Error al crear peluquero', error: error.message });
   }
 };
@@ -66,6 +62,26 @@ const obtenerPeluqueros = async (req, res) => {
     return res.json({ ok: true, data: peluqueros });
   } catch (error) {
     return res.status(500).json({ ok: false, msg: 'Error al obtener peluqueros', error: error.message });
+  }
+};
+
+/* ───────────── Obtener peluqueros DISPONIBLES ───────────── */
+const obtenerPeluquerosDisponibles = async (req, res) => {
+  try {
+    const peluqueros = await Peluquero.find({ estado: true, puestoTrabajo: { $ne: null } })
+      .populate({
+        path: 'usuario',
+        match: { estado: true },
+        select: 'nombre correo foto estado'
+      })
+      .populate('sede', 'nombre direccion')
+      .populate('puestoTrabajo', 'nombre');
+
+    const filtrados = peluqueros.filter(p => p.usuario);
+
+    return res.json({ ok: true, data: filtrados });
+  } catch (error) {
+    return res.status(500).json({ ok: false, msg: 'Error al obtener peluqueros disponibles', error: error.message });
   }
 };
 
@@ -99,13 +115,11 @@ const actualizarPeluquero = async (req, res) => {
 
     const puestoAnteriorId = peluquero.puestoTrabajo?.toString();
 
-    // Si lo desactivo, libero su puesto
     if (estado === false && peluquero.puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
       peluquero.puestoTrabajo = null;
     }
 
-    // Si cambia de puesto y está activo, validar que el nuevo esté libre
     if (puestoTrabajo && puestoTrabajo !== puestoAnteriorId && estado !== false) {
       const puesto = await PuestoTrabajo.findById(puestoTrabajo);
       if (!puesto) {
@@ -116,7 +130,6 @@ const actualizarPeluquero = async (req, res) => {
       }
     }
 
-    // Actualizar campos
     peluquero.especialidades = especialidades ?? peluquero.especialidades;
     peluquero.experiencia = experiencia ?? peluquero.experiencia;
     peluquero.telefono_profesional = telefono_profesional ?? peluquero.telefono_profesional;
@@ -132,7 +145,6 @@ const actualizarPeluquero = async (req, res) => {
 
     await peluquero.save();
 
-    // Si cambió de puesto, actualizar referencias
     if (puestoTrabajo && puestoTrabajo !== puestoAnteriorId && estado !== false) {
       if (puestoAnteriorId) {
         await PuestoTrabajo.findByIdAndUpdate(puestoAnteriorId, { peluquero: null });
@@ -147,7 +159,6 @@ const actualizarPeluquero = async (req, res) => {
 
     return res.json({ ok: true, msg: 'Peluquero actualizado correctamente', data: peluqueroActualizado });
   } catch (error) {
-    console.error('❌ Error al actualizar peluquero:', error);
     return res.status(500).json({ ok: false, msg: 'Error al actualizar peluquero', error: error.message });
   }
 };
@@ -160,7 +171,6 @@ const desactivarPeluquero = async (req, res) => {
       return res.status(404).json({ ok: false, msg: 'Peluquero no encontrado' });
     }
 
-    // Liberar puesto si tenía
     if (peluquero.puestoTrabajo) {
       await PuestoTrabajo.findByIdAndUpdate(peluquero.puestoTrabajo, { peluquero: null });
       peluquero.puestoTrabajo = null;
@@ -201,7 +211,7 @@ const activarPeluquero = async (req, res) => {
 /* ───────────── Obtener perfil del peluquero autenticado ───────────── */
 const obtenerPerfilPeluquero = async (req, res) => {
   try {
-    const usuarioId = req.uid; // viene del JWT
+    const usuarioId = req.uid;
     if (!usuarioId) return res.status(400).json({ ok: false, msg: 'Usuario no identificado' });
 
     const peluquero = await Peluquero.findOne({ usuario: usuarioId })
@@ -227,7 +237,6 @@ const obtenerPerfilPeluquero = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Error en obtenerPerfilPeluquero:', err);
     res.status(500).json({ ok: false, msg: 'Error interno del servidor' });
   }
 };
@@ -235,6 +244,7 @@ const obtenerPerfilPeluquero = async (req, res) => {
 module.exports = {
   crearPeluquero,
   obtenerPeluqueros,
+  obtenerPeluquerosDisponibles,
   obtenerPeluqueroPorId,
   actualizarPeluquero,
   desactivarPeluquero,
