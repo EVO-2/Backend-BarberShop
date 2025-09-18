@@ -24,7 +24,7 @@ const CitaSchema = new Schema({
     default: 'pendiente'
   },
 
-  observaciones: { type: String, maxlength: 500 }
+  observacion: { type: String, maxlength: 500 }
 }, {
   timestamps: true
 });

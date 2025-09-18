@@ -13,6 +13,7 @@ const {
   activarPeluquero,
   obtenerPerfilPeluquero,
   // actualizarPerfilPeluquero
+  obtenerPeluquerosDisponibles
 } = require('../controllers/peluquero.controller');
 
 // ✅ Todas las rutas protegidas con JWT
@@ -32,6 +33,11 @@ router.put(
 );
 */
 
+/* ───────────── Endpoints de consulta (admin y cliente) ───────────── */
+
+// 📌 Obtener peluqueros disponibles para citas
+router.get('/disponibles', tieneRol('admin', 'cliente'), obtenerPeluquerosDisponibles);
+
 /* ───────────── CRUD de Peluquero (solo admin) ───────────── */
 
 // Crear peluquero
@@ -40,16 +46,14 @@ router.post('/', tieneRol('admin'), crearPeluquero);
 // Listar todos los peluqueros
 router.get('/', tieneRol('admin'), obtenerPeluqueros);
 
+// 🚨 Importante: poner primero las rutas específicas para que no choquen con /:id
+router.put('/desactivar/:id', tieneRol('admin'), desactivarPeluquero);
+router.put('/activar/:id', tieneRol('admin'), activarPeluquero);
+
 // Obtener peluquero por ID
 router.get('/:id', tieneRol('admin'), obtenerPeluqueroPorId);
 
 // Actualizar peluquero
 router.put('/:id', tieneRol('admin'), actualizarPeluquero);
-
-// Desactivar peluquero y liberar puesto
-router.put('/desactivar/:id', tieneRol('admin'), desactivarPeluquero);
-
-// Activar peluquero
-router.put('/activar/:id', tieneRol('admin'), activarPeluquero);
 
 module.exports = router;
