@@ -1,7 +1,8 @@
+// controllers/cita.controller.js
 const CitaService = require('../services/cita.service');
 const Servicio = require('../models/Servicio.model');
 const Cita = require('../models/Cita.model');
-const Cliente = require('../models/Cliente.model'); 
+const Cliente = require('../models/Cliente.model');
 
 // ===================== Controladores =====================
 
@@ -13,9 +14,7 @@ const crearCita = async (req, res) => {
 
     if (rol === 'cliente') {
       const cliente = await Cliente.findOne({ usuario: uid });
-      if (!cliente) {
-        return res.status(400).json({ mensaje: 'El cliente no está registrado' });
-      }
+      if (!cliente) return res.status(400).json({ mensaje: 'El cliente no está registrado' });
       datosCita.cliente = cliente._id; 
     }
 
@@ -23,9 +22,7 @@ const crearCita = async (req, res) => {
     return res.status(201).json(cita);
   } catch (error) {
     console.error('❌ Error en crearCita:', error);
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error interno del servidor' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error interno del servidor' });
   }
 };
 
@@ -45,12 +42,23 @@ const obtenerMisCitas = async (req, res) => {
     const { uid, rol } = req;
     const { page = 1, limit = 10, fecha, filtroGeneral } = req.query;
 
+    let rangoFechas;
+    if (fecha) {
+      const fechaInicio = new Date(fecha);
+      fechaInicio.setHours(0, 0, 0, 0);
+
+      const fechaFin = new Date(fecha);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      rangoFechas = { inicio: fechaInicio, fin: fechaFin };
+    }
+
     const resultado = await CitaService.obtenerMisCitas({
       uid,
       rol,
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
-      fecha,
+      fecha: rangoFechas, // 👈 ya va como rango
       filtroGeneral
     });
 
@@ -63,6 +71,39 @@ const obtenerMisCitas = async (req, res) => {
   }
 };
 
+// Obtener citas con paginación y filtros (admin)
+const obtenerCitasPaginadas = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, fecha, filtroGeneral } = req.query;
+
+    let rangoFechas;
+    if (fecha) {
+      const fechaInicio = new Date(fecha);
+      fechaInicio.setHours(0, 0, 0, 0);
+
+      const fechaFin = new Date(fecha);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      rangoFechas = { inicio: fechaInicio, fin: fechaFin };
+    }
+
+    const resultado = await CitaService.obtenerCitasPaginadas({
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      fecha: rangoFechas, // 👈 ya va como rango
+      filtroGeneral
+    });
+
+    return res.json(resultado);
+  } catch (error) {
+    console.error("❌ Error en obtenerCitasPaginadas:", error);
+    return res.status(error.status || 500).json({
+      mensaje: error.message || "Error al obtener citas paginadas"
+    });
+  }
+};
+
+
 // Obtener una cita por ID
 const obtenerCitaPorId = async (req, res) => {
   try {
@@ -71,9 +112,7 @@ const obtenerCitaPorId = async (req, res) => {
     if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
     return res.json(cita);
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al obtener la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener la cita' });
   }
 };
 
@@ -86,9 +125,7 @@ const actualizarCita = async (req, res) => {
     if (!citaActualizada) return res.status(404).json({ mensaje: 'Cita no encontrada' });
     return res.json(citaActualizada);
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al actualizar la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al actualizar la cita' });
   }
 };
 
@@ -98,9 +135,7 @@ const reprogramarCita = async (req, res) => {
     const { id } = req.params;
     const { fecha, observacion } = req.body;
 
-    if (!fecha) {
-      return res.status(400).json({ message: 'La nueva fecha es obligatoria' });
-    }
+    if (!fecha) return res.status(400).json({ message: 'La nueva fecha es obligatoria' });
 
     const fechaInicio = new Date(fecha);
     const fechaFin = new Date(fechaInicio.getTime() + 45 * 60 * 1000);
@@ -117,10 +152,7 @@ const reprogramarCita = async (req, res) => {
       { new: true }
     ).populate("cliente peluquero sede servicios puestoTrabajo");
 
-    if (!cita) {
-      return res.status(404).json({ message: 'Cita no encontrada' });
-    }
-
+    if (!cita) return res.status(404).json({ message: 'Cita no encontrada' });
     res.json(cita);
   } catch (error) {
     console.error('❌ Error reprogramarCita:', error);
@@ -128,7 +160,78 @@ const reprogramarCita = async (req, res) => {
   }
 };
 
-// Cancelar cita
+const iniciarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { hora } = req.body;
+
+    // Llamada al servicio
+    const cita = await CitaService.iniciarCita(id, hora);
+
+    // Retorno uniforme
+    return res.json({
+      success: true,
+      mensaje: 'Cita iniciada correctamente',
+      data: cita
+    });
+  } catch (error) {
+    console.error('❌ Error en iniciarCita:', error);
+    return res.status(error.status || 500).json({
+      success: false,
+      mensaje: error.message || 'Error al iniciar la cita'
+    });
+  }
+};
+
+const finalizarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { hora } = req.body;
+
+    console.log('[finalizarCita] Request Params:', req.params);
+    console.log('[finalizarCita] Request Body:', req.body);
+
+    // Validación básica de ID
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        mensaje: 'ID de la cita es requerido'
+      });
+    }
+
+    // Normalizar hora: si viene null, "", o solo espacios, usar undefined para fecha actual
+    if (!hora || typeof hora !== 'string' || hora.trim() === '') {
+      hora = undefined;
+    } else {
+      hora = hora.trim(); // eliminar espacios innecesarios
+    }
+
+    console.log('[finalizarCita] Hora normalizada:', hora);
+
+    // Llamada al servicio
+    const cita = await CitaService.finalizarCita(id, hora);
+
+    // Retorno uniforme
+    return res.json({
+      success: true,
+      mensaje: 'Cita finalizada correctamente',
+      data: cita
+    });
+  } catch (error) {
+    console.error('❌ Error en finalizarCita:', error);
+
+    return res.status(error.status || 500).json({
+      success: false,
+      mensaje: error.message || 'Error al finalizar la cita'
+    });
+  }
+};
+
+
+
+// =========================
+// Otros controladores existentes
+// =========================
 const cancelarCita = async (req, res) => {
   try {
     const { id } = req.params;
@@ -136,23 +239,8 @@ const cancelarCita = async (req, res) => {
     if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
     return res.json({ mensaje: 'Cita cancelada exitosamente', cita });
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al cancelar la cita' });
-  }
-};
-
-// Finalizar cita
-const finalizarCita = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const cita = await CitaService.finalizarCita(id);
-    if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
-    return res.json({ mensaje: 'Cita finalizada correctamente', cita });
-  } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al finalizar la cita' });
+    console.error('❌ Error en cancelarCita:', error);
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al cancelar la cita' });
   }
 };
 
@@ -160,26 +248,15 @@ const finalizarCita = async (req, res) => {
 const getCitasPorSedeYFecha = async (req, res) => {
   try {
     const { sedeId, fecha } = req.query;
-
-    if (!sedeId || !fecha) {
-      return res.status(400).json({ mensaje: "❌ Falta sedeId o fecha" });
-    }
+    if (!sedeId || !fecha) return res.status(400).json({ mensaje: "❌ Falta sedeId o fecha" });
 
     const fechaObj = new Date(fecha);
-    if (isNaN(fechaObj.getTime())) {
-      return res.status(400).json({ mensaje: "❌ Fecha inválida" });
-    }
+    if (isNaN(fechaObj.getTime())) return res.status(400).json({ mensaje: "❌ Fecha inválida" });
 
-    const inicioDia = new Date(fechaObj);
-    inicioDia.setUTCHours(0, 0, 0, 0);
+    const inicioDia = new Date(fechaObj); inicioDia.setUTCHours(0, 0, 0, 0);
+    const finDia = new Date(fechaObj); finDia.setUTCHours(23, 59, 59, 999);
 
-    const finDia = new Date(fechaObj);
-    finDia.setUTCHours(23, 59, 59, 999);
-
-    const citas = await Cita.find({
-      sede: sedeId,
-      fecha: { $gte: inicioDia, $lte: finDia }
-    })
+    const citas = await Cita.find({ sede: sedeId, fecha: { $gte: inicioDia, $lte: finDia } })
       .populate("cliente", "nombre")
       .populate("peluquero", "nombre")
       .populate("servicios", "nombre duracion");
@@ -198,9 +275,7 @@ const obtenerCitasPorFechaYHora = async (req, res) => {
     const citas = await CitaService.obtenerCitasPorFechaYHora(fecha, hora);
     return res.json(citas);
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al obtener citas por fecha y hora' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al obtener citas por fecha y hora' });
   }
 };
 
@@ -232,9 +307,7 @@ const repetirCita = async (req, res) => {
     const nuevaCita = await CitaService.repetirCita(id, fecha);
     return res.status(201).json(nuevaCita);
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al repetir la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al repetir la cita' });
   }
 };
 
@@ -243,20 +316,15 @@ const pagarCita = async (req, res) => {
   try {
     const { id } = req.params;
     const { monto, metodo } = req.body;
-
-    if (!monto || isNaN(monto) || monto <= 0)
-      return res.status(400).json({ mensaje: 'Monto inválido' });
-    if (!metodo || typeof metodo !== 'string')
-      return res.status(400).json({ mensaje: 'Método de pago requerido' });
+    if (!monto || isNaN(monto) || monto <= 0) return res.status(400).json({ mensaje: 'Monto inválido' });
+    if (!metodo || typeof metodo !== 'string') return res.status(400).json({ mensaje: 'Método de pago requerido' });
 
     const cita = await CitaService.pagarCita(id, monto, metodo);
     if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
 
     return res.json({ mensaje: 'Pago registrado correctamente', cita });
   } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ mensaje: error.message || 'Error al pagar la cita' });
+    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al pagar la cita' });
   }
 };
 
@@ -264,10 +332,12 @@ module.exports = {
   crearCita,
   obtenerCitas,
   obtenerMisCitas,
+  obtenerCitasPaginadas,
   obtenerCitaPorId,
   obtenerServicios,
   actualizarCita,
-  reprogramarCita, 
+  reprogramarCita,
+  iniciarCita,
   cancelarCita,
   finalizarCita,
   getCitasPorSedeYFecha,

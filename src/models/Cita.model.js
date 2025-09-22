@@ -19,8 +19,8 @@ const CitaSchema = new Schema({
   turno: { type: Number, required: true },
 
   estado: {
-    type: String,
-    enum: ['pendiente', 'confirmada', 'completada', 'finalizada', 'cancelada'],
+  type: String,
+    enum: ['pendiente', 'confirmada', 'en_proceso', 'finalizada', 'cancelada'],
     default: 'pendiente'
   },
 
