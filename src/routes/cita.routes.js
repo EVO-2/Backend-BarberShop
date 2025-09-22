@@ -46,6 +46,14 @@ router.get(
   citaController.obtenerCitas
 );
 
+// 🔹 Admin y barbero: obtener citas paginadas
+router.get(
+  '/paginadas',
+  validarJWT,
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  citaController.obtenerCitasPaginadas
+);
+
 // Admin y cliente: crear nueva cita
 router.post(
   '/',
@@ -70,11 +78,29 @@ router.put(
   citaController.reprogramarCita
 );
 
-// Cliente, barbero y admin: cancelar cita
+/* ───────────── Nuevos endpoints de gestión ───────────── */
+
+// Iniciar cita (barbero o admin)
 router.put(
-  '/cancelar/:id',
+  '/:id/iniciar',
   validarJWT,
-  tieneRol(ROLES.CLIENTE, ROLES.BARBERO, ROLES.ADMIN),
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  citaController.iniciarCita
+);
+
+// Finalizar cita (barbero o admin)
+router.put(
+  '/:id/finalizar',
+  validarJWT,
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  citaController.finalizarCita
+);
+
+// Cancelar cita (barbero o admin)
+router.put(
+  '/:id/cancelar',
+  validarJWT,
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
   citaController.cancelarCita
 );
 
@@ -86,20 +112,12 @@ router.post(
   citaController.repetirCita
 );
 
-// Cliente: pagar una cita (ruta alternativa más RESTful: POST /:id/pago)
+// Cliente: pagar una cita (ruta POST /:id/pago)
 router.post(
   '/:id/pago',
   validarJWT,
   tieneRol(ROLES.CLIENTE),
   citaController.pagarCita
-);
-
-// Barbero: finalizar cita
-router.put(
-  '/:id/finalizar',
-  validarJWT,
-  tieneRol(ROLES.BARBERO),
-  citaController.finalizarCita
 );
 
 // 🔹 Obtener citas en un rango de fechas (Admin, Cliente, Barbero)
@@ -114,7 +132,7 @@ router.get(
 router.get(
   '/servicios',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO), // roles permitidos
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
   citaController.obtenerServicios
 );
 
