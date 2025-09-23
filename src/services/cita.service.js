@@ -27,7 +27,6 @@ const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'en_proceso'];
 
 // ===================== funciones auxiliares =====================
 async function calcularDuracionTotal(serviciosIds = []) {
-  console.log('[calcularDuracionTotal] serviciosIds:', serviciosIds);
   if (!Array.isArray(serviciosIds) || serviciosIds.length === 0) return 0;
 
   const validIds = serviciosIds.filter(id => id && typeof id === 'string');
@@ -37,13 +36,10 @@ async function calcularDuracionTotal(serviciosIds = []) {
     throw { status: 400, message: 'Uno o más servicios no existen o están inactivos' };
   }
 
-  const total = servicios.reduce((acc, s) => acc + (s.duracion || 0), 0);
-  console.log('[calcularDuracionTotal] duracion total:', total);
-  return total;
+  return servicios.reduce((acc, s) => acc + (s.duracion || 0), 0);
 }
 
 async function existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fechaFin, excluirId = null }) {
-  console.log('[existeSolape] Params:', { sede, peluquero, puestoTrabajo, fechaInicio, fechaFin, excluirId });
   const filtro = {
     sede,
     estado: { $in: ESTADOS_ACTIVOS },
@@ -57,13 +53,10 @@ async function existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fecha
   if (puestoTrabajo) filtro.$or.push({ puestoTrabajo });
   if (filtro.$or && filtro.$or.length === 0) delete filtro.$or;
 
-  const existe = await Cita.exists(filtro);
-  console.log('[existeSolape] Existe solape:', existe);
-  return existe;
+  return await Cita.exists(filtro);
 }
 
 async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
-  console.log('[validarReferencias] Params:', { cliente, peluquero, sede, puestoTrabajo });
   const promesas = [
     Cliente.findById(cliente).lean(),
     Sede.findOne({ _id: sede, estado: true }).lean()
@@ -81,7 +74,6 @@ async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
   if (puestoTrabajo && puesto.sede?.toString() !== sede.toString()) {
     throw { status: 400, message: 'El puesto de trabajo no pertenece a la sede seleccionada' };
   }
-  console.log('[validarReferencias] Referencias válidas');
 }
 
 // ===================== servicios =====================
@@ -94,8 +86,6 @@ const crearCita = async ({
   fecha, 
   observacion 
 }) => {
-  console.log('[crearCita] Params:', { cliente, peluquero, servicios, sede, puestoTrabajo, fecha, observacion });
-
   if (!cliente || !sede || !fecha) {
     throw { status: 400, message: 'cliente, sede y fecha son obligatorios' };
   }
@@ -133,41 +123,35 @@ const crearCita = async ({
     estado: 'pendiente',
   });
 
-  console.log('[crearCita] Cita creada ID:', nuevaCita._id);
   return Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
 };
 
 const obtenerCitas = async () => {
-  console.log('[obtenerCitas]');
-  const citas = await Cita.find().populate(CITA_POPULATE).lean();
-  console.log('[obtenerCitas] Total citas:', citas.length);
-  return citas;
+  return await Cita.find().populate(CITA_POPULATE).lean();
 };
 
 // ===================== obtenerCitasPaginadas =====================
 const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fecha }) => {
-  console.log('[obtenerCitasPaginadas] Params:', { page, limit, filtroGeneral, fecha });
-
   page = Math.max(1, Number(page) || 1);
   limit = Math.max(1, Number(limit) || 10);
   const skip = (page - 1) * limit;
 
-  // 🔎 Construcción dinámica de filtros
   let match = {};
 
-  // 👉 Filtro por rango de fechas
   if (fecha && fecha.inicio && fecha.fin) {
-    match.fecha = { $gte: new Date(fecha.inicio), $lte: new Date(fecha.fin) };
+    const inicio = new Date(fecha.inicio);
+    const fin = new Date(fecha.fin);
+    if (!isNaN(inicio.getTime()) && !isNaN(fin.getTime())) {
+      fin.setHours(23, 59, 59, 999);
+      match.fecha = { $gte: inicio, $lte: fin };
+    }
   }
 
   if (filtroGeneral && filtroGeneral.trim() !== '') {
     const palabras = filtroGeneral.trim().split(/\s+/);
-
     match.$and = palabras.map(palabra => {
       const regex = new RegExp(palabra, 'i');
       const isNumber = !isNaN(Number(palabra));
-
-      // Detectar fecha en formato string
       const isDateFull = /^\d{4}-\d{2}-\d{2}$/.test(palabra);
       const isDateMonth = /^\d{4}-\d{2}$/.test(palabra);
 
@@ -200,109 +184,34 @@ const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fech
     });
   }
 
-  // 🔄 Pipeline aggregation
   const pipeline = [
-    // Join con cliente → usuario
-    {
-      $lookup: {
-        from: 'clientes',
-        localField: 'cliente',
-        foreignField: '_id',
-        as: 'cliente'
-      }
-    },
+    { $lookup: { from: 'clientes', localField: 'cliente', foreignField: '_id', as: 'cliente' } },
     { $unwind: { path: '$cliente', preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: 'usuarios',
-        localField: 'cliente.usuario',
-        foreignField: '_id',
-        as: 'clienteUsuario'
-      }
-    },
+    { $lookup: { from: 'usuarios', localField: 'cliente.usuario', foreignField: '_id', as: 'clienteUsuario' } },
     { $unwind: { path: '$clienteUsuario', preserveNullAndEmptyArrays: true } },
-
-    // Join con peluquero → usuario
-    {
-      $lookup: {
-        from: 'peluqueros',
-        localField: 'peluquero',
-        foreignField: '_id',
-        as: 'peluquero'
-      }
-    },
+    { $lookup: { from: 'peluqueros', localField: 'peluquero', foreignField: '_id', as: 'peluquero' } },
     { $unwind: { path: '$peluquero', preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: 'usuarios',
-        localField: 'peluquero.usuario',
-        foreignField: '_id',
-        as: 'peluqueroUsuario'
-      }
-    },
+    { $lookup: { from: 'usuarios', localField: 'peluquero.usuario', foreignField: '_id', as: 'peluqueroUsuario' } },
     { $unwind: { path: '$peluqueroUsuario', preserveNullAndEmptyArrays: true } },
-
-    // Join con sede
-    {
-      $lookup: {
-        from: 'sedes',
-        localField: 'sede',
-        foreignField: '_id',
-        as: 'sede'
-      }
-    },
+    { $lookup: { from: 'sedes', localField: 'sede', foreignField: '_id', as: 'sede' } },
     { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
-
-    // Join con servicios
-    {
-      $lookup: {
-        from: 'servicios',
-        localField: 'servicios',
-        foreignField: '_id',
-        as: 'servicios'
-      }
-    },
-
-    // Join con puestoTrabajo
-    {
-      $lookup: {
-        from: 'puestotrabajos',
-        localField: 'puestoTrabajo',
-        foreignField: '_id',
-        as: 'puestoTrabajo'
-      }
-    },
+    { $lookup: { from: 'servicios', localField: 'servicios', foreignField: '_id', as: 'servicios' } },
+    { $lookup: { from: 'puestotrabajos', localField: 'puestoTrabajo', foreignField: '_id', as: 'puestoTrabajo' } },
     { $unwind: { path: '$puestoTrabajo', preserveNullAndEmptyArrays: true } },
-
-    // Aplicar filtros
     { $match: match },
-
-    // Ordenar
     { $sort: { fecha: -1 } }
   ];
 
-  // 📊 Total de documentos antes de paginar
   const totalResult = await Cita.aggregate([...pipeline, { $count: 'total' }]);
   const total = totalResult.length > 0 ? totalResult[0].total : 0;
 
-  // 📄 Paginación
-  const citasRaw = await Cita.aggregate([
-    ...pipeline,
-    { $skip: skip },
-    { $limit: limit }
-  ]);
-
-  // Adaptar citas
+  const citasRaw = await Cita.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]);
   const citas = citasRaw.map(c => ({
     ...c,
     cliente: { ...c.cliente, usuario: c.clienteUsuario },
     peluquero: { ...c.peluquero, usuario: c.peluqueroUsuario },
-    duracionRealMin:
-      c.servicios?.reduce((acc, s) => acc + (s.duracion || 0), 0) || 0
+    duracionRealMin: c.servicios?.reduce((acc, s) => acc + (s.duracion || 0), 0) || 0
   }));
-
-  console.log('[obtenerCitasPaginadas] Total registros:', total);
-  console.log('[obtenerCitasPaginadas] Citas devueltas:', citas.length);
 
   return {
     total,
@@ -313,11 +222,8 @@ const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fech
   };
 };
 
-
 // ===================== obtenerMisCitas =====================
 const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit = 10 }) => {
-  console.log('[obtenerMisCitas] Params:', { uid, rol, fecha, filtroGeneral, page, limit });
-
   page = Math.max(1, Number(page) || 1);
   limit = Math.max(1, Number(limit) || 10);
   const skip = (page - 1) * limit;
@@ -334,9 +240,13 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
     match.peluquero = peluquero._id;
   }
 
-  // 👉 Filtro de fecha por rango del día
   if (fecha && fecha.inicio && fecha.fin) {
-    match.fecha = { $gte: new Date(fecha.inicio), $lte: new Date(fecha.fin) };
+    const inicio = new Date(fecha.inicio);
+    const fin = new Date(fecha.fin);
+    if (!isNaN(inicio.getTime()) && !isNaN(fin.getTime())) {
+      fin.setHours(23, 59, 59, 999);
+      match.fecha = { $gte: inicio, $lte: fin };
+    }
   }
 
   const pipeline = [
@@ -359,7 +269,6 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
   if (filtroGeneral && filtroGeneral.trim() !== '') {
     const palabras = filtroGeneral.trim().split(/\s+/);
     const regexPalabras = palabras.map(p => new RegExp(p, 'i'));
-
     pipeline.push({
       $match: {
         $and: regexPalabras.map(regex => ({
@@ -387,7 +296,6 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
   );
 
   const resultado = await Cita.aggregate(pipeline);
-  console.log('[obtenerMisCitas] Total resultados:', resultado[0]?.totalCount[0]?.count || 0);
 
   return {
     total: resultado[0]?.totalCount[0]?.count || 0,
@@ -397,17 +305,14 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
   };
 };
 
-
-// ===================== funciones restantes con logs =====================
+// ===================== funciones restantes =====================
 const obtenerCitaPorId = async (id) => {
-  console.log('[obtenerCitaPorId] ID:', id);
   const cita = await Cita.findById(id).populate(CITA_POPULATE).lean();
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
   return cita;
 };
 
 const actualizarCita = async ({ id, data }) => {
-  console.log('[actualizarCita] Params:', { id, data });
   const { servicios, sede, puestoTrabajo, peluquero, fecha, observaciones } = data;
   const citaBase = await Cita.findById(id).lean();
   if (!citaBase) throw { status: 404, message: 'Cita no encontrada' };
@@ -449,23 +354,17 @@ const actualizarCita = async ({ id, data }) => {
   };
 
   await Cita.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
-  const citaActualizada = await Cita.findById(id).populate(CITA_POPULATE);
-  console.log('[actualizarCita] Cita actualizada ID:', id);
-  return citaActualizada;
+  return await Cita.findById(id).populate(CITA_POPULATE);
 };
 
 const calcularDuracionReal = (inicioServicio, finServicio) => {
-  console.log('[calcularDuracionReal] Params:', { inicioServicio, finServicio });
   const inicio = new Date(inicioServicio).getTime();
   const fin = new Date(finServicio).getTime();
   if (isNaN(inicio) || isNaN(fin) || fin <= inicio) return 0;
-  const diffMin = Math.round((fin - inicio) / 60000);
-  console.log('[calcularDuracionReal] Duración en minutos:', diffMin);
-  return diffMin;
+  return Math.round((fin - inicio) / 60000);
 };
 
 const iniciarCita = async (id, hora) => {
-  console.log('[iniciarCita] Params:', { id, hora });
   const cita = await Cita.findById(id);
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
   if (!['pendiente', 'confirmada'].includes(cita.estado)) {
@@ -474,74 +373,43 @@ const iniciarCita = async (id, hora) => {
   cita.inicioServicio = hora ? new Date(`1970-01-01T${hora}:00`) : new Date();
   cita.estado = 'en_proceso';
   await cita.save();
-  const citaActualizada = await Cita.findById(id).populate(CITA_POPULATE);
-  console.log('[iniciarCita] Cita iniciada ID:', id);
-  return citaActualizada;
+  return Cita.findById(id).populate(CITA_POPULATE);
 };
 
 const finalizarCita = async (id, hora) => {
-  console.log('[finalizarCita] Inicio - Params recibidos:', { id, hora });
-
-  // Normalizar hora: si viene null, "", o solo espacios → usar undefined para fecha actual
   if (!hora || typeof hora !== 'string' || hora.trim() === '') {
     hora = undefined;
   } else {
     hora = hora.trim();
   }
 
-  console.log('[finalizarCita] Hora normalizada:', hora);
-
   const cita = await Cita.findById(id);
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
 
-  // ✅ Nueva validación minimalista
-  if (cita.estado !== 'en_proceso') {
-    throw { status: 400, message: 'La cita no está en proceso y no puede finalizarse' };
-  }
-
-  if (cita.estado === 'finalizada') {
-    throw { status: 400, message: 'La cita ya fue finalizada' };
-  }
+  if (cita.estado !== 'en_proceso') throw { status: 400, message: 'La cita no está en proceso y no puede finalizarse' };
+  if (cita.estado === 'finalizada') throw { status: 400, message: 'La cita ya fue finalizada' };
 
   let fechaFin;
   if (hora) {
-    // Asegurar formato HH:MM
     const [horas, minutos] = hora.split(':').map(Number);
-    if (isNaN(horas) || isNaN(minutos)) {
-      throw { status: 400, message: 'Formato de hora inválido' };
-    }
+    if (isNaN(horas) || isNaN(minutos)) throw { status: 400, message: 'Formato de hora inválido' };
     fechaFin = new Date(cita.inicioServicio);
     fechaFin.setHours(horas, minutos, 0, 0);
   } else {
     fechaFin = new Date();
   }
 
-  console.log('[finalizarCita] Fecha de fin calculada:', fechaFin);
+  if (fechaFin <= cita.inicioServicio) throw { status: 400, message: 'La hora de finalización debe ser posterior a la de inicio' };
 
-  // ⚠️ Validación: no permitir fin antes o igual al inicio
-  if (fechaFin <= cita.inicioServicio) {
-    throw { status: 400, message: 'La hora de finalización debe ser posterior a la de inicio' };
-  }
-
-  // ✅ Actualizar cita
   cita.finServicio = fechaFin;
   cita.estado = 'finalizada';
-
-  // ⚡ Cálculo extra (solo informativo, no condiciona nada)
   cita.duracionRealMin = calcularDuracionReal(cita.inicioServicio, cita.finServicio);
 
   await cita.save();
-
-  const citaActualizada = await Cita.findById(id).populate(CITA_POPULATE);
-  console.log('[finalizarCita] Cita finalizada con éxito - ID:', id, 'Duración:', cita.duracionRealMin);
-
-  return citaActualizada;
+  return Cita.findById(id).populate(CITA_POPULATE);
 };
 
-
-
 const cancelarCita = async (id) => {
-  console.log('[cancelarCita] ID:', id);
   const cita = await Cita.findById(id);
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
   if (['en_proceso', 'finalizada', 'cancelada'].includes(cita.estado)) {
@@ -549,46 +417,36 @@ const cancelarCita = async (id) => {
   }
   cita.estado = 'cancelada';
   await cita.save();
-  console.log('[cancelarCita] Cita cancelada ID:', id);
   return Cita.findById(id).populate(CITA_POPULATE);
 };
 
 const getCitasPorSedeYFecha = async ({ sedeId, fecha }) => {
-  console.log('[getCitasPorSedeYFecha] Params:', { sedeId, fecha });
   if (!sedeId || !fecha) throw { status: 400, message: 'sedeId y fecha son obligatorios' };
   const fechaInicio = new Date(fecha); fechaInicio.setHours(0,0,0,0);
   const fechaFin = new Date(fecha); fechaFin.setHours(23,59,59,999);
 
-  const citas = await Cita.find({
+  return await Cita.find({
     sede: sedeId,
     estado: { $in: ESTADOS_ACTIVOS },
     fechaInicio: { $lt: fechaFin },
     fechaFin: { $gt: fechaInicio },
   }).populate(CITA_POPULATE).lean();
-
-  console.log('[getCitasPorSedeYFecha] Total citas:', citas.length);
-  return citas;
 };
 
 const obtenerCitasPorFechaYHora = async ({ fecha, hora }) => {
-  console.log('[obtenerCitasPorFechaYHora] Params:', { fecha, hora });
   if (!fecha || !hora) throw { status: 400, message: 'fecha y hora son obligatorios' };
   const fechaHora = new Date(`${fecha}T${hora}:00`);
   const fechaHoraFin = new Date(fechaHora);
   fechaHoraFin.setMinutes(fechaHora.getMinutes() + 59, 59, 999);
 
-  const citas = await Cita.find({
+  return await Cita.find({
     estado: { $in: ESTADOS_ACTIVOS },
     fechaInicio: { $lt: fechaHoraFin },
     fechaFin: { $gt: fechaHora },
   }).populate(CITA_POPULATE).lean();
-
-  console.log('[obtenerCitasPorFechaYHora] Total citas:', citas.length);
-  return citas;
 };
 
 const repetirCita = async ({ id, fecha }) => {
-  console.log('[repetirCita] Params:', { id, fecha });
   if (!fecha) throw { status: 400, message: 'Fecha es obligatoria' };
   const citaOriginal = await Cita.findById(id).lean();
   if (!citaOriginal) throw { status: 404, message: 'Cita original no encontrada' };
@@ -629,29 +487,22 @@ const repetirCita = async ({ id, fecha }) => {
     estado: 'pendiente'
   });
 
-  console.log('[repetirCita] Nueva cita creada ID:', nuevaCita._id);
   return Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
 };
 
 const obtenerCitasPorRango = async ({ fechaInicio, fechaFin }) => {
-  console.log('[obtenerCitasPorRango] Params:', { fechaInicio, fechaFin });
   if (!fechaInicio || !fechaFin) throw { status: 400, message: 'Se requieren fechaInicio y fechaFin' };
   const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
-  fin.setHours(23,59,59,999);
+  const fin = new Date(fechaFin); fin.setHours(23,59,59,999);
 
-  const citas = await Cita.find({
+  return await Cita.find({
     estado: { $in: ESTADOS_ACTIVOS },
     fechaInicio: { $gte: inicio },
     fechaFin: { $lte: fin }
   }).populate(CITA_POPULATE).lean();
-
-  console.log('[obtenerCitasPorRango] Total citas:', citas.length);
-  return citas;
 };
 
 const pagarCita = async ({ id, monto, metodo }) => {
-  console.log('[pagarCita] Params:', { id, monto, metodo });
   if (!monto || !metodo) throw { status: 400, message: 'Monto y método de pago son obligatorios' };
 
   const cita = await Cita.findById(id);
@@ -671,9 +522,7 @@ const pagarCita = async ({ id, monto, metodo }) => {
   cita.estado = 'pagada';
   await cita.save();
 
-  const citaPagada = await Cita.findById(cita._id).populate(CITA_POPULATE);
-  console.log('[pagarCita] Cita pagada ID:', id);
-  return citaPagada;
+  return Cita.findById(cita._id).populate(CITA_POPULATE);
 };
 
 // ===================== export =====================
