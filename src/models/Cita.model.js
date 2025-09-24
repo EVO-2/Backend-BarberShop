@@ -18,8 +18,13 @@ const CitaSchema = new Schema({
   fechaBase: { type: Date, required: true },    // Solo la fecha (sin hora) para índices
   turno: { type: Number, required: true },
 
+  // ⏱️ Nuevos campos para controlar tiempos reales
+  inicioServicio: { type: Date, default: null },
+  finServicio: { type: Date, default: null },
+  duracionRealMin: { type: Number, default: null },
+
   estado: {
-  type: String,
+    type: String,
     enum: ['pendiente', 'confirmada', 'en_proceso', 'finalizada', 'cancelada'],
     default: 'pendiente'
   },
