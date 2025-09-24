@@ -206,11 +206,13 @@ const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fech
   const total = totalResult.length > 0 ? totalResult[0].total : 0;
 
   const citasRaw = await Cita.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]);
+
   const citas = citasRaw.map(c => ({
     ...c,
     cliente: { ...c.cliente, usuario: c.clienteUsuario },
     peluquero: { ...c.peluquero, usuario: c.peluqueroUsuario },
-    duracionRealMin: c.servicios?.reduce((acc, s) => acc + (s.duracion || 0), 0) || 0
+    servicios: c.servicios?.map(s => ({ _id: s._id, nombre: s.nombre })) || [],
+    duracionRealMin: c.duracionRealMin || 0
   }));
 
   return {
@@ -271,16 +273,7 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
     const regexPalabras = palabras.map(p => new RegExp(p, 'i'));
     pipeline.push({
       $match: {
-        $and: regexPalabras.map(regex => ({
-          $or: [
-            { 'cliente.usuario.nombre': regex },
-            { 'peluquero.usuario.nombre': regex },
-            { 'sede.nombre': regex },
-            { 'servicios.nombre': regex },
-            { estado: regex },
-            { turno: regex }
-          ]
-        }))
+        $and: regexPalabras.map(regex => ({}))
       }
     });
   }
@@ -365,32 +358,25 @@ const calcularDuracionReal = (inicioServicio, finServicio) => {
 };
 
 const iniciarCita = async (id, hora) => {
-  const cita = await Cita.findById(id);
+  const cita = await Cita.findById(id).populate('servicios');
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
   if (!['pendiente', 'confirmada'].includes(cita.estado)) {
     throw { status: 400, message: 'Solo citas pendientes o confirmadas pueden iniciarse' };
   }
-  cita.inicioServicio = hora ? new Date(`1970-01-01T${hora}:00`) : new Date();
+  const inicio = hora ? new Date(`1970-01-01T${hora}:00`) : new Date();
+  cita.inicioServicio = inicio;
   cita.estado = 'en_proceso';
   await cita.save();
   return Cita.findById(id).populate(CITA_POPULATE);
 };
 
 const finalizarCita = async (id, hora) => {
-  if (!hora || typeof hora !== 'string' || hora.trim() === '') {
-    hora = undefined;
-  } else {
-    hora = hora.trim();
-  }
-
-  const cita = await Cita.findById(id);
+  const cita = await Cita.findById(id).populate('servicios');
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
-
   if (cita.estado !== 'en_proceso') throw { status: 400, message: 'La cita no está en proceso y no puede finalizarse' };
-  if (cita.estado === 'finalizada') throw { status: 400, message: 'La cita ya fue finalizada' };
 
   let fechaFin;
-  if (hora) {
+  if (hora && cita.inicioServicio) {
     const [horas, minutos] = hora.split(':').map(Number);
     if (isNaN(horas) || isNaN(minutos)) throw { status: 400, message: 'Formato de hora inválido' };
     fechaFin = new Date(cita.inicioServicio);
@@ -399,13 +385,11 @@ const finalizarCita = async (id, hora) => {
     fechaFin = new Date();
   }
 
-  if (fechaFin <= cita.inicioServicio) throw { status: 400, message: 'La hora de finalización debe ser posterior a la de inicio' };
-
   cita.finServicio = fechaFin;
+  cita.duracionRealMin = calcularDuracionReal(cita.inicioServicio, fechaFin);
   cita.estado = 'finalizada';
-  cita.duracionRealMin = calcularDuracionReal(cita.inicioServicio, cita.finServicio);
-
   await cita.save();
+
   return Cita.findById(id).populate(CITA_POPULATE);
 };
 
