@@ -39,21 +39,27 @@ async function calcularDuracionTotal(serviciosIds = []) {
   return servicios.reduce((acc, s) => acc + (s.duracion || 0), 0);
 }
 
+// 🔹 Validación de solape de horarios
 async function existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fechaFin, excluirId = null }) {
-  const filtro = {
+  const filtroBase = {
     sede,
-    estado: { $in: ESTADOS_ACTIVOS },
-    fechaInicio: { $lt: fechaFin },
-    fechaFin: { $gt: fechaInicio },
-    ...(excluirId && { _id: { $ne: excluirId } }),
-    ...(peluquero || puestoTrabajo ? { $or: [] } : {})
+    estado: { $in: ESTADOS_ACTIVOS }, // solo citas activas cuentan
+    fechaInicio: { $lt: fechaFin },   // se solapan si inician antes de que termine la nueva
+    fechaFin: { $gt: fechaInicio },   // y terminan después de que empiece la nueva
+    ...(excluirId && { _id: { $ne: excluirId } })
   };
 
-  if (peluquero) filtro.$or.push({ peluquero });
-  if (puestoTrabajo) filtro.$or.push({ puestoTrabajo });
-  if (filtro.$or && filtro.$or.length === 0) delete filtro.$or;
+  // reglas de bloqueo: mismo peluquero o mismo puesto de trabajo
+  const condiciones = [];
+  if (peluquero) condiciones.push({ peluquero });
+  if (puestoTrabajo) condiciones.push({ puestoTrabajo });
 
-  return await Cita.exists(filtro);
+  // si hay peluquero o puesto, aplicamos OR
+  if (condiciones.length > 0) {
+    filtroBase.$or = condiciones;
+  }
+
+  return await Cita.exists(filtroBase);
 }
 
 async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
@@ -90,24 +96,40 @@ const crearCita = async ({
     throw { status: 400, message: 'cliente, sede y fecha son obligatorios' };
   }
 
+  // validar que cliente, peluquero, sede y puestoTrabajo existan
   await validarReferencias({ cliente, peluquero, sede, puestoTrabajo });
 
+  // calcular duración total de los servicios
   const duracionMin = await calcularDuracionTotal(servicios);
   const fechaInicio = new Date(fecha);
   const fechaFin = new Date(fechaInicio.getTime() + (duracionMin || 30) * 60 * 1000);
 
+  // validar solapamiento de citas en sede/puesto/peluquero
   const haySolape = await existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fechaFin });
   if (haySolape) throw { status: 400, message: 'Horario no disponible (solapado con otra cita)' };
 
-  const inicioDia = new Date(fechaInicio); inicioDia.setHours(0,0,0,0);
-  const finDia = new Date(fechaInicio); finDia.setHours(23,59,59,999);
+  // rango del día (para buscar citas del peluquero ese día)
+  const inicioDia = new Date(fechaInicio);
+  inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(fechaInicio);
+  finDia.setHours(23, 59, 59, 999);
 
-  const ultimoTurno = await Cita.find({ sede, fechaInicio: { $gte: inicioDia, $lte: finDia } })
+  // fechaBase: día normalizado a las 00:00:00 (clave para agrupar)
+  const fechaBase = new Date(fechaInicio);
+  fechaBase.setHours(0, 0, 0, 0);
+
+  // obtener último turno del peluquero para ese día
+  const ultimoTurno = await Cita.findOne({
+    peluquero: peluquero || null,
+    fechaBase: { $gte: inicioDia, $lte: finDia }
+  })
     .sort({ turno: -1 })
-    .limit(1);
+    .lean();
 
-  const turno = (ultimoTurno[0]?.turno || 0) + 1;
+  // asignar turno correlativo al peluquero
+  const turno = (ultimoTurno?.turno || 0) + 1;
 
+  // crear cita
   const nuevaCita = await Cita.create({
     cliente,
     peluquero: peluquero || null,
@@ -116,8 +138,8 @@ const crearCita = async ({
     puestoTrabajo: puestoTrabajo || null,
     fechaInicio,
     fechaFin,
-    fecha: fechaInicio.toISOString(),
-    fechaBase: fechaInicio.toISOString(),
+    fecha: fechaInicio,
+    fechaBase,
     observacion: observacion || null,
     turno,
     estado: 'pendiente',
@@ -126,18 +148,30 @@ const crearCita = async ({
   return Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
 };
 
+
 const obtenerCitas = async () => {
   return await Cita.find().populate(CITA_POPULATE).lean();
 };
 
 // ===================== obtenerCitasPaginadas =====================
-const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fecha }) => {
+const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fecha, rol, usuarioId }) => {
   page = Math.max(1, Number(page) || 1);
   limit = Math.max(1, Number(limit) || 10);
   const skip = (page - 1) * limit;
 
-  let match = {};
+  const match = {};
 
+  // ----------- Restricción por rol -----------
+  if (rol === 'cliente') {
+    throw { status: 403, message: 'Un cliente no tiene permisos para gestionar citas' };
+  } else if (rol === 'peluquero' || rol === 'barbero') {
+    const peluquero = await Peluquero.findOne({ usuario: usuarioId }).lean();
+    if (!peluquero) throw { status: 404, message: 'Peluquero no encontrado' };
+    match.peluquero = peluquero._id;
+  }
+  // admin → sin restricción (ve todas las citas)
+
+  // ----------- Filtro por fecha -----------
   if (fecha && fecha.inicio && fecha.fin) {
     const inicio = new Date(fecha.inicio);
     const fin = new Date(fecha.fin);
@@ -147,82 +181,64 @@ const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fech
     }
   }
 
-  if (filtroGeneral && filtroGeneral.trim() !== '') {
-    const palabras = filtroGeneral.trim().split(/\s+/);
-    match.$and = palabras.map(palabra => {
-      const regex = new RegExp(palabra, 'i');
-      const isNumber = !isNaN(Number(palabra));
-      const isDateFull = /^\d{4}-\d{2}-\d{2}$/.test(palabra);
-      const isDateMonth = /^\d{4}-\d{2}$/.test(palabra);
-
-      if (isDateFull) {
-        const fechaInicio = new Date(palabra);
-        const fechaFin = new Date(palabra);
-        fechaFin.setDate(fechaFin.getDate() + 1);
-        return { fecha: { $gte: fechaInicio, $lt: fechaFin } };
-      }
-
-      if (isDateMonth) {
-        const [year, month] = palabra.split('-').map(Number);
-        const fechaInicio = new Date(year, month - 1, 1);
-        const fechaFin = new Date(year, month, 1);
-        return { fecha: { $gte: fechaInicio, $lt: fechaFin } };
-      }
-
-      return {
-        $or: [
-          { 'clienteUsuario.nombre': regex },
-          { 'clienteUsuario.apellido': regex },
-          { 'peluqueroUsuario.nombre': regex },
-          { 'peluqueroUsuario.apellido': regex },
-          { 'sede.nombre': regex },
-          { 'servicios.nombre': regex },
-          { estado: regex },
-          ...(isNumber ? [{ turno: Number(palabra) }] : [])
-        ]
-      };
-    });
-  }
-
+  // ----------- Pipeline base -----------
   const pipeline = [
+    { $match: match },
     { $lookup: { from: 'clientes', localField: 'cliente', foreignField: '_id', as: 'cliente' } },
     { $unwind: { path: '$cliente', preserveNullAndEmptyArrays: true } },
-    { $lookup: { from: 'usuarios', localField: 'cliente.usuario', foreignField: '_id', as: 'clienteUsuario' } },
-    { $unwind: { path: '$clienteUsuario', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'usuarios', localField: 'cliente.usuario', foreignField: '_id', as: 'cliente.usuario' } },
+    { $unwind: { path: '$cliente.usuario', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'peluqueros', localField: 'peluquero', foreignField: '_id', as: 'peluquero' } },
     { $unwind: { path: '$peluquero', preserveNullAndEmptyArrays: true } },
-    { $lookup: { from: 'usuarios', localField: 'peluquero.usuario', foreignField: '_id', as: 'peluqueroUsuario' } },
-    { $unwind: { path: '$peluqueroUsuario', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'usuarios', localField: 'peluquero.usuario', foreignField: '_id', as: 'peluquero.usuario' } },
+    { $unwind: { path: '$peluquero.usuario', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'sedes', localField: 'sede', foreignField: '_id', as: 'sede' } },
     { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'servicios', localField: 'servicios', foreignField: '_id', as: 'servicios' } },
-    { $lookup: { from: 'puestotrabajos', localField: 'puestoTrabajo', foreignField: '_id', as: 'puestoTrabajo' } },
-    { $unwind: { path: '$puestoTrabajo', preserveNullAndEmptyArrays: true } },
-    { $match: match },
-    { $sort: { fecha: -1 } }
   ];
 
-  const totalResult = await Cita.aggregate([...pipeline, { $count: 'total' }]);
-  const total = totalResult.length > 0 ? totalResult[0].total : 0;
+  // ----------- Filtro general -----------
+  if (filtroGeneral && filtroGeneral.trim() !== '') {
+    const palabras = filtroGeneral.trim().split(/\s+/);
+    const regexPalabras = palabras.map(p => new RegExp(p, 'i'));
+    pipeline.push({
+      $match: {
+        $and: regexPalabras.map(regex => ({
+          $or: [
+            { 'cliente.usuario.nombre': regex },
+            { 'cliente.usuario.apellido': regex },
+            { 'peluquero.usuario.nombre': regex },
+            { 'peluquero.usuario.apellido': regex },
+            { 'sede.nombre': regex },
+            { 'servicios.nombre': regex },
+            { estado: regex },
+            { turno: regex }
+          ]
+        }))
+      }
+    });
+  }
 
-  const citasRaw = await Cita.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]);
+  pipeline.push(
+    { $sort: { fecha: -1, turno: 1 } },
+    {
+      $facet: {
+        data: [{ $skip: skip }, { $limit: limit }],
+        totalCount: [{ $count: 'count' }]
+      }
+    }
+  );
 
-  const citas = citasRaw.map(c => ({
-    ...c,
-    cliente: { ...c.cliente, usuario: c.clienteUsuario },
-    peluquero: { ...c.peluquero, usuario: c.peluqueroUsuario },
-    servicios: c.servicios?.map(s => ({ _id: s._id, nombre: s.nombre })) || [],
-    duracionRealMin: c.duracionRealMin || 0
-  }));
+  const resultado = await Cita.aggregate(pipeline);
 
   return {
-    total,
+    total: resultado[0]?.totalCount[0]?.count || 0,
     page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-    citas
+    totalPages: Math.ceil((resultado[0]?.totalCount[0]?.count || 0) / limit),
+    citas: resultado[0]?.data || []
   };
 };
+
 
 // ===================== obtenerMisCitas =====================
 const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit = 10 }) => {
@@ -273,7 +289,16 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
     const regexPalabras = palabras.map(p => new RegExp(p, 'i'));
     pipeline.push({
       $match: {
-        $and: regexPalabras.map(regex => ({}))
+        $and: regexPalabras.map(regex => ({
+          $or: [
+            { 'cliente.usuario.nombre': regex },
+            { 'peluquero.usuario.nombre': regex },
+            { 'sede.nombre': regex },
+            { 'servicios.nombre': regex },
+            { estado: regex },
+            { turno: regex }
+          ]
+        }))
       }
     });
   }
@@ -336,7 +361,8 @@ const actualizarCita = async ({ id, data }) => {
   });
   if (haySolape) throw { status: 400, message: 'Horario no disponible (solapado con otra cita)' };
 
-  const updateData = {
+  // Si se cambia peluquero o fecha, recalcular turno por peluquero/día
+  let updateData = {
     sede: sede ?? citaBase.sede,
     peluquero: peluquero ?? citaBase.peluquero,
     puestoTrabajo: puestoTrabajo ?? citaBase.puestoTrabajo,
@@ -345,6 +371,24 @@ const actualizarCita = async ({ id, data }) => {
     fechaFin,
     observaciones: observaciones ?? citaBase.observaciones
   };
+
+  // recalcular fechaBase y turno si cambia la fecha o peluquero
+  const fechaBaseNueva = new Date(fechaInicio); fechaBaseNueva.setHours(0,0,0,0);
+  const peluqueroNuevo = peluquero ?? citaBase.peluquero;
+  if (
+    fechaBaseNueva.getTime() !== new Date(citaBase.fechaBase).getTime() ||
+    peluqueroNuevo.toString() !== (citaBase.peluquero?.toString ? citaBase.peluquero.toString() : String(citaBase.peluquero))
+  ) {
+    const inicioDia = new Date(fechaInicio); inicioDia.setHours(0,0,0,0);
+    const finDia = new Date(fechaInicio); finDia.setHours(23,59,59,999);
+    const ultimoTurno = await Cita.findOne({
+      peluquero: peluqueroNuevo,
+      fechaBase: { $gte: inicioDia, $lte: finDia },
+      _id: { $ne: id }
+    }).sort({ turno: -1 }).lean();
+    updateData.fechaBase = fechaBaseNueva;
+    updateData.turno = (ultimoTurno?.turno || 0) + 1;
+  }
 
   await Cita.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
   return await Cita.findById(id).populate(CITA_POPULATE);
@@ -455,8 +499,16 @@ const repetirCita = async ({ id, fecha }) => {
   });
   if (haySolape) throw { status: 400, message: 'Horario no disponible (solapado con otra cita)' };
 
-  const turno = await Cita.find({ sede: citaOriginal.sede }).sort({ turno: -1 }).limit(1)
-    .then(r => (r[0]?.turno || 0) + 1);
+  // calcular turno por peluquero y día
+  const inicioDia = new Date(fechaInicio); inicioDia.setHours(0,0,0,0);
+  const finDia = new Date(fechaInicio); finDia.setHours(23,59,59,999);
+  const ultimoTurno = await Cita.findOne({
+    peluquero: citaOriginal.peluquero,
+    fechaBase: { $gte: inicioDia, $lte: finDia }
+  }).sort({ turno: -1 }).lean();
+  const turno = (ultimoTurno?.turno || 0) + 1;
+
+  const fechaBase = new Date(fechaInicio); fechaBase.setHours(0,0,0,0);
 
   const nuevaCita = await Cita.create({
     cliente: citaOriginal.cliente,
@@ -466,7 +518,7 @@ const repetirCita = async ({ id, fecha }) => {
     servicios: citaOriginal.servicios,
     fechaInicio,
     fechaFin,
-    fechaBase: fechaInicio.toISOString(),
+    fechaBase,
     turno,
     estado: 'pendiente'
   });

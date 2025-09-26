@@ -16,7 +16,7 @@ const CitaSchema = new Schema({
 
   fecha: { type: Date, required: true },        // Fecha y hora exacta de la cita
   fechaBase: { type: Date, required: true },    // Solo la fecha (sin hora) para índices
-  turno: { type: Number, required: true },
+  turno: { type: Number, required: true },      // Turno incremental por peluquero
 
   // ⏱️ Nuevos campos para controlar tiempos reales
   inicioServicio: { type: Date, default: null },
@@ -35,30 +35,47 @@ const CitaSchema = new Schema({
 });
 
 /**
- * Índices para garantizar consistencia:
- * - Un peluquero no puede tener 2 citas en el mismo turno y día
- * - Un puesto de trabajo no puede tener 2 citas en el mismo turno y día
+ * Índice único:
+ * - Asegura que un mismo peluquero no tenga dos turnos con el mismo número el mismo día.
  */
 CitaSchema.index(
   { peluquero: 1, fechaBase: 1, turno: 1 },
   { unique: true }
 );
 
-CitaSchema.index(
-  { puestoTrabajo: 1, fechaBase: 1, turno: 1 },
-  { unique: true }
-);
+// ⚠️ Eliminamos el índice de puestoTrabajo, porque la validación de solapamiento
+// ya se maneja en el service.js con existeSolape()
+// Esto permite varias citas en el mismo puesto en un día, siempre que no coincidan en horario.
 
 // Para búsquedas rápidas por sede y fecha
 CitaSchema.index({ sede: 1, fechaBase: 1 });
 
-// Middleware: establece fechaBase a partir de fecha
-CitaSchema.pre('validate', function (next) {
+/**
+ * Middleware:
+ * - Calcula fechaBase a partir de fecha
+ * - Asigna turno incremental por peluquero y día
+ */
+CitaSchema.pre('validate', async function (next) {
   if (this.fecha) {
+    // fecha base (día sin hora)
     const base = new Date(this.fecha);
     base.setHours(0, 0, 0, 0);
     this.fechaBase = base;
   }
+
+  // Solo calcular turno si es nueva cita o cambió peluquero/fecha
+  if (this.isNew || this.isModified('fecha') || this.isModified('peluquero')) {
+    try {
+      const count = await model('Cita').countDocuments({
+        peluquero: this.peluquero,
+        fechaBase: this.fechaBase
+      });
+      this.turno = count + 1; // Turno incremental independiente por peluquero y día
+    } catch (err) {
+      return next(err);
+    }
+  }
+
   next();
 });
 

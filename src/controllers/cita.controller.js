@@ -91,11 +91,14 @@ const obtenerCitasPaginadas = async (req, res) => {
       } catch {}
     }
 
+    // ✅ Pasar rol y usuarioId desde el middleware
     const resultado = await CitaService.obtenerCitasPaginadas({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       fecha: rangoFechas,
-      filtroGeneral
+      filtroGeneral,
+      rol: req.rol,       // igual que en obtenerMisCitas
+      usuarioId: req.uid  // igual que en obtenerMisCitas
     });
 
     return res.json(resultado);
@@ -105,7 +108,6 @@ const obtenerCitasPaginadas = async (req, res) => {
     });
   }
 };
-
 // Obtener una cita por ID
 const obtenerCitaPorId = async (req, res) => {
   try {
