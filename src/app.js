@@ -13,7 +13,8 @@ const clienteRoutes   = require('./routes/cliente.routes');
 const peluqueroRoutes = require('./routes/peluquero.routes');
 const citaRoutes      = require('./routes/cita.routes');
 const catalogoRoutes  = require('./routes/catalogo.routes');
-const pagoRoutes      = require('./routes/pago'); 
+const pagoRoutes      = require('./routes/pago');
+const servicioRoutes  = require('./routes/servicio.routes'); 
 
 const app = express();
 
@@ -32,16 +33,17 @@ app.get('/', (req, res) => {
   res.send('✅ API Barbería JEVO en funcionamiento');
 });
 
-app.use('/api/auth',      authRoutes);
-app.use('/api/roles',     rolRoutes);
-app.use('/api/usuarios',  usuarioRoutes);
-app.use('/api/clientes',  clienteRoutes);
+app.use('/api/auth',       authRoutes);
+app.use('/api/roles',      rolRoutes);
+app.use('/api/usuarios',   usuarioRoutes);
+app.use('/api/clientes',   clienteRoutes);
 app.use('/api/peluqueros', peluqueroRoutes);
-app.use('/api/citas',     citaRoutes);
-app.use('/api/sedes',     sedeRoutes);
-app.use('/api/puestos',   puestoRoutes);
-app.use('/api',           catalogoRoutes); 
-app.use('/api/pagos',     pagoRoutes);     
+app.use('/api/citas',      citaRoutes);
+app.use('/api/sedes',      sedeRoutes);
+app.use('/api/puestos',    puestoRoutes);
+app.use('/api',            catalogoRoutes); 
+app.use('/api/pagos',      pagoRoutes);
+app.use('/api/servicios',  servicioRoutes); 
 
 // ============ Manejo de Rutas no encontradas ============
 app.use((req, res, next) => {
