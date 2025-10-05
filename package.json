@@ -1,23 +1,30 @@
 {
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^3.0.2",
+    "bull": "^4.16.5",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.3",
+    "email-templates": "^12.0.3",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
+    "handlebars": "^4.7.8",
+    "html-to-text": "^9.0.5",
+    "ioredis": "^5.8.0",
     "jsonwebtoken": "^9.0.2",
+    "mjml": "^4.16.1",
     "mongoose": "^8.16.2",
-    "multer": "^2.0.1"
+    "multer": "^2.0.1",
+    "twilio": "^5.10.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
   },
- "scripts": {
-  "start": "node src/server.js",
-  "dev": "nodemon src/server.js",
-  "seed": "node seed/seedAdmin.js",
-  "seed:roles": "node seed/seedRoles.js",
-  "seed:datos": "node seed/seedDatosIniciales.js"
-}
-
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node seed/seedAdmin.js",
+    "seed:roles": "node seed/seedRoles.js",
+    "seed:datos": "node seed/seedDatosIniciales.js"
+  }
 }

@@ -1,0 +1,63 @@
+<mjml>
+  <mj-head>
+    <mj-preview>Confirmación de tu cita en Barbería JEVO</mj-preview>
+    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" />
+    <mj-attributes>
+      <mj-all font-family="Roboto, Arial, sans-serif" />
+      <mj-text font-size="16px" color="#333333" line-height="24px" />
+      <mj-button background-color="#032e4d" color="white" border-radius="6px" font-size="16px" font-weight="500" padding="20px" />
+    </mj-attributes>
+  </mj-head>
+
+  <mj-body background-color="#f5f7fa">
+    <!-- Header con logo usando CID -->
+    <mj-section background-color="#032e4d" padding="25px 0">
+      <mj-column>
+        <mj-image width="120px" src="cid:logo@barbershop" alt="Barbería JEVO" />
+        <mj-text color="#ffffff" font-size="26px" font-weight="700" align="center" padding-top="10px">
+          Barbería JEVO
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Tarjeta de cita -->
+    <mj-section background-color="#ffffff" border-radius="16px" padding="30px" css-class="card" box-shadow="0px 4px 12px rgba(0,0,0,0.1)">
+      <mj-column>
+        <mj-text font-size="20px" font-weight="600" color="#032e4d" padding-bottom="10px">
+          ¡Hola %%NOMBRE%%!
+        </mj-text>
+
+        <mj-text font-size="16px" color="#555555" line-height="24px" padding-bottom="20px">
+          Tu cita en <strong>Barbería JEVO</strong> ha sido <strong>confirmada</strong>. Aquí tienes los detalles:
+        </mj-text>
+
+        <!-- Detalles de la cita -->
+        <mj-section background-color="#f0f4f8" border-radius="12px" padding="15px">
+          <mj-column>
+            <mj-text font-size="18px" font-weight="500" color="#000000" align="center">
+              📅 Fecha: <strong>%%FECHA%%</strong><br/>
+              ⏰ Hora: <strong>%%HORA%%</strong><br/>
+              💈 Servicio: <strong>%%SERVICIO%%</strong><br/>
+              🆔 Turno: <strong>%%TURNO%%</strong>
+            </mj-text>
+          </mj-column>
+        </mj-section>
+
+        <mj-button href="%%URL%%" align="center" background-color="#032e4d" color="#ffffff" font-size="16px" font-weight="600" border-radius="8px" padding="20px" margin-top="20px">
+          Ver mi cita
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#f5f7fa" padding="25px 0">
+      <mj-column>
+        <mj-text font-size="13px" color="#999999" align="center" line-height="20px">
+          Barbería JEVO © %%YEAR%%<br/>
+          Calle Ficticia 123, Cali, Colombia<br/>
+          Si no solicitaste esta cita, ignora este mensaje.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
