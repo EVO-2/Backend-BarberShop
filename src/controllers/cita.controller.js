@@ -2,27 +2,101 @@ const CitaService = require('../services/cita.service');
 const Servicio = require('../models/Servicio.model');
 const Cita = require('../models/Cita.model');
 const Cliente = require('../models/Cliente.model');
+//const NotificationController = require('./notification.controller');
+const NotificationService = require('../services/notification.service'); 
+
+
 
 // ===================== Controladores =====================
 
 // Crear nueva cita
 const crearCita = async (req, res) => {
   try {
-    const { rol, uid } = req; 
+    const { rol, uid } = req;
     let datosCita = { ...req.body };
 
+    // Asociar cliente si el rol es cliente
     if (rol === 'cliente') {
       const cliente = await Cliente.findOne({ usuario: uid });
       if (!cliente) return res.status(400).json({ mensaje: 'El cliente no está registrado' });
-      datosCita.cliente = cliente._id; 
+      if (!cliente.usuario) return res.status(400).json({ mensaje: 'El cliente no tiene usuario asignado' });
+      datosCita.cliente = cliente._id;
     }
 
+    // Crear la cita
     const cita = await CitaService.crearCita(datosCita);
+
+    // ================== Notificaciones ==================
+    try {
+      // Poblar usuario desde Cliente
+      const clienteData = await Cliente.findById(cita.cliente).populate('usuario', 'nombre correo telefono');
+      const user = clienteData.usuario;
+
+      // Poblar servicios desde Cita
+      const citaPop = await Cita.findById(cita._id).populate({ path: 'servicios', select: 'nombre' });
+      const servicioNombre = citaPop.servicios && citaPop.servicios.length > 0
+        ? citaPop.servicios.map(s => s.nombre).join(', ')
+        : 'Servicio no definido';
+
+      if (user) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4200";
+
+        // Formatear fecha y hora
+        const fechaObj = new Date(cita.fecha);
+        const fechaFormateada = fechaObj.toLocaleDateString('es-CO', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        const horaFormateada = fechaObj.toLocaleTimeString('es-CO', {
+          hour: '2-digit', minute: '2-digit', hour12: true
+        });
+
+        // ====== Correo ======
+        if (user.correo) {
+          await NotificationService.sendNotification({
+            type: "email",
+            to: user.correo,
+            template: "cita-confirmacion",
+            data: {
+              subject: "Confirmación de tu cita",
+              variables: {
+                NOMBRE: user.nombre,
+                FECHA: fechaFormateada,
+                HORA: horaFormateada,
+                SERVICIO: servicioNombre,
+                TURNO: cita.turno,
+                URL: `${frontendUrl}/mis-citas/${cita._id}`,
+                YEAR: new Date().getFullYear(),
+              },
+            },
+          });
+        }
+
+        // ====== SMS ======
+        let telefonoE164 = clienteData.telefono
+          ? (clienteData.telefono.startsWith('+') ? clienteData.telefono : '+57' + clienteData.telefono)
+          : null;
+
+        if (telefonoE164 && /^\+\d{10,15}$/.test(telefonoE164)) {
+          await NotificationService.sendNotification({
+            type: "sms",
+            to: telefonoE164,
+            message: `Hola ${user.nombre}, tu cita para ${servicioNombre} el ${fechaFormateada} a las ${horaFormateada} (Turno #${cita.turno}) ha sido confirmada.`,
+          });
+        }
+      }
+    } catch (err) {
+      // Captura de errores de notificación sin logs de rastreo
+    }
+    // ====================================================
+
+    // Devolver cita incluyendo el turno
     return res.status(201).json(cita);
   } catch (error) {
     return res.status(error.status || 500).json({ mensaje: error.message || 'Error interno del servidor' });
   }
 };
+
+
 
 // Obtener todas las citas (admin)
 const obtenerCitas = async (_req, res) => {
@@ -91,14 +165,13 @@ const obtenerCitasPaginadas = async (req, res) => {
       } catch {}
     }
 
-    // ✅ Pasar rol y usuarioId desde el middleware
     const resultado = await CitaService.obtenerCitasPaginadas({
       page: parseInt(page, 10),
       limit: parseInt(limit, 10),
       fecha: rangoFechas,
       filtroGeneral,
-      rol: req.rol,       // igual que en obtenerMisCitas
-      usuarioId: req.uid  // igual que en obtenerMisCitas
+      rol: req.rol,
+      usuarioId: req.uid
     });
 
     return res.json(resultado);
@@ -108,6 +181,7 @@ const obtenerCitasPaginadas = async (req, res) => {
     });
   }
 };
+
 // Obtener una cita por ID
 const obtenerCitaPorId = async (req, res) => {
   try {
