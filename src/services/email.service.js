@@ -33,14 +33,11 @@ class EmailService {
       // Configuración del correo
       const msg = {
         to,
-        from: process.env.SENDGRID_FROM, // remitente verificado en SendGrid
+        from: process.env.SENDGRID_FROM, // Remitente verificado en SendGrid
         subject: data.subject || "Notificación Barbería JEVO",
         html,
         text,
       };
-
-      // 🔹 Log del objeto que se va a enviar
-      console.log("📧 Enviando correo con el siguiente contenido:", msg);
 
       // Enviar correo
       await sgMail.send(msg);
@@ -51,7 +48,6 @@ class EmailService {
         to,
       };
     } catch (err) {
-      console.error("❌ Error enviando correo:", err.message);
       return {
         success: false,
         error: err.message,
