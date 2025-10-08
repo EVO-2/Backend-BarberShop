@@ -21,9 +21,11 @@ class NotificationService {
     if (type === "email") {
       return this.emailService.sendTemplate(to, template, data);
     }
+
     if (type === "sms") {
       return this.smsService.sendSMS(to, message);
     }
+
     throw new Error("Tipo de notificación no soportado");
   }
 }

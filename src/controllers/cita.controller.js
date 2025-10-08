@@ -4,6 +4,7 @@ const Cita = require('../models/Cita.model');
 const Cliente = require('../models/Cliente.model');
 //const NotificationController = require('./notification.controller');
 const NotificationService = require('../services/notification.service'); 
+const { programarRecordatorio } = require('../schedulers/recordatorio.scheduler');
 
 
 
@@ -15,6 +16,24 @@ const crearCita = async (req, res) => {
     const { rol, uid } = req;
     let datosCita = { ...req.body };
 
+    // ✅ Validar que la fecha exista
+    if (!datosCita.fecha) {
+      return res.status(400).json({ mensaje: 'La fecha de la cita es obligatoria' });
+    }
+
+    // ✅ Validar que la fecha no sea pasada
+    const fechaCita = new Date(datosCita.fecha);
+    const ahora = new Date();
+
+    if (isNaN(fechaCita.getTime())) {
+      return res.status(400).json({ mensaje: 'Formato de fecha inválido' });
+    }
+
+    // Si la fecha está en el pasado (1 minuto de tolerancia)
+    if (fechaCita.getTime() < ahora.getTime() - 60000) {
+      return res.status(400).json({ mensaje: 'No puedes crear una cita con fecha u hora pasada' });
+    }
+
     // Asociar cliente si el rol es cliente
     if (rol === 'cliente') {
       const cliente = await Cliente.findOne({ usuario: uid });
@@ -23,7 +42,7 @@ const crearCita = async (req, res) => {
       datosCita.cliente = cliente._id;
     }
 
-    // Crear la cita
+    // ✅ Crear la cita solo si pasa las validaciones
     const cita = await CitaService.crearCita(datosCita);
 
     // ================== Notificaciones ==================
@@ -72,7 +91,7 @@ const crearCita = async (req, res) => {
         }
 
         // ====== SMS ======
-        let telefonoE164 = clienteData.telefono
+        const telefonoE164 = clienteData.telefono
           ? (clienteData.telefono.startsWith('+') ? clienteData.telefono : '+57' + clienteData.telefono)
           : null;
 
@@ -85,17 +104,20 @@ const crearCita = async (req, res) => {
         }
       }
     } catch (err) {
-      // Captura de errores de notificación sin logs de rastreo
+      // Captura silenciosa de errores en notificación
     }
     // ====================================================
 
+    // Programar recordatorio 1 hora y 20 minutos antes de la cita
+    await programarRecordatorio(cita);
+
     // Devolver cita incluyendo el turno
     return res.status(201).json(cita);
+
   } catch (error) {
     return res.status(error.status || 500).json({ mensaje: error.message || 'Error interno del servidor' });
   }
 };
-
 
 
 // Obtener todas las citas (admin)

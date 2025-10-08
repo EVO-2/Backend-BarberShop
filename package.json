@@ -15,6 +15,7 @@
     "mjml": "^4.16.1",
     "mongoose": "^8.16.2",
     "multer": "^2.0.1",
+    "node-schedule": "^2.1.1",
     "twilio": "^5.10.2"
   },
   "devDependencies": {
