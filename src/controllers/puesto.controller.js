@@ -2,119 +2,171 @@
 const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const Peluquero = require('../models/Peluquero.model');
 
-// =============================
-// GET /api/puestos/por-sede/:sedeId
-// =============================
+// =================== OBTENER TODOS LOS PUESTOS ===================
 const obtenerPuestos = async (req, res) => {
   try {
     const { sedeId } = req.params;
-    let { peluquero_id, usuario_id } = req.query;
+    const { usuario_id } = req.query;
 
     if (!sedeId) {
-      return res.status(400).json({ message: 'El parámetro sedeId es obligatorio' });
+      return res.status(400).json({ msg: 'El parámetro sedeId es obligatorio.' });
     }
 
-    // Resolver usuario_id -> peluquero_id
-    if (usuario_id && !peluquero_id) {
-      const peluqueroDoc = await Peluquero.findOne({ usuario: usuario_id });
-      peluquero_id = peluqueroDoc?._id?.toString();
-    }
-
-    const puestos = await PuestoTrabajo.find({ sede: sedeId, estado: true })
-      .populate('sede', 'nombre')
+    // Buscar puestos y poblar peluquero → usuario(nombre, apellido)
+    const puestos = await PuestoTrabajo.find({ sede: sedeId })
       .populate({
         path: 'peluquero',
-        select: '_id estado puestoTrabajo usuario',
         populate: {
           path: 'usuario',
-          select: 'nombre apellido'
+          select: 'nombre apellido estado'
         }
-      });
+      })
+      .populate('sede', 'nombre');
 
-    // ========== MODO CREAR ==========
-    if (!peluquero_id) {
-      const puestosLibres = puestos
-        .filter(p => !p.peluquero || !p.peluquero._id)
-        .map(p => ({
-          _id: p._id,
-          nombre: p.nombre,
-          sede: p.sede,
-          ocupado: false
-        }));
+    // Simplificar la respuesta al frontend
+    const puestosSimplificados = puestos.map(p => ({
+      _id: p._id,
+      nombre: p.nombre,
+      sede: p.sede?.nombre || 'Sin sede',
+      estado: p.estado,
+      peluquero: p.peluquero
+        ? {
+            _id: p.peluquero._id,
+            nombreCompleto: `${p.peluquero.usuario?.nombre || ''} ${p.peluquero.usuario?.apellido || ''}`.trim()
+          }
+        : null
+    }));
 
-      return res.json(puestosLibres);
+    return res.json(puestosSimplificados);
+  } catch (error) {
+    return res.status(500).json({ msg: 'Error al obtener los puestos.' });
+  }
+};
+
+// =============================
+// POST /api/puestos
+// =============================
+const crearPuesto = async (req, res) => {
+  try {
+    // 🧩 Aceptar tanto "sede" como "sedeId"
+    const { nombre, estado = true } = req.body;
+    const sedeId = req.body.sede || req.body.sedeId;
+
+    // ✅ Validaciones
+    if (!nombre || !sedeId) {
+      return res.status(400).json({ message: 'Nombre y sede son obligatorios' });
     }
 
-    // ========== MODO EDICIÓN ==========
-    const peluquero = await Peluquero.findById(peluquero_id).populate('puestoTrabajo');
-    const puestoActualId = peluquero?.puestoTrabajo?._id?.toString();
-
-    const puestosDisponibles = puestos.map(p => {
-      const esMismoPuesto = p._id.toString() === puestoActualId;
-      const peluqueroActivo = Boolean(p.peluquero && p.peluquero.estado === true);
-      const ocupado = peluqueroActivo && !esMismoPuesto;
-
-      return {
-        _id: p._id,
-        nombre: p.nombre,
-        sede: p.sede,
-        ocupado
-      };
+    // ✅ Crear el nuevo puesto
+    const nuevoPuesto = new PuestoTrabajo({
+      nombre,
+      sede: sedeId,
+      estado
     });
 
-    // Asegurar que el puesto actual del peluquero esté incluido
-    if (puestoActualId && !puestosDisponibles.find(p => p._id.toString() === puestoActualId)) {
-      puestosDisponibles.push({
-        _id: puestoActualId,
-        nombre: peluquero.puestoTrabajo.nombre,
-        sede: peluquero.puestoTrabajo.sede,
-        ocupado: false
+    await nuevoPuesto.save();
+
+    return res.status(201).json({
+      message: 'Puesto creado correctamente',
+      puesto: nuevoPuesto
+    });
+  } catch (error) {
+    console.error('❌ Error en crearPuesto:', error);
+    return res.status(500).json({ message: 'Error al crear el puesto de trabajo' });
+  }
+};
+
+
+// =============================
+// PUT /api/puestos/:id
+// =============================
+  const actualizarPuesto = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nombre, estado, sede } = req.body; // ✅ Incluimos sede
+
+      const puesto = await PuestoTrabajo.findById(id);
+      if (!puesto) {
+        return res.status(404).json({ message: 'Puesto no encontrado' });
+      }
+
+      // ✅ Actualizar solo los campos enviados
+      if (nombre) puesto.nombre = nombre;
+      if (typeof estado === 'boolean') puesto.estado = estado;
+      if (sede) puesto.sede = sede; // Puede venir como ObjectId o como string
+
+      const puestoActualizado = await puesto.save();
+
+      return res.json({
+        message: 'Puesto actualizado correctamente',
+        puesto: puestoActualizado,
+      });
+    } catch (error) {
+      console.error('❌ Error en actualizarPuesto:', error);
+      return res.status(500).json({
+        message: 'Error al actualizar el puesto de trabajo',
+        error: error.message,
       });
     }
+  };
 
-    return res.json(puestosDisponibles);
+
+// =============================
+// DELETE /api/puestos/:id (soft delete)
+// =============================
+const eliminarPuesto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const puesto = await PuestoTrabajo.findById(id);
+    if (!puesto) return res.status(404).json({ message: 'Puesto no encontrado' });
+
+    puesto.estado = false;
+    await puesto.save();
+
+    return res.json({ message: 'Puesto eliminado correctamente (soft delete)', puesto });
   } catch (error) {
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: 'Error al eliminar el puesto de trabajo' });
   }
 };
 
 // =============================
 // PUT /api/puestos/:id/asignar
 // =============================
-// Asigna un peluquero a un puesto y libera el puesto anterior automáticamente
 const asignarPuesto = async (req, res) => {
   try {
     const { peluqueroId } = req.body;
-    const puesto = await PuestoTrabajo.findById(req.params.id).populate('sede');
+    if (!peluqueroId)
+      return res.status(400).json({ message: 'El ID del peluquero es obligatorio' });
+
+    const puesto = await PuestoTrabajo.findById(req.params.id).populate('sede peluquero');
     if (!puesto) return res.status(404).json({ message: 'Puesto no encontrado' });
+
+    if (puesto.peluquero && puesto.peluquero._id.toString() !== peluqueroId)
+      return res.status(400).json({ message: 'El puesto ya está ocupado por otro peluquero' });
 
     const peluquero = await Peluquero.findById(peluqueroId).populate('puestoTrabajo');
     if (!peluquero) return res.status(404).json({ message: 'Peluquero no encontrado' });
 
-    // Validación: el puesto debe pertenecer a la misma sede que el peluquero (si ya tenía puesto asignado)
     const sedeActual = peluquero.puestoTrabajo?.sede?.toString();
-    if (sedeActual && puesto.sede._id.toString() !== sedeActual) {
-      return res.status(400).json({
-        message: 'El puesto seleccionado no pertenece a la misma sede del peluquero'
-      });
-    }
+    if (sedeActual && puesto.sede._id.toString() !== sedeActual)
+      return res
+        .status(400)
+        .json({ message: 'El puesto seleccionado no pertenece a la misma sede del peluquero' });
 
-    // Si el peluquero ya tenía un puesto diferente, liberarlo
     const puestoAnterior = peluquero.puestoTrabajo?._id?.toString();
     if (puestoAnterior && puestoAnterior !== puesto._id.toString()) {
       await PuestoTrabajo.findByIdAndUpdate(puestoAnterior, { peluquero: null });
     }
 
-    // Asignar el nuevo puesto
     puesto.peluquero = peluquero._id;
     await puesto.save();
 
     peluquero.puestoTrabajo = puesto._id;
     await peluquero.save();
 
-    res.json({ message: 'Peluquero reasignado correctamente', peluquero });
+    return res.json({ message: 'Peluquero asignado correctamente', peluquero });
   } catch (error) {
-    res.status(500).json({ message: 'Error asignando puesto' });
+    return res.status(500).json({ message: 'Error al asignar el puesto de trabajo' });
   }
 };
 
@@ -126,22 +178,23 @@ const liberarPuesto = async (req, res) => {
     const puesto = await PuestoTrabajo.findById(req.params.id);
     if (!puesto) return res.status(404).json({ message: 'Puesto no encontrado' });
 
-    // Si tenía peluquero, desasociarlo también
-    if (puesto.peluquero) {
+    if (puesto.peluquero)
       await Peluquero.findByIdAndUpdate(puesto.peluquero, { puestoTrabajo: null });
-    }
 
     puesto.peluquero = null;
     await puesto.save();
 
-    res.json({ message: 'Puesto liberado exitosamente' });
+    return res.json({ message: 'Puesto liberado exitosamente' });
   } catch (error) {
-    res.status(500).json({ message: 'Error liberando puesto' });
+    return res.status(500).json({ message: 'Error al liberar el puesto de trabajo' });
   }
 };
 
 module.exports = {
   obtenerPuestos,
+  crearPuesto,
+  actualizarPuesto,
+  eliminarPuesto,
   asignarPuesto,
   liberarPuesto
 };

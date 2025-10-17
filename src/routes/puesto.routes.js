@@ -17,15 +17,13 @@ router.use(validarJWT);
 router.get('/por-sede/:sedeId', PuestoController.obtenerPuestos);
 
 // =============================
-// PUT /api/puestos/:id/liberar
-// Solo los administradores pueden liberar un puesto
+// RUTAS ADMIN
+// Solo los administradores pueden crear, actualizar, eliminar, asignar y liberar puestos
 // =============================
-router.put('/:id/liberar', tieneRol('admin'), PuestoController.liberarPuesto);
-
-// =============================
-// PUT /api/puestos/:id/asignar
-// Solo los administradores pueden asignar un puesto
-// =============================
+router.post('/', tieneRol('admin'), PuestoController.crearPuesto);
+router.put('/:id', tieneRol('admin'), PuestoController.actualizarPuesto);
+router.delete('/:id', tieneRol('admin'), PuestoController.eliminarPuesto);
 router.put('/:id/asignar', tieneRol('admin'), PuestoController.asignarPuesto);
+router.put('/:id/liberar', tieneRol('admin'), PuestoController.liberarPuesto);
 
 module.exports = router;
