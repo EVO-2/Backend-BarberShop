@@ -1,4 +1,7 @@
-// rutas/servicio.routes.js
+// ===============================================
+// RUTAS DE SERVICIOS - Backend BarberShop
+// ===============================================
+
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -8,19 +11,22 @@ const fs = require('fs');
 const { validarJWT } = require('../middlewares/validarJWT');
 const { tieneRol } = require('../middlewares/validarRol');
 const servicioCtrl = require('../controllers/servicio.controller');
-const Servicio = require('../models/Servicio.model');
 
-/* ───────────── Roles ───────────── */
+// ============================================================
+// Definición de Roles
+// ============================================================
 const ROLES = {
   ADMIN: 'admin',
   CLIENTE: 'cliente',
   BARBERO: 'barbero'
 };
 
-/* ───────────── Configuración Multer ───────────── */
+// ============================================================
+// Configuración de Multer para subir imágenes de servicios
+// ============================================================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'servicios');
+    const uploadPath = path.join(__dirname, '..', 'uploads', 'servicios');
 
     // ✅ Crea la carpeta si no existe
     if (!fs.existsSync(uploadPath)) {
@@ -31,59 +37,34 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${file.fieldname}${ext}`);
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, uniqueName);
   }
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png/;
     const mimetype = allowed.test(file.mimetype);
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-    if (mimetype && ext) {
-      return cb(null, true);
-    }
-    cb(new Error("❌ Solo se permiten imágenes JPG o PNG"));
+    if (mimetype && ext) return cb(null, true);
+    cb(new Error('❌ Solo se permiten imágenes JPG o PNG'));
   }
 });
 
-/* ───────────── Rutas de Servicios ───────────── */
+// ============================================================
+// RUTAS DE SERVICIO
+// ============================================================
 
-// 🔹 Crear servicio (solo admin) con soporte para imágenes
+// 🔹 Crear servicio (solo admin)
 router.post(
   '/',
   validarJWT,
   tieneRol(ROLES.ADMIN),
-  upload.array('imagenes', 5), // ✅ máximo 5 imágenes
-  async (req, res) => {
-    try {
-      const { nombre, descripcion, precio } = req.body;
-
-      // Procesar imágenes si vienen
-      const imagenes = req.files
-        ? req.files.map(file => `/uploads/servicios/${file.filename}`)
-        : [];
-
-      const nuevoServicio = new Servicio({
-        nombre,
-        descripcion,
-        precio,
-        imagenes
-      });
-
-      await nuevoServicio.save();
-
-      res.status(201).json({
-        mensaje: "✅ Servicio creado correctamente",
-        servicio: nuevoServicio
-      });
-    } catch (error) {
-      console.error("Error al crear servicio:", error);
-      res.status(500).json({ mensaje: "❌ Error al crear servicio" });
-    }
-  }
+  upload.array('imagenes', 5),
+  servicioCtrl.crearServicio
 );
 
 // 🔹 Obtener todos los servicios (admin, cliente y barbero)
@@ -94,7 +75,7 @@ router.get(
   servicioCtrl.obtenerServicios
 );
 
-// 🔹 Obtener un servicio por ID (todos los roles pueden consultar)
+// 🔹 Obtener un servicio por ID (disponible para todos los roles)
 router.get(
   '/:id',
   validarJWT,
@@ -102,57 +83,33 @@ router.get(
   servicioCtrl.obtenerServicioPorId
 );
 
-// 🔹 Actualizar servicio (solo admin)
+// 🔹 Actualizar servicio completo (solo admin)
 router.put(
   '/:id',
-  validarJWT,
-  tieneRol(ROLES.ADMIN),
-  servicioCtrl.actualizarServicio
-);
-
-// 🔹 Actualizar imágenes de un servicio (solo admin) con multer
-router.put(
-  '/:id/imagenes',
   validarJWT,
   tieneRol(ROLES.ADMIN),
   upload.array('imagenes', 5),
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ mensaje: "❌ No se subieron imágenes" });
-      }
-
-      const nuevasImagenes = req.files.map(file => `/uploads/servicios/${file.filename}`);
-
-      const servicio = await Servicio.findByIdAndUpdate(
-        id,
-        { $push: { imagenes: { $each: nuevasImagenes } } },
-        { new: true, upsert: false }
-      );
-
-      if (!servicio) {
-        return res.status(404).json({ mensaje: "❌ Servicio no encontrado" });
-      }
-
-      res.json({
-        mensaje: "✅ Imágenes agregadas correctamente",
-        servicio,
-      });
-    } catch (error) {
-      console.error("Error al actualizar imágenes:", error);
-      res.status(500).json({ mensaje: "❌ Error al actualizar imágenes" });
-    }
-  }
+  servicioCtrl.actualizarServicio
 );
 
-// 🔹 Eliminar servicio (solo admin)
-router.delete(
-  '/:id',
+// ✅ Cambiar estado de un servicio (activar/desactivar)
+router.patch(
+  '/:id/estado',
   validarJWT,
   tieneRol(ROLES.ADMIN),
-  servicioCtrl.eliminarServicio
+  servicioCtrl.cambiarEstadoServicio
 );
+
+// ============================================================
+// Middleware de manejo de errores de multer (opcional, elegante)
+// ============================================================
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ mensaje: `❌ Error de carga: ${err.message}` });
+  } else if (err) {
+    return res.status(400).json({ mensaje: `❌ ${err.message}` });
+  }
+  next();
+});
 
 module.exports = router;
