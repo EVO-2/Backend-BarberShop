@@ -106,7 +106,7 @@ const registro = async (req, res) => {
         foto: nuevoUsuario.foto
       },
       process.env.JWT_SECRET,
-      { expiresIn: '4h' }
+      { expiresIn: '3h' }
     );
 
     const { exp } = jwt.decode(token);

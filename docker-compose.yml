@@ -1,0 +1,30 @@
+version: '3.9'
+services:
+  backend-barbershop:
+    build: .
+    container_name: backend-barbershop
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/BACKEND-BARBERSHOP
+    depends_on:
+      - mongodb
+    networks:
+      - barber-network
+
+  mongodb:
+    image: mongo:6
+    container_name: mongodb-barbershop
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - barber-network
+
+volumes:
+  mongo_data:
+
+networks:
+  barber-network:
+    external: true
