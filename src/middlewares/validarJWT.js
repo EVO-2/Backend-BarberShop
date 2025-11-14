@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
-const Usuario = require('../models/Usuario.model');
+import jwt from 'jsonwebtoken';
+import Usuario from '../models/Usuario.model.js';
 
-const validarJWT = async (req, res, next) => {
+export const validarJWT = async (req, res, next) => {
   const authHeader = req.header('Authorization') || req.header('authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -13,23 +13,16 @@ const validarJWT = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    // Verificamos que el token traiga uid
     const { uid } = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Buscamos el usuario y populamos el rol
     const usuario = await Usuario.findById(uid).populate('rol');
+
     if (!usuario) {
-      return res.status(401).json({
-        mensaje: 'Token no válido – usuario no existe',
-      });
+      return res.status(401).json({ mensaje: 'Token no válido – usuario no existe' });
     }
 
-    // Guardamos info en el request
     req.usuario = usuario;
     req.uid = uid;
     req.usuarioId = usuario._id;
-
-    // Normalizamos el rol
     req.rol = (usuario.rol?.nombre || usuario.rol?.toString() || '').toLowerCase();
 
     next();
@@ -41,4 +34,12 @@ const validarJWT = async (req, res, next) => {
   }
 };
 
-module.exports = { validarJWT };
+// Opcional: verificación de roles
+export const verificarRol = (rolesPermitidos = []) => {
+  return (req, res, next) => {
+    if (!rolesPermitidos.includes(req.rol)) {
+      return res.status(403).json({ mensaje: 'Acceso denegado' });
+    }
+    next();
+  };
+};
