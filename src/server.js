@@ -14,7 +14,8 @@ app.use(mainApp);
 // 👉 Puerto desde .env o por defecto 3000
 const PORT = process.env.PORT || 3000;
 
-// 👉 Levantar el servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
+// 👉 Levantar el servidor (escucha en todas las interfaces)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor escuchando en http://0.0.0.0:${PORT}`);
 });
+

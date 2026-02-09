@@ -7,6 +7,10 @@ const jwt = require('jsonwebtoken');
 
 const login = async (req, res) => {
   try {
+    // 🔍 LOGS DE DEPURACIÓN (CLAVE PARA CAPACITOR / ANDROID)
+    console.log('📱 USER-AGENT:', req.headers['user-agent']);
+    console.log('📥 Body recibido:', req.body);
+
     const usuario = await Usuario.findOne({ correo: req.body.correo })
       .select('+password')
       .populate('rol', 'nombre');
@@ -36,6 +40,7 @@ const login = async (req, res) => {
 
     // 👇 Cargar datos extra según el rol
     let datosRol = null;
+
     if (usuario.rol?.nombre === 'cliente') {
       datosRol = await Cliente.findOne({ usuario: usuario._id });
     } else if (usuario.rol?.nombre === 'barbero') {
@@ -57,23 +62,29 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al iniciar sesión', error: error.message });
+    console.error('❌ Error en login:', error);
+    res.status(500).json({
+      mensaje: 'Error al iniciar sesión',
+      error: error.message
+    });
   }
 };
-
 
 const registro = async (req, res) => {
   try {
     const { nombre, correo, password } = req.body;
 
     if (!nombre || !correo || !password) {
-      return res.status(400).json({ mensaje: 'Nombre, correo y contraseña son obligatorios' });
+      return res.status(400).json({
+        mensaje: 'Nombre, correo y contraseña son obligatorios'
+      });
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        mensaje: 'La contraseña debe tener mínimo 8 caracteres, incluyendo mayúscula, minúscula, número y un carácter especial'
+        mensaje:
+          'La contraseña debe tener mínimo 8 caracteres, incluyendo mayúscula, minúscula, número y un carácter especial'
       });
     }
 
@@ -95,7 +106,6 @@ const registro = async (req, res) => {
     });
 
     await nuevoUsuario.save();
-
     await Cliente.create({ usuario: nuevoUsuario._id });
 
     const token = jwt.sign(
@@ -123,7 +133,11 @@ const registro = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al registrar usuario', error: error.message });
+    console.error('❌ Error en registro:', error);
+    res.status(500).json({
+      mensaje: 'Error al registrar usuario',
+      error: error.message
+    });
   }
 };
 
@@ -134,10 +148,13 @@ const verificarCorreoExistente = async (req, res) => {
     const existe = await Usuario.findOne({ correo });
     res.json({ existe: !!existe });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al verificar el correo', error: error.message });
+    console.error('❌ Error al verificar correo:', error);
+    res.status(500).json({
+      mensaje: 'Error al verificar el correo',
+      error: error.message
+    });
   }
 };
-
 
 module.exports = {
   login,
