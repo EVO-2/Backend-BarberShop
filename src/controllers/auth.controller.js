@@ -7,11 +7,9 @@ const jwt = require('jsonwebtoken');
 
 const login = async (req, res) => {
   try {
-    // 🔍 LOGS DE DEPURACIÓN (CLAVE PARA CAPACITOR / ANDROID)
-    console.log('📱 USER-AGENT:', req.headers['user-agent']);
-    console.log('📥 Body recibido:', req.body);
+    const { correo, password } = req.body;
 
-    const usuario = await Usuario.findOne({ correo: req.body.correo })
+    const usuario = await Usuario.findOne({ correo })
       .select('+password')
       .populate('rol', 'nombre');
 
@@ -19,7 +17,7 @@ const login = async (req, res) => {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
-    const validPassword = await bcrypt.compare(req.body.password, usuario.password);
+    const validPassword = await bcrypt.compare(password, usuario.password);
     if (!validPassword) {
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
     }
@@ -38,7 +36,6 @@ const login = async (req, res) => {
     const { exp } = jwt.decode(token);
     const expDate = new Date(exp * 1000);
 
-    // 👇 Cargar datos extra según el rol
     let datosRol = null;
 
     if (usuario.rol?.nombre === 'cliente') {
@@ -62,10 +59,9 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en login:', error);
+    console.error('Error en login:', error);
     res.status(500).json({
-      mensaje: 'Error al iniciar sesión',
-      error: error.message
+      mensaje: 'Error al iniciar sesión'
     });
   }
 };
@@ -80,7 +76,9 @@ const registro = async (req, res) => {
       });
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         mensaje:
@@ -133,10 +131,9 @@ const registro = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en registro:', error);
+    console.error('Error en registro:', error);
     res.status(500).json({
-      mensaje: 'Error al registrar usuario',
-      error: error.message
+      mensaje: 'Error al registrar usuario'
     });
   }
 };
@@ -148,10 +145,9 @@ const verificarCorreoExistente = async (req, res) => {
     const existe = await Usuario.findOne({ correo });
     res.json({ existe: !!existe });
   } catch (error) {
-    console.error('❌ Error al verificar correo:', error);
+    console.error('Error al verificar correo:', error);
     res.status(500).json({
-      mensaje: 'Error al verificar el correo',
-      error: error.message
+      mensaje: 'Error al verificar el correo'
     });
   }
 };

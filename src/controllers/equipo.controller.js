@@ -2,15 +2,19 @@
 const Equipo = require('../models/Equipo.model');
 const EquipoMovimiento = require('../models/EquipoMovimiento.model');
 
-// Crear equipo
+// ======================================
+// CREAR EQUIPO
+// ======================================
 const crearEquipo = async (req, res) => {
   try {
     const data = req.body;
-    // opcional: asignar creadoPor desde req.uid si tu auth middleware lo setea
+
+    // Asignar creadoPor desde req.uid si existe
     if (req.uid) data.creadoPor = req.uid;
+
     const equipo = await Equipo.create(data);
 
-    // Crear movimiento de alta
+    // Registrar movimiento de alta
     await EquipoMovimiento.create({
       equipo: equipo._id,
       tipo: 'alta',
@@ -27,17 +31,21 @@ const crearEquipo = async (req, res) => {
   }
 };
 
-// Listar equipos (filtros sencillos)
+// ======================================
+// LISTAR EQUIPOS (con filtros y paginación)
+// ======================================
 const listarEquipos = async (req, res) => {
   try {
     const { tipo, sede, estado, q, page = 1, limit = 20 } = req.query;
     const filtro = { activo: true };
+
     if (tipo) filtro.tipo = tipo;
     if (sede) filtro.sede = sede;
     if (estado) filtro.estado = estado;
     if (q) filtro.nombre = new RegExp(q, 'i');
 
     const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
+
     const items = await Equipo.find(filtro)
       .populate('sede', 'nombre direccion')
       .populate('puesto', 'nombre')
@@ -48,14 +56,22 @@ const listarEquipos = async (req, res) => {
       .lean();
 
     const total = await Equipo.countDocuments(filtro);
-    res.json({ data: items, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) });
+
+    res.json({
+      data: items,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit))
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: 'Error listando equipos' });
   }
 };
 
-// Obtener por id (detalle)
+// ======================================
+// OBTENER EQUIPO POR ID
+// ======================================
 const obtenerEquipoPorId = async (req, res) => {
   try {
     const { id } = req.params;
@@ -64,7 +80,9 @@ const obtenerEquipoPorId = async (req, res) => {
       .populate('puesto', 'nombre')
       .populate('asignadoA', 'nombre correo')
       .lean();
+
     if (!equipo) return res.status(404).json({ mensaje: 'Equipo no encontrado' });
+
     res.json({ data: equipo });
   } catch (err) {
     console.error(err);
@@ -72,20 +90,22 @@ const obtenerEquipoPorId = async (req, res) => {
   }
 };
 
-// Actualizar equipo
+// ======================================
+// ACTUALIZAR EQUIPO
+// ======================================
 const actualizarEquipo = async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
+
     if (req.uid) data.actualizadoPor = req.uid;
 
-    // Si cambia sede/puesto/asignadoA, registrar movimiento (opcional más abajo)
     const equipoPrev = await Equipo.findById(id).lean();
     if (!equipoPrev) return res.status(404).json({ mensaje: 'Equipo no encontrado' });
 
     const equipo = await Equipo.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 
-    // Registrar movimiento si hubo cambio de sede/puesto/asignadoA/estado importante
+    // Registrar movimientos si hay cambios
     const movimientos = [];
     if (data.sede && String(data.sede) !== String(equipoPrev.sede)) {
       movimientos.push({
@@ -125,8 +145,10 @@ const actualizarEquipo = async (req, res) => {
   }
 };
 
-// Baja lógica
-const eliminarEquipo = async (req, res) => {
+// ======================================
+// BAJA LÓGICA / DESACTIVAR EQUIPO
+// ======================================
+const desactivarEquipo = async (req, res) => {
   try {
     const { id } = req.params;
     const equipo = await Equipo.findByIdAndUpdate(id, { activo: false }, { new: true });
@@ -139,10 +161,10 @@ const eliminarEquipo = async (req, res) => {
       creadoPor: req.uid || null
     });
 
-    res.json({ mensaje: 'Equipo dado de baja correctamente' });
+    res.json({ data: equipo, mensaje: 'Equipo dado de baja correctamente' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ mensaje: 'Error al eliminar equipo' });
+    res.status(500).json({ mensaje: 'Error al desactivar equipo' });
   }
 };
 
@@ -151,5 +173,5 @@ module.exports = {
   listarEquipos,
   obtenerEquipoPorId,
   actualizarEquipo,
-  eliminarEquipo
+  desactivarEquipo
 };
