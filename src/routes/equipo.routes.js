@@ -30,7 +30,7 @@ router.put('/:id', auth, equipoCtrl.actualizarEquipo);
 router.patch('/:id/desactivar', auth, equipoCtrl.desactivarEquipo);
 
 // Eliminar físico (opcional)
-router.delete('/:id', auth, equipoCtrl.eliminarEquipo);
+//router.delete('/:id', auth, equipoCtrl.eliminarEquipo);
 
 // ================================
 // RUTAS MOVIMIENTOS EQUIPO
