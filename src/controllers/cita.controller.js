@@ -3,7 +3,7 @@ const Servicio = require('../models/Servicio.model');
 const Cita = require('../models/Cita.model');
 const Cliente = require('../models/Cliente.model');
 //const NotificationController = require('./notification.controller');
-const NotificationService = require('../services/notification.service'); 
+const NotificationService = require('../services/notification.service');
 const { programarRecordatorio } = require('../schedulers/recordatorio.scheduler');
 
 
@@ -146,7 +146,7 @@ const obtenerMisCitas = async (req, res) => {
             fin: new Date(parsed.fin)
           };
         }
-      } catch {}
+      } catch { }
     }
 
     const resultado = await CitaService.obtenerMisCitas({
@@ -184,7 +184,7 @@ const obtenerCitasPaginadas = async (req, res) => {
 
           rangoFechas = { inicio, fin };
         }
-      } catch {}
+      } catch { }
     }
 
     const resultado = await CitaService.obtenerCitasPaginadas({

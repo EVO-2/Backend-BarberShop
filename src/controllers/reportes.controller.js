@@ -2,6 +2,7 @@ const Cita = require('../models/Cita.model');
 const Pago = require('../models/Pago.model');
 const Producto = require('../models/Producto.model');
 const Usuario = require('../models/Usuario.model');
+const Equipo = require('../models/Equipo.model');
 
 // =================== 📊 Reporte de Ingresos ===================
 const obtenerReporteIngresos = async (req, res) => {
@@ -225,17 +226,62 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 // =================== 📦 Reporte de Inventario ===================
 const obtenerReporteInventario = async (req, res) => {
   try {
-    const productos = await Producto.find({}, 'nombre stock usosVendidos');
+    const resultado = await Equipo.aggregate([
+      // 1️⃣ Agrupar por sede y tipo de equipo
+      {
+        $group: {
+          _id: {
+            sede: '$sede',
+            tipo: '$tipo',
+          },
+          cantidad: { $sum: 1 },
+        },
+      },
 
-    const reporte = productos.map((p) => ({
-      producto: p.nombre,
-      stock: p.stock,
-      usosVendidos: p.usosVendidos || 0,
-    }));
+      // 2️⃣ Lookup para traer nombre de la sede
+      {
+        $lookup: {
+          from: 'sedes',
+          localField: '_id.sede',
+          foreignField: '_id',
+          as: 'sede',
+        },
+      },
+      { $unwind: '$sede' },
 
-    res.json(reporte);
+      // 3️⃣ Agrupar nuevamente por sede
+      {
+        $group: {
+          _id: '$sede.nombre',
+          equipos: {
+            $push: {
+              tipo: '$_id.tipo',
+              cantidad: '$cantidad',
+            },
+          },
+          totalSede: { $sum: '$cantidad' }, // 🔥 total real
+        },
+      },
+
+      // 4️⃣ Formato final limpio
+      {
+        $project: {
+          _id: 0,
+          sede: '$_id',
+          equipos: 1,
+          totalSede: 1,
+        },
+      },
+
+      { $sort: { sede: 1 } },
+    ]);
+
+    res.json({
+      ok: true,
+      reporte: resultado,
+    });
   } catch (error) {
-    console.error('❌ Error al obtener reporte de inventario:', error);
+    console.error('❌ Error al obtener reporte de inventario por sede:', error);
     res.status(500).json({
       ok: false,
       mensaje: 'Error generando reporte de inventario',
