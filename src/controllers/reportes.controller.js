@@ -15,16 +15,14 @@ const obtenerReporteIngresos = async (req, res) => {
       });
     }
 
-    const filtroFechas = {
-      fecha: {
-        $gte: new Date(fechaInicio),
-        $lte: new Date(fechaFin),
-      },
+    const rangoFechas = {
+      $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
+      $lte: new Date(`${fechaFin}T23:59:59.999Z`),
     };
 
     const citas = await Cita.find({
       estado: 'finalizada',
-      ...filtroFechas,
+      fechaBase: rangoFechas,
     })
       .populate('pago')
       .populate({
@@ -69,7 +67,9 @@ const obtenerReporteIngresos = async (req, res) => {
         totalServicios,
         ingresosTotales,
         promedioPorCita:
-          citas.length > 0 ? (ingresosTotales / citas.length).toFixed(2) : 0,
+          citas.length > 0
+            ? (ingresosTotales / citas.length).toFixed(2)
+            : 0,
       },
       detalle: detalleCitas,
     });
@@ -95,32 +95,33 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
       });
     }
 
+    const rangoFechas = {
+      $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
+      $lte: new Date(`${fechaFin}T23:59:59.999Z`),
+    };
+
     const resultado = await Cita.aggregate([
       {
         $match: {
           estado: 'finalizada',
-          fecha: { $gte: new Date(fechaInicio), $lte: new Date(fechaFin) },
+          fechaBase: rangoFechas,
         },
       },
       {
         $group: {
-          _id: '$peluquero',  
+          _id: '$peluquero',
           cantidadCitas: { $sum: 1 },
         },
       },
-
-      // 1️⃣ Lookup hacia Peluquero
       {
         $lookup: {
-          from: 'peluqueros',    
+          from: 'peluqueros',
           localField: '_id',
           foreignField: '_id',
           as: 'peluquero',
         },
       },
       { $unwind: { path: '$peluquero', preserveNullAndEmptyArrays: true } },
-
-      // 2️⃣ Lookup hacia Usuario (para obtener nombre)
       {
         $lookup: {
           from: 'usuarios',
@@ -130,16 +131,13 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
         },
       },
       { $unwind: { path: '$usuario', preserveNullAndEmptyArrays: true } },
-
-      // 3️⃣ Proyecto final limpio
       {
         $project: {
           _id: 0,
-          peluquero: '$usuario.nombre', 
+          peluquero: '$usuario.nombre',
           cantidadCitas: 1,
         },
       },
-
       { $sort: { cantidadCitas: -1 } },
     ]);
 
@@ -166,32 +164,33 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
       });
     }
 
+    const rangoFechas = {
+      $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
+      $lte: new Date(`${fechaFin}T23:59:59.999Z`),
+    };
+
     const resultado = await Cita.aggregate([
       {
         $match: {
           estado: 'finalizada',
-          fecha: { $gte: new Date(fechaInicio), $lte: new Date(fechaFin) },
+          fechaBase: rangoFechas,
         },
       },
       {
         $group: {
-          _id: '$cliente',  
+          _id: '$cliente',
           cantidadCitas: { $sum: 1 },
         },
       },
-
-      // 1️⃣ Lookup hacia Cliente
       {
         $lookup: {
           from: 'clientes',
-          localField: '_id',        // aquí llega el ID del cliente
-          foreignField: '_id',      // ID de cliente coincide ✔️
+          localField: '_id',
+          foreignField: '_id',
           as: 'cliente',
         },
       },
       { $unwind: { path: '$cliente', preserveNullAndEmptyArrays: true } },
-
-      // 2️⃣ Lookup hacia Usuario para obtener el nombre
       {
         $lookup: {
           from: 'usuarios',
@@ -201,8 +200,6 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
         },
       },
       { $unwind: { path: '$usuario', preserveNullAndEmptyArrays: true } },
-
-      // 3️⃣ Proyección limpia
       {
         $project: {
           _id: 0,
@@ -210,7 +207,6 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
           cantidadCitas: 1,
         },
       },
-
       { $sort: { cantidadCitas: -1 } },
       { $limit: 10 },
     ]);
@@ -226,18 +222,17 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
   }
 };
 
-
 // =================== 📦 Reporte de Inventario ===================
 const obtenerReporteInventario = async (req, res) => {
   try {
     const productos = await Producto.find({}, 'nombre stock usosVendidos');
+
     const reporte = productos.map((p) => ({
       producto: p.nombre,
       stock: p.stock,
       usosVendidos: p.usosVendidos || 0,
     }));
 
-    // Devuelve un array limpio directamente
     res.json(reporte);
   } catch (error) {
     console.error('❌ Error al obtener reporte de inventario:', error);
