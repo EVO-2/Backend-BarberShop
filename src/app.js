@@ -19,6 +19,7 @@ const servicioRoutes = require('./routes/servicio.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const reportesRoutes = require('./routes/reportes.routes');
 const equipoRoutes = require('./routes/equipo.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/servicios', servicioRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/equipos', equipoRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // ============ Manejo de Rutas no encontradas ============
 app.use((req, res, next) => {
