@@ -5,6 +5,8 @@ const Cliente = require('../models/Cliente.model');
 //const NotificationController = require('./notification.controller');
 const NotificationService = require('../services/notification.service');
 const { programarRecordatorio } = require('../schedulers/recordatorio.scheduler');
+const { pagarCita: pagarCitaService } = require('../services/cita.service');
+const { MetodosPago, Mensajes } = require('../constants');
 
 
 
@@ -305,6 +307,7 @@ const finalizarCita = async (req, res) => {
       data: cita
     });
   } catch (error) {
+    console.error("ERROR FINALIZAR:", error);
     return res.status(error.status || 500).json({
       success: false,
       mensaje: error.message || 'Error al finalizar la cita'
@@ -395,15 +398,29 @@ const pagarCita = async (req, res) => {
   try {
     const { id } = req.params;
     const { monto, metodo } = req.body;
-    if (!monto || isNaN(monto) || monto <= 0) return res.status(400).json({ mensaje: 'Monto inválido' });
-    if (!metodo || typeof metodo !== 'string') return res.status(400).json({ mensaje: 'Método de pago requerido' });
 
-    const cita = await CitaService.pagarCita(id, monto, metodo);
-    if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    // Validaciones básicas usando constantes
+    if (!monto || isNaN(monto) || monto <= 0) {
+      return res.status(400).json({ mensaje: Mensajes.ERROR_MONTO_INVALIDO || 'Monto inválido' });
+    }
 
-    return res.json({ mensaje: 'Pago registrado correctamente', cita });
+    if (!metodo || !Object.values(MetodosPago).includes(metodo)) {
+      return res.status(400).json({ mensaje: Mensajes.ERROR_METODO_INVALIDO || 'Método de pago no válido' });
+    }
+
+    const cita = await pagarCitaService(id, monto, metodo);
+
+    return res.json({
+      mensaje: Mensajes.EXITO_PAGO_REGISTRADO || 'Pago registrado correctamente',
+      cita
+    });
+
   } catch (error) {
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error al pagar la cita' });
+    console.error('Error en pagarCita controller:', error);
+
+    return res.status(error.status || 500).json({
+      mensaje: error.message || 'Error al pagar la cita'
+    });
   }
 };
 

@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const conectarDB = require('./config/db');
+const path = require('path');
 
 // ======================= Rutas =======================
 const rolRoutes = require('./routes/rol.routes');
@@ -27,11 +28,19 @@ const app = express();
 conectarDB();
 
 // =================== Middlewares ===================
-app.use(cors());
+// Configuración CORS para desarrollo móvil
+const corsOptions = {
+  origin: '*', // ⚠️ Permite todos los orígenes en desarrollo
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// Parseo de JSON
 app.use(express.json());
 
-// Servir imágenes de perfil u otros archivos estáticos
-app.use('/uploads', express.static('uploads'));
+// Servir archivos estáticos (imágenes de perfil, uploads)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // =================== Rutas ===================
 app.get('/', (req, res) => {

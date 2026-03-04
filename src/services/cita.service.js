@@ -1,11 +1,13 @@
 // ===================== imports ===================== 
-const Cliente        = require('../models/Cliente.model');
-const Peluquero      = require('../models/Peluquero.model');
-const Servicio       = require('../models/Servicio.model');
-const Sede           = require('../models/Sede.model');
-const PuestoTrabajo  = require('../models/PuestoTrabajo.model');
-const Pago           = require('../models/Pago.model');
-const Cita           = require('../models/Cita.model');
+const Cliente = require('../models/Cliente.model');
+const Peluquero = require('../models/Peluquero.model');
+const Servicio = require('../models/Servicio.model');
+const Sede = require('../models/Sede.model');
+const PuestoTrabajo = require('../models/PuestoTrabajo.model');
+const Pago = require('../models/Pago.model');
+const Cita = require('../models/Cita.model');
+const mongoose = require('mongoose');
+const { EstadosPago, MetodosPago } = require('../constants');
 
 const CITA_POPULATE = [
   {
@@ -83,14 +85,14 @@ async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
 }
 
 // ===================== servicios =====================
-const crearCita = async ({ 
-  cliente, 
-  peluquero, 
-  servicios = [], 
-  sede, 
-  puestoTrabajo, 
-  fecha, 
-  observacion 
+const crearCita = async ({
+  cliente,
+  peluquero,
+  servicios = [],
+  sede,
+  puestoTrabajo,
+  fecha,
+  observacion
 }) => {
   if (!cliente || !sede || !fecha) {
     throw { status: 400, message: 'cliente, sede y fecha son obligatorios' };
@@ -373,14 +375,14 @@ const actualizarCita = async ({ id, data }) => {
   };
 
   // recalcular fechaBase y turno si cambia la fecha o peluquero
-  const fechaBaseNueva = new Date(fechaInicio); fechaBaseNueva.setHours(0,0,0,0);
+  const fechaBaseNueva = new Date(fechaInicio); fechaBaseNueva.setHours(0, 0, 0, 0);
   const peluqueroNuevo = peluquero ?? citaBase.peluquero;
   if (
     fechaBaseNueva.getTime() !== new Date(citaBase.fechaBase).getTime() ||
     peluqueroNuevo.toString() !== (citaBase.peluquero?.toString ? citaBase.peluquero.toString() : String(citaBase.peluquero))
   ) {
-    const inicioDia = new Date(fechaInicio); inicioDia.setHours(0,0,0,0);
-    const finDia = new Date(fechaInicio); finDia.setHours(23,59,59,999);
+    const inicioDia = new Date(fechaInicio); inicioDia.setHours(0, 0, 0, 0);
+    const finDia = new Date(fechaInicio); finDia.setHours(23, 59, 59, 999);
     const ultimoTurno = await Cita.findOne({
       peluquero: peluqueroNuevo,
       fechaBase: { $gte: inicioDia, $lte: finDia },
@@ -415,26 +417,83 @@ const iniciarCita = async (id, hora) => {
 };
 
 const finalizarCita = async (id, hora) => {
-  const cita = await Cita.findById(id).populate('servicios');
-  if (!cita) throw { status: 404, message: 'Cita no encontrada' };
-  if (cita.estado !== 'en_proceso') throw { status: 400, message: 'La cita no está en proceso y no puede finalizarse' };
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  let fechaFin;
-  if (hora && cita.inicioServicio) {
-    const [horas, minutos] = hora.split(':').map(Number);
-    if (isNaN(horas) || isNaN(minutos)) throw { status: 400, message: 'Formato de hora inválido' };
-    fechaFin = new Date(cita.inicioServicio);
-    fechaFin.setHours(horas, minutos, 0, 0);
-  } else {
-    fechaFin = new Date();
+  try {
+    const cita = await Cita.findById(id)
+      .session(session)
+      .populate('servicios');
+
+    if (!cita) {
+      throw { status: 404, message: 'Cita no encontrada' };
+    }
+
+    if (cita.estado !== 'en_proceso') {
+      throw { status: 400, message: 'La cita no está en proceso y no puede finalizarse' };
+    }
+
+    if (!cita.inicioServicio) {
+      throw { status: 400, message: 'La cita no tiene hora de inicio registrada' };
+    }
+
+    // 🔹 Calcular fecha fin
+    let fechaFin;
+
+    if (hora) {
+      const [horas, minutos] = hora.split(':').map(Number);
+
+      if (isNaN(horas) || isNaN(minutos)) {
+        throw { status: 400, message: 'Formato de hora inválido' };
+      }
+
+      fechaFin = new Date(cita.inicioServicio);
+      fechaFin.setHours(horas, minutos, 0, 0);
+    } else {
+      fechaFin = new Date();
+    }
+
+    if (fechaFin < cita.inicioServicio) {
+      throw { status: 400, message: 'La hora de finalización no puede ser menor a la hora de inicio' };
+    }
+
+    cita.finServicio = fechaFin;
+    cita.duracionRealMin = calcularDuracionReal(cita.inicioServicio, fechaFin);
+    cita.estado = 'finalizada';
+
+    // 🔹 Calcular total
+    const total = (cita.servicios || []).reduce(
+      (acc, s) => acc + (s.precio || 0),
+      0
+    );
+
+    // 🔥 Crear pago SOLO si no existe
+    if (!cita.pago) {
+      const pago = new Pago({
+        cita: cita._id,
+        monto: total,
+        metodo: null,
+        estado: 'pendiente',
+        fecha: null
+      });
+
+      await pago.save({ session });
+
+      cita.pago = pago._id;
+    }
+
+    await cita.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return await Cita.findById(id).populate(CITA_POPULATE);
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
   }
-
-  cita.finServicio = fechaFin;
-  cita.duracionRealMin = calcularDuracionReal(cita.inicioServicio, fechaFin);
-  cita.estado = 'finalizada';
-  await cita.save();
-
-  return Cita.findById(id).populate(CITA_POPULATE);
 };
 
 const cancelarCita = async (id) => {
@@ -450,8 +509,8 @@ const cancelarCita = async (id) => {
 
 const getCitasPorSedeYFecha = async ({ sedeId, fecha }) => {
   if (!sedeId || !fecha) throw { status: 400, message: 'sedeId y fecha son obligatorios' };
-  const fechaInicio = new Date(fecha); fechaInicio.setHours(0,0,0,0);
-  const fechaFin = new Date(fecha); fechaFin.setHours(23,59,59,999);
+  const fechaInicio = new Date(fecha); fechaInicio.setHours(0, 0, 0, 0);
+  const fechaFin = new Date(fecha); fechaFin.setHours(23, 59, 59, 999);
 
   return await Cita.find({
     sede: sedeId,
@@ -500,15 +559,15 @@ const repetirCita = async ({ id, fecha }) => {
   if (haySolape) throw { status: 400, message: 'Horario no disponible (solapado con otra cita)' };
 
   // calcular turno por peluquero y día
-  const inicioDia = new Date(fechaInicio); inicioDia.setHours(0,0,0,0);
-  const finDia = new Date(fechaInicio); finDia.setHours(23,59,59,999);
+  const inicioDia = new Date(fechaInicio); inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(fechaInicio); finDia.setHours(23, 59, 59, 999);
   const ultimoTurno = await Cita.findOne({
     peluquero: citaOriginal.peluquero,
     fechaBase: { $gte: inicioDia, $lte: finDia }
   }).sort({ turno: -1 }).lean();
   const turno = (ultimoTurno?.turno || 0) + 1;
 
-  const fechaBase = new Date(fechaInicio); fechaBase.setHours(0,0,0,0);
+  const fechaBase = new Date(fechaInicio); fechaBase.setHours(0, 0, 0, 0);
 
   const nuevaCita = await Cita.create({
     cliente: citaOriginal.cliente,
@@ -529,7 +588,7 @@ const repetirCita = async ({ id, fecha }) => {
 const obtenerCitasPorRango = async ({ fechaInicio, fechaFin }) => {
   if (!fechaInicio || !fechaFin) throw { status: 400, message: 'Se requieren fechaInicio y fechaFin' };
   const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin); fin.setHours(23,59,59,999);
+  const fin = new Date(fechaFin); fin.setHours(23, 59, 59, 999);
 
   return await Cita.find({
     estado: { $in: ESTADOS_ACTIVOS },
@@ -538,27 +597,46 @@ const obtenerCitasPorRango = async ({ fechaInicio, fechaFin }) => {
   }).populate(CITA_POPULATE).lean();
 };
 
-const pagarCita = async ({ id, monto, metodo }) => {
-  if (!monto || !metodo) throw { status: 400, message: 'Monto y método de pago son obligatorios' };
+// ===================== pagarCita =====================
+const pagarCita = async (id, monto, metodo) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const cita = await Cita.findById(id);
-  if (!cita) throw { status: 404, message: 'Cita no encontrada' };
-  if (cita.estado === 'cancelada') throw { status: 400, message: 'No se puede pagar una cita cancelada' };
-  if (cita.pago) throw { status: 400, message: 'La cita ya tiene un pago asociado' };
+  try {
+    const cita = await Cita.findById(id).session(session);
+    if (!cita) throw { status: 404, message: 'Cita no encontrada' };
+    if (cita.estado === 'cancelada') throw { status: 400, message: 'No se puede pagar una cita cancelada' };
+    if (cita.estado === 'pagada') throw { status: 400, message: 'La cita ya está pagada' };
+    if (cita.estado !== 'finalizada') throw { status: 400, message: 'Solo se pueden pagar citas finalizadas' };
+    if (!cita.pago) throw { status: 400, message: 'La cita no tiene un pago asociado' };
 
-  const pago = await Pago.create({
-    cita: cita._id,
-    monto,
-    metodo,
-    estado: 'completado',
-    fecha: new Date()
-  });
+    const pago = await Pago.findById(cita.pago).session(session);
+    if (!pago) throw { status: 400, message: 'No existe un pago asociado a esta cita' };
+    if (pago.estado === EstadosPago.PAGADO) throw { status: 400, message: 'Este pago ya fue pagado' };
 
-  cita.pago = pago._id;
-  cita.estado = 'pagada';
-  await cita.save();
+    if (!monto || monto <= 0) throw { status: 400, message: 'El monto debe ser mayor a 0' };
+    if (!metodo || !Object.values(MetodosPago).includes(metodo)) throw { status: 400, message: 'Método de pago inválido' };
 
-  return Cita.findById(cita._id).populate(CITA_POPULATE);
+    pago.monto = monto;
+    pago.metodo = metodo;
+    pago.estado = EstadosPago.PAGADO;
+    pago.fecha = new Date();
+
+    await pago.save({ session });
+
+    cita.estado = 'pagada';
+    await cita.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return await Cita.findById(id).populate(CITA_POPULATE);
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };
 
 // ===================== export =====================
@@ -570,9 +648,9 @@ module.exports = {
   obtenerCitaPorId,
   actualizarCita,
   calcularDuracionReal,
-  iniciarCita,   
-  finalizarCita, 
-  cancelarCita,  
+  iniciarCita,
+  finalizarCita,
+  cancelarCita,
   getCitasPorSedeYFecha,
   obtenerCitasPorFechaYHora,
   repetirCita,

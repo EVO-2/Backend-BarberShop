@@ -14,8 +14,10 @@ const PagoSchema = new Schema({
   },
   metodo: {
     type: String,
-    enum: Object.values(MetodosPago),
-    required: true
+    required: function () {
+      return this.estado === 'pagado';
+    },
+    default: null
   },
   estado: {
     type: String,

@@ -113,10 +113,10 @@ router.post(
 );
 
 // Cliente: pagar una cita (ruta POST /:id/pago)
-router.post(
-  '/:id/pago',
+router.put(
+  '/:id/pagar',
   validarJWT,
-  tieneRol(ROLES.CLIENTE),
+  tieneRol(ROLES.ADMIN),
   citaController.pagarCita
 );
 

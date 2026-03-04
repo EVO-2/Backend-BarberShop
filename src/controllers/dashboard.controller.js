@@ -2,80 +2,98 @@ const Cliente = require('../models/Cliente.model');
 const Cita = require('../models/Cita.model');
 const Usuario = require('../models/Usuario.model');
 const Rol = require('../models/Rol.model');
-
-const obtenerRangoSemana = (offsetDias = 0) => {
-    const inicio = new Date();
-    inicio.setHours(0, 0, 0, 0);
-    inicio.setDate(inicio.getDate() - offsetDias);
-
-    const fin = new Date(inicio);
-    fin.setDate(inicio.getDate() + 6);
-    fin.setHours(23, 59, 59, 999);
-
-    return { inicio, fin };
-};
+const Pago = require('../models/Pago.model');
 
 const obtenerResumenDashboard = async (req, res) => {
     try {
 
-        // 📅 Hoy
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
+        /* =====================================================
+           📅 FECHAS
+        ===================================================== */
+
+        // 🔹 Hoy
+        const inicioHoy = new Date();
+        inicioHoy.setHours(0, 0, 0, 0);
 
         const finHoy = new Date();
         finHoy.setHours(23, 59, 59, 999);
 
-        // 📅 Semana actual
-        const semanaActual = obtenerRangoSemana(6);
+        // 🔹 Últimos 7 días (incluye hoy)
+        const inicioSemanaActual = new Date();
+        inicioSemanaActual.setDate(inicioSemanaActual.getDate() - 6);
+        inicioSemanaActual.setHours(0, 0, 0, 0);
 
-        // 📅 Semana anterior
-        const semanaAnterior = obtenerRangoSemana(13);
+        const finSemanaActual = new Date();
+        finSemanaActual.setHours(23, 59, 59, 999);
+
+        // 🔹 Semana anterior
+        const inicioSemanaAnterior = new Date();
+        inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 13);
+        inicioSemanaAnterior.setHours(0, 0, 0, 0);
+
+        const finSemanaAnterior = new Date();
+        finSemanaAnterior.setDate(finSemanaAnterior.getDate() - 7);
+        finSemanaAnterior.setHours(23, 59, 59, 999);
+
+        /* =====================================================
+           🔎 ROL BARBERO
+        ===================================================== */
 
         const rolPeluquero = await Rol.findOne({ nombre: 'barbero', estado: true });
 
         if (!rolPeluquero) {
             return res.status(400).json({
-                msg: 'Rol peluquero no encontrado'
+                msg: 'Rol barbero no encontrado'
             });
         }
+
+        /* =====================================================
+           🚀 CONSULTAS EN PARALELO
+        ===================================================== */
 
         const [
             totalClientes,
             citasHoy,
-            ingresosHoy,
+            ingresosHoyAgg,
             peluquerosActivos,
             ultimasCitas,
-            ingresosSemana,
-            ingresosSemanaAnterior,
+            ingresosSemanaAgg,
+            ingresosSemanaAnteriorAgg,
             estadosCitas,
             serviciosTop
         ] = await Promise.all([
 
+            // 👥 Clientes activos
             Cliente.countDocuments({ estado: true }),
 
+            // 📅 Citas hoy (operativo, no financiero)
             Cita.countDocuments({
-                fecha: { $gte: hoy, $lte: finHoy }
+                fecha: { $gte: inicioHoy, $lte: finHoy }
             }),
 
-            Cita.aggregate([
-                { $match: { fecha: { $gte: hoy, $lte: finHoy }, estado: 'finalizada' } },
+            // 💰 Ingresos hoy (DESDE PAGOS)
+            Pago.aggregate([
                 {
-                    $lookup: {
-                        from: 'pagos',
-                        localField: 'pago',
-                        foreignField: '_id',
-                        as: 'pagoData'
+                    $match: {
+                        estado: 'pagado',
+                        createdAt: { $gte: inicioHoy, $lte: finHoy }
                     }
                 },
-                { $unwind: '$pagoData' },
-                { $group: { _id: null, total: { $sum: '$pagoData.monto' } } }
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: '$monto' }
+                    }
+                }
             ]),
 
+            // 👨‍🔧 Peluqueros activos
             Usuario.countDocuments({
                 rol: rolPeluquero._id,
                 estado: true
             }),
 
+            // 🕓 Últimas 5 citas
             Cita.find()
                 .sort({ fecha: -1 })
                 .limit(5)
@@ -90,49 +108,37 @@ const obtenerResumenDashboard = async (req, res) => {
                 .populate('servicios', 'nombre precio duracion')
                 .populate('sede', 'nombre direccion'),
 
-            // 📊 Ingresos últimos 7 días agrupados por día
-            Cita.aggregate([
+            // 📊 Ingresos últimos 7 días (DESDE PAGOS)
+            Pago.aggregate([
                 {
                     $match: {
-                        fecha: { $gte: semanaActual.inicio, $lte: semanaActual.fin },
-                        estado: 'finalizada'
+                        estado: 'pagado',
+                        createdAt: { $gte: inicioSemanaActual, $lte: finSemanaActual }
                     }
                 },
-                {
-                    $lookup: {
-                        from: 'pagos',
-                        localField: 'pago',
-                        foreignField: '_id',
-                        as: 'pagoData'
-                    }
-                },
-                { $unwind: '$pagoData' },
                 {
                     $group: {
-                        _id: { $dayOfWeek: '$fecha' },
-                        total: { $sum: '$pagoData.monto' }
+                        _id: { $dayOfWeek: '$createdAt' },
+                        total: { $sum: '$monto' }
                     }
-                }
+                },
+                { $sort: { _id: 1 } }
             ]),
 
-            // 📉 Semana anterior total
-            Cita.aggregate([
+            // 📉 Total semana anterior (DESDE PAGOS)
+            Pago.aggregate([
                 {
                     $match: {
-                        fecha: { $gte: semanaAnterior.inicio, $lte: semanaAnterior.fin },
-                        estado: 'finalizada'
+                        estado: 'pagado',
+                        createdAt: { $gte: inicioSemanaAnterior, $lte: finSemanaAnterior }
                     }
                 },
                 {
-                    $lookup: {
-                        from: 'pagos',
-                        localField: 'pago',
-                        foreignField: '_id',
-                        as: 'pagoData'
+                    $group: {
+                        _id: null,
+                        total: { $sum: '$monto' }
                     }
-                },
-                { $unwind: '$pagoData' },
-                { $group: { _id: null, total: { $sum: '$pagoData.monto' } } }
+                }
             ]),
 
             // 📈 Estados de citas
@@ -145,7 +151,7 @@ const obtenerResumenDashboard = async (req, res) => {
                 }
             ]),
 
-            // 🏆 Servicios más prestados
+            // 🏆 Servicios más solicitados
             Cita.aggregate([
                 { $unwind: '$servicios' },
                 {
@@ -167,6 +173,7 @@ const obtenerResumenDashboard = async (req, res) => {
                 { $unwind: '$servicioData' },
                 {
                     $project: {
+                        _id: 0,
                         nombre: '$servicioData.nombre',
                         total: 1
                     }
@@ -174,23 +181,34 @@ const obtenerResumenDashboard = async (req, res) => {
             ])
         ]);
 
-        const totalSemanaActual = ingresosSemana.reduce((acc, item) => acc + item.total, 0);
-        const totalSemanaAnterior = ingresosSemanaAnterior[0]?.total || 0;
+        /* =====================================================
+           📊 CÁLCULOS FINALES
+        ===================================================== */
+
+        const ingresosHoy = ingresosHoyAgg[0]?.total || 0;
+        const totalSemanaActual = ingresosSemanaAgg.reduce((acc, item) => acc + item.total, 0);
+        const totalSemanaAnterior = ingresosSemanaAnteriorAgg[0]?.total || 0;
+
+        const variacion = totalSemanaAnterior > 0
+            ? ((totalSemanaActual - totalSemanaAnterior) / totalSemanaAnterior) * 100
+            : (totalSemanaActual > 0 ? 100 : 0);
+
+        /* =====================================================
+           📤 RESPUESTA
+        ===================================================== */
 
         res.json({
             totalClientes,
             citasHoy,
-            ingresosHoy: ingresosHoy[0]?.total || 0,
+            ingresosHoy,
             peluquerosActivos,
             ultimasCitas,
 
-            ingresosSemana,
+            ingresosSemana: ingresosSemanaAgg,
             comparacionSemana: {
                 actual: totalSemanaActual,
                 anterior: totalSemanaAnterior,
-                variacion: totalSemanaAnterior
-                    ? ((totalSemanaActual - totalSemanaAnterior) / totalSemanaAnterior) * 100
-                    : 100
+                variacion: Number(variacion.toFixed(2))
             },
 
             estadosCitas,
@@ -198,7 +216,7 @@ const obtenerResumenDashboard = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error('Error en dashboard:', error);
         res.status(500).json({
             msg: 'Error obteniendo resumen del dashboard'
         });
