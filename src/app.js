@@ -1,8 +1,6 @@
 // ======================= Imports =======================
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const conectarDB = require('./config/db');
 const path = require('path');
 
 // ======================= Rutas =======================
@@ -24,29 +22,32 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 
-// =================== Conexión DB ===================
-conectarDB();
-
 // =================== Middlewares ===================
-// Configuración CORS para desarrollo móvil
+
+// Configuración CORS
 const corsOptions = {
-  origin: '*', // ⚠️ Permite todos los orígenes en desarrollo
+  origin: '*', // ⚠️ En producción debes limitar dominios
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
+  credentials: true
 };
+
 app.use(cors(corsOptions));
 
 // Parseo de JSON
 app.use(express.json());
 
-// Servir archivos estáticos (imágenes de perfil, uploads)
+// Parseo de formularios
+app.use(express.urlencoded({ extended: true }));
+
+// Servir archivos estáticos (imágenes, uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// =================== Rutas ===================
+// =================== Ruta raíz ===================
 app.get('/', (req, res) => {
   res.send('✅ API Barbería JEVO en funcionamiento');
 });
 
+// =================== Rutas API ===================
 app.use('/api/auth', authRoutes);
 app.use('/api/roles', rolRoutes);
 app.use('/api/usuarios', usuarioRoutes);
@@ -63,9 +64,12 @@ app.use('/api/reportes', reportesRoutes);
 app.use('/api/equipos', equipoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// ============ Manejo de Rutas no encontradas ============
+// =================== Manejo de errores 404 ===================
 app.use((req, res, next) => {
-  res.status(404).json({ mensaje: '❌ Ruta no encontrada' });
+  res.status(404).json({
+    ok: false,
+    mensaje: '❌ Ruta no encontrada'
+  });
 });
 
 module.exports = app;

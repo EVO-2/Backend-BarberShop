@@ -21,8 +21,10 @@ const obtenerReporteIngresos = async (req, res) => {
       $lte: new Date(`${fechaFin}T23:59:59.999Z`),
     };
 
+    // 🔹 Solo citas realmente pagadas
     const citas = await Cita.find({
-      estado: 'finalizada',
+      estado: 'pagada',
+      pago: { $ne: null },
       fechaBase: rangoFechas,
     })
       .populate('pago')
@@ -41,10 +43,10 @@ const obtenerReporteIngresos = async (req, res) => {
     let totalServicios = 0;
 
     const detalleCitas = citas.map((cita) => {
-      const subtotal =
-        cita.servicios?.reduce((acc, s) => acc + (s.precio || 0), 0) || 0;
 
-      ingresosTotales += subtotal;
+      const montoPagado = cita.pago?.monto || 0;
+
+      ingresosTotales += montoPagado;
       totalServicios += cita.servicios?.length || 0;
 
       return {
@@ -52,30 +54,35 @@ const obtenerReporteIngresos = async (req, res) => {
         fecha: cita.fecha,
         cliente: cita.cliente?.usuario?.nombre || 'N/D',
         peluquero: cita.peluquero?.usuario?.nombre || 'N/D',
-        servicios: cita.servicios?.map((s) => ({
+        servicios: (cita.servicios || []).map((s) => ({
           nombre: s.nombre,
           precio: s.precio,
         })),
-        subtotal,
+        subtotal: montoPagado,
       };
     });
 
     res.json({
       ok: true,
-      rango: { desde: fechaInicio, hasta: fechaFin },
+      rango: {
+        desde: fechaInicio,
+        hasta: fechaFin,
+      },
       resumen: {
         cantidadCitas: citas.length,
         totalServicios,
         ingresosTotales,
         promedioPorCita:
           citas.length > 0
-            ? (ingresosTotales / citas.length).toFixed(2)
+            ? Number((ingresosTotales / citas.length).toFixed(2))
             : 0,
       },
       detalle: detalleCitas,
     });
+
   } catch (error) {
     console.error('❌ Error al obtener reporte de ingresos:', error);
+
     res.status(500).json({
       ok: false,
       mensaje: 'Error al generar el reporte de ingresos',
