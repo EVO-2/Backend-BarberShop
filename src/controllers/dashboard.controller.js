@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const Cliente = require('../models/Cliente.model');
 const Cita = require('../models/Cita.model');
 const Usuario = require('../models/Usuario.model');
@@ -8,17 +10,29 @@ const obtenerResumenDashboard = async (req, res) => {
     try {
 
         /* =====================================================
+           🏢 SEDE
+        ===================================================== */
+
+        const { sede } = req.query;
+
+        if (!sede || !mongoose.Types.ObjectId.isValid(sede)) {
+            return res.status(400).json({
+                msg: 'Debe enviar un id de sede válido'
+            });
+        }
+
+        const sedeId = new mongoose.Types.ObjectId(sede);
+
+        /* =====================================================
            📅 FECHAS
         ===================================================== */
 
-        // 🔹 Hoy
         const inicioHoy = new Date();
         inicioHoy.setHours(0, 0, 0, 0);
 
         const finHoy = new Date();
         finHoy.setHours(23, 59, 59, 999);
 
-        // 🔹 Últimos 7 días (incluye hoy)
         const inicioSemanaActual = new Date();
         inicioSemanaActual.setDate(inicioSemanaActual.getDate() - 6);
         inicioSemanaActual.setHours(0, 0, 0, 0);
@@ -26,7 +40,6 @@ const obtenerResumenDashboard = async (req, res) => {
         const finSemanaActual = new Date();
         finSemanaActual.setHours(23, 59, 59, 999);
 
-        // 🔹 Semana anterior
         const inicioSemanaAnterior = new Date();
         inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 13);
         inicioSemanaAnterior.setHours(0, 0, 0, 0);
@@ -39,7 +52,10 @@ const obtenerResumenDashboard = async (req, res) => {
            🔎 ROL BARBERO
         ===================================================== */
 
-        const rolPeluquero = await Rol.findOne({ nombre: 'barbero', estado: true });
+        const rolPeluquero = await Rol.findOne({
+            nombre: 'barbero',
+            estado: true
+        });
 
         if (!rolPeluquero) {
             return res.status(400).json({
@@ -48,31 +64,57 @@ const obtenerResumenDashboard = async (req, res) => {
         }
 
         /* =====================================================
-           🚀 CONSULTAS EN PARALELO
+           🚀 CONSULTAS
         ===================================================== */
 
         const [
-            totalClientes,
             citasHoy,
-            ingresosHoyAgg,
-            peluquerosActivos,
             ultimasCitas,
+            ingresosHoyAgg,
             ingresosSemanaAgg,
             ingresosSemanaAnteriorAgg,
             estadosCitas,
-            serviciosTop
+            serviciosTop,
+            clientesUnicos,
+            peluquerosUnicos
         ] = await Promise.all([
 
-            // 👥 Clientes activos
-            Cliente.countDocuments({ estado: true }),
+            /* 📅 Citas hoy */
 
-            // 📅 Citas hoy (operativo, no financiero)
             Cita.countDocuments({
+                sede: sedeId,
                 fecha: { $gte: inicioHoy, $lte: finHoy }
             }),
 
-            // 💰 Ingresos hoy (DESDE PAGOS)
+            /* 🕓 Últimas citas */
+
+            Cita.find({ sede: sedeId })
+                .sort({ fecha: -1 })
+                .limit(5)
+                .populate({
+                    path: 'cliente',
+                    populate: { path: 'usuario', select: 'nombre' }
+                })
+                .populate({
+                    path: 'peluquero',
+                    populate: { path: 'usuario', select: 'nombre' }
+                })
+                .populate('servicios', 'nombre precio duracion')
+                .populate('sede', 'nombre direccion'),
+
+            /* 💰 Ingresos hoy */
+
             Pago.aggregate([
+                {
+                    $lookup: {
+                        from: 'citas',
+                        localField: 'cita',
+                        foreignField: '_id',
+                        pipeline: [{ $match: { sede: sedeId } }],
+                        as: 'citaData'
+                    }
+                },
+                { $unwind: '$citaData' },
                 {
                     $match: {
                         estado: 'pagado',
@@ -87,33 +129,26 @@ const obtenerResumenDashboard = async (req, res) => {
                 }
             ]),
 
-            // 👨‍🔧 Peluqueros activos
-            Usuario.countDocuments({
-                rol: rolPeluquero._id,
-                estado: true
-            }),
+            /* 📊 Ingresos semana */
 
-            // 🕓 Últimas 5 citas
-            Cita.find()
-                .sort({ fecha: -1 })
-                .limit(5)
-                .populate({
-                    path: 'cliente',
-                    populate: { path: 'usuario', select: 'nombre' }
-                })
-                .populate({
-                    path: 'peluquero',
-                    populate: { path: 'usuario', select: 'nombre' }
-                })
-                .populate('servicios', 'nombre precio duracion')
-                .populate('sede', 'nombre direccion'),
-
-            // 📊 Ingresos últimos 7 días (DESDE PAGOS)
             Pago.aggregate([
+                {
+                    $lookup: {
+                        from: 'citas',
+                        localField: 'cita',
+                        foreignField: '_id',
+                        pipeline: [{ $match: { sede: sedeId } }],
+                        as: 'citaData'
+                    }
+                },
+                { $unwind: '$citaData' },
                 {
                     $match: {
                         estado: 'pagado',
-                        createdAt: { $gte: inicioSemanaActual, $lte: finSemanaActual }
+                        createdAt: {
+                            $gte: inicioSemanaActual,
+                            $lte: finSemanaActual
+                        }
                     }
                 },
                 {
@@ -125,12 +160,26 @@ const obtenerResumenDashboard = async (req, res) => {
                 { $sort: { _id: 1 } }
             ]),
 
-            // 📉 Total semana anterior (DESDE PAGOS)
+            /* 📉 Semana anterior */
+
             Pago.aggregate([
+                {
+                    $lookup: {
+                        from: 'citas',
+                        localField: 'cita',
+                        foreignField: '_id',
+                        pipeline: [{ $match: { sede: sedeId } }],
+                        as: 'citaData'
+                    }
+                },
+                { $unwind: '$citaData' },
                 {
                     $match: {
                         estado: 'pagado',
-                        createdAt: { $gte: inicioSemanaAnterior, $lte: finSemanaAnterior }
+                        createdAt: {
+                            $gte: inicioSemanaAnterior,
+                            $lte: finSemanaAnterior
+                        }
                     }
                 },
                 {
@@ -141,8 +190,10 @@ const obtenerResumenDashboard = async (req, res) => {
                 }
             ]),
 
-            // 📈 Estados de citas
+            /* 📈 Estados citas */
+
             Cita.aggregate([
+                { $match: { sede: sedeId } },
                 {
                     $group: {
                         _id: '$estado',
@@ -151,8 +202,10 @@ const obtenerResumenDashboard = async (req, res) => {
                 }
             ]),
 
-            // 🏆 Servicios más solicitados
+            /* 🏆 Servicios top */
+
             Cita.aggregate([
+                { $match: { sede: sedeId } },
                 { $unwind: '$servicios' },
                 {
                     $group: {
@@ -178,16 +231,32 @@ const obtenerResumenDashboard = async (req, res) => {
                         total: 1
                     }
                 }
-            ])
+            ]),
+
+            /* 👥 Clientes únicos por sede */
+
+            Cita.distinct('cliente', { sede: sedeId }),
+
+            /* ✂️ Peluqueros únicos por sede */
+
+            Cita.distinct('peluquero', { sede: sedeId })
+
         ]);
 
         /* =====================================================
-           📊 CÁLCULOS FINALES
+           📊 CÁLCULOS
         ===================================================== */
 
+        const totalClientes = clientesUnicos.length;
+        const peluquerosActivos = peluquerosUnicos.length;
+
         const ingresosHoy = ingresosHoyAgg[0]?.total || 0;
-        const totalSemanaActual = ingresosSemanaAgg.reduce((acc, item) => acc + item.total, 0);
-        const totalSemanaAnterior = ingresosSemanaAnteriorAgg[0]?.total || 0;
+
+        const totalSemanaActual =
+            ingresosSemanaAgg.reduce((acc, item) => acc + item.total, 0);
+
+        const totalSemanaAnterior =
+            ingresosSemanaAnteriorAgg[0]?.total || 0;
 
         const variacion = totalSemanaAnterior > 0
             ? ((totalSemanaActual - totalSemanaAnterior) / totalSemanaAnterior) * 100
@@ -205,6 +274,7 @@ const obtenerResumenDashboard = async (req, res) => {
             ultimasCitas,
 
             ingresosSemana: ingresosSemanaAgg,
+
             comparacionSemana: {
                 actual: totalSemanaActual,
                 anterior: totalSemanaAnterior,
@@ -216,10 +286,13 @@ const obtenerResumenDashboard = async (req, res) => {
         });
 
     } catch (error) {
+
         console.error('Error en dashboard:', error);
+
         res.status(500).json({
             msg: 'Error obteniendo resumen del dashboard'
         });
+
     }
 };
 
