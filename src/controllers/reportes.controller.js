@@ -4,9 +4,11 @@ const Producto = require('../models/Producto.model');
 const Usuario = require('../models/Usuario.model');
 const Equipo = require('../models/Equipo.model');
 
+
 // =================== 📊 Reporte de Ingresos ===================
 const obtenerReporteIngresos = async (req, res) => {
   try {
+
     const { fechaInicio, fechaFin } = req.query;
 
     if (!fechaInicio || !fechaFin) {
@@ -21,13 +23,13 @@ const obtenerReporteIngresos = async (req, res) => {
       $lte: new Date(`${fechaFin}T23:59:59.999Z`),
     };
 
-    // 🔹 Solo citas realmente pagadas
     const citas = await Cita.find({
       estado: 'pagada',
       pago: { $ne: null },
       fechaBase: rangoFechas,
     })
       .populate('pago')
+      .populate('sede', 'nombre')
       .populate({
         path: 'cliente',
         populate: { path: 'usuario', select: 'nombre' },
@@ -42,6 +44,8 @@ const obtenerReporteIngresos = async (req, res) => {
     let ingresosTotales = 0;
     let totalServicios = 0;
 
+    const ingresosPorSede = {};
+
     const detalleCitas = citas.map((cita) => {
 
       const montoPagado = cita.pago?.monto || 0;
@@ -49,9 +53,18 @@ const obtenerReporteIngresos = async (req, res) => {
       ingresosTotales += montoPagado;
       totalServicios += cita.servicios?.length || 0;
 
+      const sedeNombre = cita.sede?.nombre || 'Sin sede';
+
+      if (!ingresosPorSede[sedeNombre]) {
+        ingresosPorSede[sedeNombre] = 0;
+      }
+
+      ingresosPorSede[sedeNombre] += montoPagado;
+
       return {
         id: cita._id,
         fecha: cita.fecha,
+        sede: sedeNombre,
         cliente: cita.cliente?.usuario?.nombre || 'N/D',
         peluquero: cita.peluquero?.usuario?.nombre || 'N/D',
         servicios: (cita.servicios || []).map((s) => ({
@@ -77,10 +90,12 @@ const obtenerReporteIngresos = async (req, res) => {
             ? Number((ingresosTotales / citas.length).toFixed(2))
             : 0,
       },
+      ingresosPorSede,
       detalle: detalleCitas,
     });
 
   } catch (error) {
+
     console.error('❌ Error al obtener reporte de ingresos:', error);
 
     res.status(500).json({
@@ -88,12 +103,14 @@ const obtenerReporteIngresos = async (req, res) => {
       mensaje: 'Error al generar el reporte de ingresos',
       error: error.message,
     });
+
   }
 };
 
 // =================== 💈 Reporte de Citas por Barbero ===================
 const obtenerReporteCitasPorBarbero = async (req, res) => {
   try {
+
     const { fechaInicio, fechaFin } = req.query;
 
     if (!fechaInicio || !fechaFin) {
@@ -109,27 +126,35 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
     };
 
     const resultado = await Cita.aggregate([
+
       {
         $match: {
           estado: 'finalizada',
           fechaBase: rangoFechas,
         },
       },
+
       {
         $group: {
-          _id: '$peluquero',
+          _id: {
+            peluquero: '$peluquero',
+            sede: '$sede',
+          },
           cantidadCitas: { $sum: 1 },
         },
       },
+
       {
         $lookup: {
           from: 'peluqueros',
-          localField: '_id',
+          localField: '_id.peluquero',
           foreignField: '_id',
           as: 'peluquero',
         },
       },
-      { $unwind: { path: '$peluquero', preserveNullAndEmptyArrays: true } },
+
+      { $unwind: '$peluquero' },
+
       {
         $lookup: {
           from: 'usuarios',
@@ -138,31 +163,52 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
           as: 'usuario',
         },
       },
-      { $unwind: { path: '$usuario', preserveNullAndEmptyArrays: true } },
+
+      { $unwind: '$usuario' },
+
+      {
+        $lookup: {
+          from: 'sedes',
+          localField: '_id.sede',
+          foreignField: '_id',
+          as: 'sede',
+        },
+      },
+
+      { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
+
       {
         $project: {
           _id: 0,
+          sede: '$sede.nombre',
           peluquero: '$usuario.nombre',
           cantidadCitas: 1,
         },
       },
-      { $sort: { cantidadCitas: -1 } },
+
+      { $sort: { cantidadCitas: -1 } }
+
     ]);
 
     res.json(resultado);
+
   } catch (error) {
+
     console.error('❌ Error al obtener reporte de citas por barbero:', error);
+
     res.status(500).json({
       ok: false,
       mensaje: 'Error generando reporte de citas por barbero',
       error: error.message,
     });
+
   }
 };
 
 // =================== 👥 Reporte de Clientes Frecuentes ===================
 const obtenerReporteClientesFrecuentes = async (req, res) => {
   try {
+
     const { fechaInicio, fechaFin } = req.query;
 
     if (!fechaInicio || !fechaFin) {
@@ -178,27 +224,35 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
     };
 
     const resultado = await Cita.aggregate([
+
       {
         $match: {
           estado: 'finalizada',
           fechaBase: rangoFechas,
         },
       },
+
       {
         $group: {
-          _id: '$cliente',
+          _id: {
+            cliente: '$cliente',
+            sede: '$sede',
+          },
           cantidadCitas: { $sum: 1 },
         },
       },
+
       {
         $lookup: {
           from: 'clientes',
-          localField: '_id',
+          localField: '_id.cliente',
           foreignField: '_id',
           as: 'cliente',
         },
       },
-      { $unwind: { path: '$cliente', preserveNullAndEmptyArrays: true } },
+
+      { $unwind: '$cliente' },
+
       {
         $lookup: {
           from: 'usuarios',
@@ -207,26 +261,46 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
           as: 'usuario',
         },
       },
-      { $unwind: { path: '$usuario', preserveNullAndEmptyArrays: true } },
+
+      { $unwind: '$usuario' },
+
+      {
+        $lookup: {
+          from: 'sedes',
+          localField: '_id.sede',
+          foreignField: '_id',
+          as: 'sede',
+        },
+      },
+
+      { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
+
       {
         $project: {
           _id: 0,
+          sede: '$sede.nombre',
           cliente: '$usuario.nombre',
           cantidadCitas: 1,
         },
       },
+
       { $sort: { cantidadCitas: -1 } },
-      { $limit: 10 },
+      { $limit: 10 }
+
     ]);
 
     res.json(resultado);
+
   } catch (error) {
+
     console.error('❌ Error al obtener reporte de clientes frecuentes:', error);
+
     res.status(500).json({
       ok: false,
       mensaje: 'Error generando reporte de clientes frecuentes',
       error: error.message,
     });
+
   }
 };
 
