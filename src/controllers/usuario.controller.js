@@ -306,6 +306,7 @@ const verificarPuesto = async (req, res) => {
 // ==========================
 const obtenerPerfil = async (req, res) => {
   try {
+
     const usuario = await Usuario.findById(req.uid)
       .populate('rol')
       .populate({
@@ -336,7 +337,7 @@ const obtenerPerfil = async (req, res) => {
           nombre: usuario.nombre,
           correo: usuario.correo,
           rol: usuario.rol.nombre,
-          img: usuario.img,
+          foto: usuario.foto
         }
       });
     }
@@ -350,7 +351,7 @@ const obtenerPerfil = async (req, res) => {
           nombre: usuario.nombre,
           correo: usuario.correo,
           rol: usuario.rol.nombre,
-          img: usuario.img,
+          foto: usuario.foto
         }
       });
     }
@@ -362,7 +363,7 @@ const obtenerPerfil = async (req, res) => {
         nombre: usuario.nombre,
         correo: usuario.correo,
         rol: usuario.rol.nombre,
-        img: usuario.img,
+        foto: usuario.foto
       }
     });
 
@@ -376,17 +377,24 @@ const obtenerPerfil = async (req, res) => {
 // ==========================
 const actualizarPerfil = async (req, res) => {
   try {
+
     const usuarioId = req.usuario.id;
     const datos = req.body;
+
+    const usuarioActual = await Usuario.findById(usuarioId);
+
+    if (!usuarioActual) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
 
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
       usuarioId,
       {
-        nombre: datos.nombre,
-        correo: datos.correo,
-        genero: datos.genero,
-        fecha_nacimiento: datos.fecha_nacimiento,
-        foto: datos.foto || ""
+        nombre: datos.nombre ?? usuarioActual.nombre,
+        correo: datos.correo ?? usuarioActual.correo,
+        genero: datos.genero ?? usuarioActual.genero,
+        fecha_nacimiento: datos.fecha_nacimiento ?? usuarioActual.fecha_nacimiento,
+        foto: datos.foto ?? usuarioActual.foto
       },
       { new: true }
     ).populate("rol");
@@ -394,7 +402,9 @@ const actualizarPerfil = async (req, res) => {
     let perfilExtra = null;
 
     switch (usuarioActualizado.rol.nombre) {
+
       case "barbero":
+
         perfilExtra = await Peluquero.findOneAndUpdate(
           { usuario: usuarioId },
           {
@@ -405,9 +415,11 @@ const actualizarPerfil = async (req, res) => {
           },
           { new: true }
         );
+
         break;
 
       case "cliente":
+
         perfilExtra = await Cliente.findOneAndUpdate(
           { usuario: usuarioId },
           {
@@ -416,14 +428,14 @@ const actualizarPerfil = async (req, res) => {
           },
           { new: true }
         );
+
         break;
 
       case "admin":
-        perfilExtra = { permisos: "completos" };
-        break;
 
-      default:
-        perfilExtra = null;
+        perfilExtra = { permisos: "completos" };
+
+        break;
     }
 
     const perfilCompleto = {

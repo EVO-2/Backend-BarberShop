@@ -1,12 +1,11 @@
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+
 const Usuario = require('../models/Usuario.model');
 const Rol = require('../models/Rol.model');
 const Cliente = require('../models/Cliente.model');
 const Peluquero = require('../models/Peluquero.model');
 const PuestoTrabajo = require('../models/PuestoTrabajo');
-const usuarioController = require('../controllers/usuario.controller');
-const express = require('express');
-const router = express.Router();
 
 
 /* ========================== */
@@ -14,6 +13,7 @@ const router = express.Router();
 /* ========================== */
 const crearUsuario = async (datos) => {
   try {
+
     const { correo, password, rol, detalles } = datos;
 
     // Verificar correo duplicado
@@ -41,29 +41,36 @@ const crearUsuario = async (datos) => {
 
     await nuevoUsuario.save();
 
-    // Crear documento asociado (cliente o peluquero)
+    // Crear documento asociado
     if (rol === 'cliente') {
       await Cliente.create({ usuario: nuevoUsuario._id, ...detalles });
-    } else if (rol === 'barbero') {
+    }
+    else if (rol === 'barbero') {
       await Peluquero.create({ usuario: nuevoUsuario._id, ...detalles });
     }
 
     return nuevoUsuario;
+
   } catch (error) {
     throw new Error(`Error al crear usuario: ${error.message}`);
   }
 };
+
 
 /* ========================== */
 /*     Obtener Usuarios       */
 /* ========================== */
 const obtenerUsuarios = async () => {
   try {
-    return await Usuario.find()
+
+    const usuarios = await Usuario.find()
       .populate('rol', 'nombre')
-      .populate('cliente')   
-      .populate('peluquero') 
+      .populate('cliente')
+      .populate('peluquero')
       .lean();
+
+    return usuarios;
+
   } catch (error) {
     throw new Error(`Error al obtener usuarios: ${error.message}`);
   }
@@ -75,15 +82,19 @@ const obtenerUsuarios = async () => {
 /* ========================== */
 const obtenerUsuarioPorId = async (id) => {
   try {
+
     const usuario = await Usuario.findById(id)
       .populate('rol', 'nombre')
-      .populate('cliente')   
-      .populate('peluquero') 
+      .populate('cliente')
+      .populate('peluquero')
       .lean();
 
-    if (!usuario) throw new Error('Usuario no encontrado');
+    if (!usuario) {
+      throw new Error('Usuario no encontrado');
+    }
 
     return usuario;
+
   } catch (error) {
     throw new Error(`Error al obtener usuario por ID: ${error.message}`);
   }
@@ -95,122 +106,190 @@ const obtenerUsuarioPorId = async (id) => {
 /* ========================== */
 const actualizarUsuario = async (id, datos) => {
   try {
+
     const { correo, rol, cliente, peluquero } = datos;
 
-    // Validar correo duplicado
+    const usuarioActual = await Usuario.findById(id);
+
+    if (!usuarioActual) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    /* ---------------------------------- */
+    /* Mantener la foto si no viene nueva */
+    /* ---------------------------------- */
+    if (!datos.foto) {
+      datos.foto = usuarioActual.foto;
+    }
+
+    /* ----------------------------- */
+    /* Validar correo duplicado      */
+    /* ----------------------------- */
     if (correo) {
-      const existente = await Usuario.findOne({ correo, _id: { $ne: id } });
+
+      const existente = await Usuario.findOne({
+        correo,
+        _id: { $ne: id }
+      });
+
       if (existente) {
         throw new Error('El correo ya está en uso por otro usuario');
       }
     }
 
-    // Obtener documento del nuevo rol (si viene)
     let nuevoRol = null;
+
     if (rol) {
+
       const rolDoc = await Rol.findOne({ nombre: rol });
-      if (!rolDoc) throw new Error(`El rol '${rol}' no existe`);
+
+      if (!rolDoc) {
+        throw new Error(`El rol '${rol}' no existe`);
+      }
+
       nuevoRol = rolDoc._id;
     }
 
-    // Campos de usuario a actualizar
     const camposUsuario = { ...datos };
+
     delete camposUsuario.cliente;
     delete camposUsuario.peluquero;
-    if (nuevoRol) camposUsuario.rol = nuevoRol;
 
-    const usuarioActualizado = await Usuario.findByIdAndUpdate(id, camposUsuario, {
-      new: true,
-      runValidators: true
-    }).populate('rol', 'nombre');
+    if (nuevoRol) {
+      camposUsuario.rol = nuevoRol;
+    }
 
-    if (!usuarioActualizado) throw new Error('Usuario no encontrado');
+    const usuarioActualizado = await Usuario.findByIdAndUpdate(
+      id,
+      camposUsuario,
+      {
+        new: true,
+        runValidators: true
+      }
+    )
+      .populate('rol', 'nombre')
+      .lean();
 
-    // Actualizar datos de cliente o peluquero
+    if (!usuarioActualizado) {
+      throw new Error('Usuario no encontrado');
+    }
+
+
+    /* ========================= */
+    /* Cliente                   */
+    /* ========================= */
     if (rol === 'cliente' && cliente) {
+
       const clienteExistente = await Cliente.findOne({ usuario: id });
+
       if (clienteExistente) {
         await Cliente.updateOne({ usuario: id }, { $set: cliente });
       } else {
         await Cliente.create({ ...cliente, usuario: id });
       }
 
-      // Eliminar peluquero si existía
       await Peluquero.deleteOne({ usuario: id });
 
-    } else if (rol === 'barbero' && peluquero) {
+    }
+
+
+    /* ========================= */
+    /* Barbero                   */
+    /* ========================= */
+    if (rol === 'barbero' && peluquero) {
+
       const peluqueroExistente = await Peluquero.findOne({ usuario: id });
+
       if (peluqueroExistente) {
         await Peluquero.updateOne({ usuario: id }, { $set: peluquero });
       } else {
         await Peluquero.create({ ...peluquero, usuario: id });
       }
 
-      // Eliminar cliente si existía
       await Cliente.deleteOne({ usuario: id });
+
     }
 
     return usuarioActualizado;
+
   } catch (error) {
     throw new Error(`Error al actualizar usuario: ${error.message}`);
   }
 };
+
 
 /* ========================== */
 /*     Eliminar Usuario       */
 /* ========================== */
 const eliminarUsuario = async (id) => {
   try {
+
     const eliminado = await Usuario.findByIdAndUpdate(
       id,
       { estado: false },
       { new: true }
-    );
-    if (!eliminado) throw new Error('Usuario no encontrado');
+    ).lean();
+
+    if (!eliminado) {
+      throw new Error('Usuario no encontrado');
+    }
+
     return eliminado;
+
   } catch (error) {
     throw new Error(`Error al eliminar usuario: ${error.message}`);
   }
 };
+
 
 /* ========================== */
 /*     Cambiar Estado         */
 /* ========================== */
 const cambiarEstadoUsuario = async (id, estado) => {
   try {
+
     const actualizado = await Usuario.findByIdAndUpdate(
       id,
       { estado },
       { new: true }
-    );
-    if (!actualizado) throw new Error('Usuario no encontrado');
+    ).lean();
+
+    if (!actualizado) {
+      throw new Error('Usuario no encontrado');
+    }
+
     return actualizado;
+
   } catch (error) {
     throw new Error(`Error al cambiar estado del usuario: ${error.message}`);
   }
 };
 
+
 /* ========================== */
 /*     Verificar Puesto       */
 /* ========================== */
 const verificarPuesto = async (puestoId, usuarioId) => {
+
   if (!mongoose.Types.ObjectId.isValid(puestoId)) {
     throw new Error('ID de puesto inválido');
   }
 
-  const puesto = await PuestoTrabajo.findById(puestoId).populate('peluquero');
+  const puesto = await PuestoTrabajo
+    .findById(puestoId)
+    .populate('peluquero');
 
   if (!puesto) {
     throw new Error('Puesto no encontrado');
   }
 
-  // Disponible si no tiene peluquero asignado o si es del mismo usuario
   if (!puesto.peluquero || puesto.peluquero.usuario.toString() === usuarioId) {
     return { disponible: true };
   }
 
   return { disponible: false };
 };
+
 
 module.exports = {
   crearUsuario,
