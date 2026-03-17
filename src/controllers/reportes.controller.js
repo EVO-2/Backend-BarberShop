@@ -9,7 +9,7 @@ const Equipo = require('../models/Equipo.model');
 const obtenerReporteIngresos = async (req, res) => {
   try {
 
-    const { fechaInicio, fechaFin } = req.query;
+    const { fechaInicio, fechaFin, sede } = req.query;
 
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({
@@ -18,35 +18,120 @@ const obtenerReporteIngresos = async (req, res) => {
       });
     }
 
+    // 📅 Rango de fechas
     const rangoFechas = {
       $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
-      $lte: new Date(`${fechaFin}T23:59:59.999Z`),
+      $lte: new Date(`${fechaFin}T23:59:59.999Z`)
     };
 
-    const citas = await Cita.find({
+    // 🔎 Match dinámico
+    const match = {
       estado: 'pagada',
       pago: { $ne: null },
-      fechaBase: rangoFechas,
-    })
-      .populate('pago')
-      .populate('sede', 'nombre')
-      .populate({
-        path: 'cliente',
-        populate: { path: 'usuario', select: 'nombre' },
-      })
-      .populate({
-        path: 'peluquero',
-        populate: { path: 'usuario', select: 'nombre' },
-      })
-      .populate('servicios', 'nombre precio')
-      .sort({ fecha: 1 });
+      fechaBase: rangoFechas
+    };
+
+    if (sede) {
+      match.sede = require('mongoose').Types.ObjectId(sede);
+    }
+
+    // =========================
+    // 🔥 AGGREGATION PIPELINE
+    // =========================
+    const resultado = await Cita.aggregate([
+
+      { $match: match },
+
+      // Traer pago
+      {
+        $lookup: {
+          from: 'pagos',
+          localField: 'pago',
+          foreignField: '_id',
+          as: 'pago'
+        }
+      },
+      { $unwind: '$pago' },
+
+      // Traer sede
+      {
+        $lookup: {
+          from: 'sedes',
+          localField: 'sede',
+          foreignField: '_id',
+          as: 'sede'
+        }
+      },
+      { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
+
+      // Traer cliente
+      {
+        $lookup: {
+          from: 'clientes',
+          localField: 'cliente',
+          foreignField: '_id',
+          as: 'cliente'
+        }
+      },
+      { $unwind: { path: '$cliente', preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: 'usuarios',
+          localField: 'cliente.usuario',
+          foreignField: '_id',
+          as: 'clienteUsuario'
+        }
+      },
+      { $unwind: { path: '$clienteUsuario', preserveNullAndEmptyArrays: true } },
+
+      // Traer peluquero
+      {
+        $lookup: {
+          from: 'peluqueros',
+          localField: 'peluquero',
+          foreignField: '_id',
+          as: 'peluquero'
+        }
+      },
+      { $unwind: { path: '$peluquero', preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: 'usuarios',
+          localField: 'peluquero.usuario',
+          foreignField: '_id',
+          as: 'peluqueroUsuario'
+        }
+      },
+      { $unwind: { path: '$peluqueroUsuario', preserveNullAndEmptyArrays: true } },
+
+      // Traer servicios
+      {
+        $lookup: {
+          from: 'servicios',
+          localField: 'servicios',
+          foreignField: '_id',
+          as: 'servicios'
+        }
+      },
+
+      // Ordenar por fecha
+      { $sort: { fecha: 1 } }
+
+    ]);
+
+    // =========================
+    // 🔎 Procesamiento final
+    // =========================
 
     let ingresosTotales = 0;
     let totalServicios = 0;
 
     const ingresosPorSede = {};
+    const detalleCitas = [];
 
-    const detalleCitas = citas.map((cita) => {
+    resultado.forEach((cita) => {
 
       const montoPagado = cita.pago?.monto || 0;
 
@@ -61,37 +146,42 @@ const obtenerReporteIngresos = async (req, res) => {
 
       ingresosPorSede[sedeNombre] += montoPagado;
 
-      return {
+      detalleCitas.push({
         id: cita._id,
         fecha: cita.fecha,
         sede: sedeNombre,
-        cliente: cita.cliente?.usuario?.nombre || 'N/D',
-        peluquero: cita.peluquero?.usuario?.nombre || 'N/D',
-        servicios: (cita.servicios || []).map((s) => ({
+        cliente: cita.clienteUsuario?.nombre || 'N/D',
+        peluquero: cita.peluqueroUsuario?.nombre || 'N/D',
+        servicios: (cita.servicios || []).map(s => ({
           nombre: s.nombre,
-          precio: s.precio,
+          precio: s.precio
         })),
-        subtotal: montoPagado,
-      };
+        subtotal: montoPagado
+      });
+
     });
+
+    // =========================
+    // 📤 Respuesta
+    // =========================
 
     res.json({
       ok: true,
       rango: {
         desde: fechaInicio,
-        hasta: fechaFin,
+        hasta: fechaFin
       },
       resumen: {
-        cantidadCitas: citas.length,
+        cantidadCitas: detalleCitas.length,
         totalServicios,
         ingresosTotales,
         promedioPorCita:
-          citas.length > 0
-            ? Number((ingresosTotales / citas.length).toFixed(2))
-            : 0,
+          detalleCitas.length > 0
+            ? Number((ingresosTotales / detalleCitas.length).toFixed(2))
+            : 0
       },
       ingresosPorSede,
-      detalle: detalleCitas,
+      detalle: detalleCitas
     });
 
   } catch (error) {
@@ -101,11 +191,12 @@ const obtenerReporteIngresos = async (req, res) => {
     res.status(500).json({
       ok: false,
       mensaje: 'Error al generar el reporte de ingresos',
-      error: error.message,
+      error: error.message
     });
 
   }
 };
+
 
 // =================== 💈 Reporte de Citas por Barbero ===================
 const obtenerReporteCitasPorBarbero = async (req, res) => {
@@ -129,25 +220,16 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
 
       {
         $match: {
-          estado: 'finalizada',
+          estado: { $in: ['finalizada', 'pagada'] },
           fechaBase: rangoFechas,
         },
       },
 
-      {
-        $group: {
-          _id: {
-            peluquero: '$peluquero',
-            sede: '$sede',
-          },
-          cantidadCitas: { $sum: 1 },
-        },
-      },
-
+      // 🔹 traer peluquero
       {
         $lookup: {
           from: 'peluqueros',
-          localField: '_id.peluquero',
+          localField: 'peluquero',
           foreignField: '_id',
           as: 'peluquero',
         },
@@ -155,6 +237,7 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
 
       { $unwind: '$peluquero' },
 
+      // 🔹 traer usuario del peluquero
       {
         $lookup: {
           from: 'usuarios',
@@ -166,10 +249,11 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
 
       { $unwind: '$usuario' },
 
+      // 🔹 traer sede
       {
         $lookup: {
           from: 'sedes',
-          localField: '_id.sede',
+          localField: 'sede',
           foreignField: '_id',
           as: 'sede',
         },
@@ -177,11 +261,22 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
 
       { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
 
+      // 🔹 ahora agrupamos
+      {
+        $group: {
+          _id: {
+            peluquero: '$usuario.nombre',
+            sede: '$sede.nombre',
+          },
+          cantidadCitas: { $sum: 1 },
+        },
+      },
+
       {
         $project: {
           _id: 0,
-          sede: '$sede.nombre',
-          peluquero: '$usuario.nombre',
+          sede: '$_id.sede',
+          peluquero: '$_id.peluquero',
           cantidadCitas: 1,
         },
       },
@@ -205,6 +300,7 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
   }
 };
 
+
 // =================== 👥 Reporte de Clientes Frecuentes ===================
 const obtenerReporteClientesFrecuentes = async (req, res) => {
   try {
@@ -227,25 +323,16 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 
       {
         $match: {
-          estado: 'finalizada',
+          estado: { $in: ['finalizada', 'pagada'] },
           fechaBase: rangoFechas,
         },
       },
 
-      {
-        $group: {
-          _id: {
-            cliente: '$cliente',
-            sede: '$sede',
-          },
-          cantidadCitas: { $sum: 1 },
-        },
-      },
-
+      // 🔹 traer cliente
       {
         $lookup: {
           from: 'clientes',
-          localField: '_id.cliente',
+          localField: 'cliente',
           foreignField: '_id',
           as: 'cliente',
         },
@@ -253,6 +340,7 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 
       { $unwind: '$cliente' },
 
+      // 🔹 traer usuario del cliente
       {
         $lookup: {
           from: 'usuarios',
@@ -264,10 +352,11 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 
       { $unwind: '$usuario' },
 
+      // 🔹 traer sede
       {
         $lookup: {
           from: 'sedes',
-          localField: '_id.sede',
+          localField: 'sede',
           foreignField: '_id',
           as: 'sede',
         },
@@ -275,11 +364,22 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 
       { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
 
+      // 🔹 agrupamos después de tener todos los datos
+      {
+        $group: {
+          _id: {
+            cliente: '$usuario.nombre',
+            sede: '$sede.nombre',
+          },
+          cantidadCitas: { $sum: 1 },
+        },
+      },
+
       {
         $project: {
           _id: 0,
-          sede: '$sede.nombre',
-          cliente: '$usuario.nombre',
+          sede: '$_id.sede',
+          cliente: '$_id.cliente',
           cantidadCitas: 1,
         },
       },
@@ -303,6 +403,7 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 
   }
 };
+
 
 // =================== 📦 Reporte de Inventario ===================
 const obtenerReporteInventario = async (req, res) => {

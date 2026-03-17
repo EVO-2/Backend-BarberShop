@@ -399,20 +399,36 @@ const actualizarCita = async ({ id, data }) => {
 const calcularDuracionReal = (inicioServicio, finServicio) => {
   const inicio = new Date(inicioServicio).getTime();
   const fin = new Date(finServicio).getTime();
+
   if (isNaN(inicio) || isNaN(fin) || fin <= inicio) return 0;
-  return Math.round((fin - inicio) / 60000);
+
+  return Math.floor((fin - inicio) / 60000);
 };
 
 const iniciarCita = async (id, hora) => {
   const cita = await Cita.findById(id).populate('servicios');
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
+
   if (!['pendiente', 'confirmada'].includes(cita.estado)) {
     throw { status: 400, message: 'Solo citas pendientes o confirmadas pueden iniciarse' };
   }
-  const inicio = hora ? new Date(`1970-01-01T${hora}:00`) : new Date();
+
+  let inicio;
+
+  if (hora) {
+    const [horas, minutos] = hora.split(':').map(Number);
+
+    inicio = new Date(cita.fecha); // 👈 USAR fecha real de la cita
+    inicio.setHours(horas, minutos, 0, 0);
+  } else {
+    inicio = new Date();
+  }
+
   cita.inicioServicio = inicio;
   cita.estado = 'en_proceso';
+
   await cita.save();
+
   return Cita.findById(id).populate(CITA_POPULATE);
 };
 
@@ -449,12 +465,22 @@ const finalizarCita = async (id, hora) => {
 
       fechaFin = new Date(cita.inicioServicio);
       fechaFin.setHours(horas, minutos, 0, 0);
+
+      // 🔥 SOLUCIÓN CRUCE DE DÍA
+      if (fechaFin < cita.inicioServicio) {
+        fechaFin.setDate(fechaFin.getDate() + 1);
+      }
+
     } else {
       fechaFin = new Date();
     }
 
-    if (fechaFin < cita.inicioServicio) {
-      throw { status: 400, message: 'La hora de finalización no puede ser menor a la hora de inicio' };
+    // 🔹 Validación final (por seguridad)
+    if (fechaFin <= cita.inicioServicio) {
+      throw {
+        status: 400,
+        message: 'La hora de finalización no puede ser menor o igual a la hora de inicio'
+      };
     }
 
     cita.finServicio = fechaFin;
@@ -478,7 +504,6 @@ const finalizarCita = async (id, hora) => {
       });
 
       await pago.save({ session });
-
       cita.pago = pago._id;
     }
 

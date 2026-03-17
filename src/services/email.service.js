@@ -1,57 +1,35 @@
-// src/services/email.service.js
-const sgMail = require("@sendgrid/mail");
-const path = require("path");
-const fs = require("fs");
-const mjml2html = require("mjml");
-const { htmlToText } = require("html-to-text");
+const nodemailer = require('nodemailer');
 
 class EmailService {
   constructor() {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
   }
 
-  async sendTemplate(to, templateName, data) {
+  async sendEmail({ to, subject, html }) {
+    if (!to) {
+      throw new Error('El destinatario del correo es obligatorio');
+    }
+
     try {
-      // Ruta a la plantilla MJML
-      const templatePath = path.join("src", "templates", `${templateName}.mjml`);
-
-      // Leer la plantilla
-      let mjmlTemplate = fs.readFileSync(templatePath, "utf8");
-
-      // Reemplazar variables dinámicas (%%VARIABLE%%)
-      for (const key in data.variables) {
-        const regex = new RegExp(`%%${key.toUpperCase()}%%`, "g");
-        mjmlTemplate = mjmlTemplate.replace(regex, data.variables[key]);
-      }
-
-      // Compilar MJML a HTML
-      const { html } = mjml2html(mjmlTemplate, { filePath: templatePath });
-
-      // Generar versión en texto plano
-      const text = htmlToText(html);
-
-      // Configuración del correo
-      const msg = {
+      const info = await this.transporter.sendMail({
+        from: `"BarberShop" <${process.env.EMAIL_USER}>`,
         to,
-        from: process.env.SENDGRID_FROM, // Remitente verificado en SendGrid
-        subject: data.subject || "Notificación Barbería JEVO",
-        html,
-        text,
-      };
+        subject,
+        html
+      });
 
-      // Enviar correo
-      await sgMail.send(msg);
+      console.log(`📧 Email enviado a ${to}: ${info.messageId}`);
+      return info;
 
-      return {
-        success: true,
-        message: "Correo enviado con éxito",
-        to,
-      };
-    } catch (err) {
-      return {
-        success: false,
-        error: err.message,
-      };
+    } catch (error) {
+      console.error('❌ Error enviando email:', error.message);
+      throw error;
     }
   }
 }

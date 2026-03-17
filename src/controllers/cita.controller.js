@@ -2,7 +2,7 @@ const CitaService = require('../services/cita.service');
 const Servicio = require('../models/Servicio.model');
 const Cita = require('../models/Cita.model');
 const Cliente = require('../models/Cliente.model');
-//const NotificationController = require('./notification.controller');
+const { notificarNuevaCita } = require('../services/notificacion.service');
 const NotificationService = require('../services/notification.service');
 const { programarRecordatorio } = require('../schedulers/recordatorio.scheduler');
 const { pagarCita: pagarCitaService } = require('../services/cita.service');
@@ -18,12 +18,11 @@ const crearCita = async (req, res) => {
     const { rol, uid } = req;
     let datosCita = { ...req.body };
 
-    // ✅ Validar que la fecha exista
+    // ================= VALIDACIONES =================
     if (!datosCita.fecha) {
       return res.status(400).json({ mensaje: 'La fecha de la cita es obligatoria' });
     }
 
-    // ✅ Validar que la fecha no sea pasada
     const fechaCita = new Date(datosCita.fecha);
     const ahora = new Date();
 
@@ -31,96 +30,97 @@ const crearCita = async (req, res) => {
       return res.status(400).json({ mensaje: 'Formato de fecha inválido' });
     }
 
-    // Si la fecha está en el pasado (1 minuto de tolerancia)
     if (fechaCita.getTime() < ahora.getTime() - 60000) {
       return res.status(400).json({ mensaje: 'No puedes crear una cita con fecha u hora pasada' });
     }
 
-    // Asociar cliente si el rol es cliente
-    if (rol === 'cliente') {
-      const cliente = await Cliente.findOne({ usuario: uid });
-      if (!cliente) return res.status(400).json({ mensaje: 'El cliente no está registrado' });
-      if (!cliente.usuario) return res.status(400).json({ mensaje: 'El cliente no tiene usuario asignado' });
-      datosCita.cliente = cliente._id;
+    // ================= CLIENTE =================
+    let clienteData = null;
+
+    if (datosCita.cliente) {
+      clienteData = await Cliente.findById(datosCita.cliente)
+        .populate('usuario', 'nombre correo telefono');
+    } else if (rol === 'cliente') {
+      clienteData = await Cliente.findOne({ usuario: uid })
+        .populate('usuario', 'nombre correo telefono');
+
+      if (clienteData) {
+        datosCita.cliente = clienteData._id;
+      }
     }
 
-    // ✅ Crear la cita solo si pasa las validaciones
+    if (!clienteData) {
+      return res.status(400).json({ mensaje: 'Cliente no válido' });
+    }
+
+    // ================= CREAR CITA =================
     const cita = await CitaService.crearCita(datosCita);
 
-    // ================== Notificaciones ==================
-    try {
-      // Poblar usuario desde Cliente
-      const clienteData = await Cliente.findById(cita.cliente).populate('usuario', 'nombre correo telefono');
-      const user = clienteData.usuario;
+    // ================= PREPARAR DATOS =================
+    const citaPop = await Cita.findById(cita._id).populate({
+      path: 'servicios',
+      select: 'nombre'
+    });
 
-      // Poblar servicios desde Cita
-      const citaPop = await Cita.findById(cita._id).populate({ path: 'servicios', select: 'nombre' });
-      const servicioNombre = citaPop.servicios && citaPop.servicios.length > 0
-        ? citaPop.servicios.map(s => s.nombre).join(', ')
-        : 'Servicio no definido';
+    const servicios = citaPop.servicios?.map(s => s.nombre).join(', ') || 'Servicio no definido';
 
-      if (user) {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4200";
+    const user = clienteData?.usuario;
 
-        // Formatear fecha y hora
-        const fechaObj = new Date(cita.fecha);
-        const fechaFormateada = fechaObj.toLocaleDateString('es-CO', {
-          day: '2-digit', month: '2-digit', year: 'numeric'
-        });
-        const horaFormateada = fechaObj.toLocaleTimeString('es-CO', {
-          hour: '2-digit', minute: '2-digit', hour12: true
-        });
+    const fechaObj = new Date(cita.fecha);
 
-        // ====== Correo ======
-        if (user.correo) {
-          await NotificationService.sendNotification({
-            type: "email",
-            to: user.correo,
-            template: "cita-confirmacion",
-            data: {
-              subject: "Confirmación de tu cita",
-              variables: {
-                NOMBRE: user.nombre,
-                FECHA: fechaFormateada,
-                HORA: horaFormateada,
-                SERVICIO: servicioNombre,
-                TURNO: cita.turno,
-                URL: `${frontendUrl}/mis-citas/${cita._id}`,
-                YEAR: new Date().getFullYear(),
-              },
-            },
-          });
-        }
+    const fechaFormateada = fechaObj.toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
 
-        // ====== SMS ======
-        const telefonoE164 = clienteData.telefono
-          ? (clienteData.telefono.startsWith('+') ? clienteData.telefono : '+57' + clienteData.telefono)
-          : null;
+    const horaFormateada = fechaObj.toLocaleTimeString('es-CO', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
 
-        if (telefonoE164 && /^\+\d{10,15}$/.test(telefonoE164)) {
-          await NotificationService.sendNotification({
-            type: "sms",
-            to: telefonoE164,
-            message: `Hola ${user.nombre}, tu cita para ${servicioNombre} el ${fechaFormateada} a las ${horaFormateada} (Turno #${cita.turno}) ha sido confirmada.`,
-          });
-        }
-      }
-    } catch (err) {
-      // Captura silenciosa de errores en notificación
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4200";
+
+    // ================= PAYLOAD BASE =================
+    const payload = user ? {
+      nombre: user.nombre,
+      correo: user.correo,
+      telefono: clienteData?.telefono,
+      citaId: cita._id,
+      fecha: fechaFormateada,
+      hora: horaFormateada,
+      servicios,
+      turno: cita.turno,
+      url: `${frontendUrl}/mis-citas/${cita._id}`
+    } : null;
+
+    // ================= NOTIFICACIÓN INMEDIATA =================
+    if (payload) {
+      NotificationService.notify('CITA_CREADA', payload)
+        .catch(err => console.error('Error notificación creación:', err.message));
     }
-    // ====================================================
 
-    // Programar recordatorio 1 hora y 20 minutos antes de la cita
-    await programarRecordatorio(cita);
+    // ================= RECORDATORIO PROGRAMADO =================
+    if (payload) {
+      programarRecordatorio(cita)
+        .then(() => {
+          console.log(`⏰ Recordatorio programado para cita ${cita._id}`);
+        })
+        .catch(err => {
+          console.error('Error programando recordatorio:', err.message);
+        });
+    }
 
-    // Devolver cita incluyendo el turno
+    // ================= RESPONSE =================
     return res.status(201).json(cita);
 
   } catch (error) {
-    return res.status(error.status || 500).json({ mensaje: error.message || 'Error interno del servidor' });
+    return res.status(error.status || 500).json({
+      mensaje: error.message || 'Error interno del servidor'
+    });
   }
 };
-
 
 // Obtener todas las citas (admin)
 const obtenerCitas = async (_req, res) => {
