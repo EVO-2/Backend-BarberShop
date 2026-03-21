@@ -5,6 +5,10 @@ const generarTemplateRecordatorio = require('../templates/recordatorio.template'
 const generarTemplateCita = require('../templates/citaConfirmada.template');
 const enviarEmail = require('../helpers/enviarEmail');
 
+// 🔥 NUEVO (WHATSAPP)
+const WhatsAppService = require('./whatsapp.service');
+const generarMensajeRecordatorio = require('../templates/whatsappRecordatorio.template');
+
 class NotificationService {
   constructor() {
     this.emailService = new EmailService();
@@ -18,7 +22,6 @@ class NotificationService {
           await this.handleCitaCreada(payload);
           break;
 
-        // ✅ NUEVO EVENTO
         case 'CITA_RECORDATORIO':
           await this.handleRecordatorio(payload);
           break;
@@ -74,11 +77,12 @@ class NotificationService {
     }
   }
 
-  // ⏰ RECORDATORIO DE CITA (NUEVO)
+  // ⏰ RECORDATORIO DE CITA
   async handleRecordatorio(data) {
     const {
       nombre,
       correo,
+      telefono, // 🔥 IMPORTANTE: ahora lo usamos
       fecha,
       hora,
       servicios,
@@ -86,6 +90,7 @@ class NotificationService {
       url
     } = data;
 
+    // ================= EMAIL =================
     if (correo) {
       try {
         console.log('⏰ [NotificationService] Generando template MJML (Recordatorio)...');
@@ -109,14 +114,36 @@ class NotificationService {
 
         console.log(`📧 [NotificationService] Recordatorio enviado a ${correo}`);
       } catch (error) {
-        console.error('❌ Error enviando recordatorio:', error.message);
+        console.error('❌ Error enviando recordatorio (email):', error.message);
+      }
+    }
+
+    // ================= WHATSAPP =================
+    if (telefono) {
+      try {
+        console.log(`📱 [NotificationService] Enviando WhatsApp a ${telefono}...`);
+
+        const mensaje = generarMensajeRecordatorio({
+          nombre,
+          fecha,
+          hora,
+          servicio: servicios,
+          url
+        });
+
+        await WhatsAppService.enviarMensaje({
+          telefono,
+          mensaje
+        });
+
+        console.log(`📱 [NotificationService] WhatsApp enviado a ${telefono}`);
+      } catch (error) {
+        console.error('❌ Error enviando WhatsApp:', error.message);
       }
     }
   }
 
   // ================= FUTURO =================
-  // - WhatsApp
-  // - SMS
   // - Push notifications
 }
 

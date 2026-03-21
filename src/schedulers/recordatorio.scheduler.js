@@ -26,40 +26,19 @@ const programarRecordatorio = async (cita) => {
       const horaFormateada = fechaCita.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4200";
 
-      // ======= Correo =======
-      if (user.correo) {
-        await NotificationService.sendNotification({
-          type: "email",
-          to: user.correo,
-          template: "cita-recordatorio",
-          data: {
-            subject: "Recordatorio de tu cita en Barbería JEVO",
-            variables: {
-              NOMBRE: user.nombre,
-              FECHA: fechaFormateada,
-              HORA: horaFormateada,
-              SERVICIO: servicioNombre,
-              TURNO: cita.turno,
-              URL: `${frontendUrl}/mis-citas/${cita._id}`,
-              YEAR: new Date().getFullYear(),
-              REPROGRAMAR_HORA: '1 hora antes',
-            },
-          },
-        });
-      }
-
-      // ======= SMS =======
-      const telefonoE164 = clienteData.telefono
-        ? (clienteData.telefono.startsWith('+') ? clienteData.telefono : '+57' + clienteData.telefono)
-        : null;
-
-      if (telefonoE164 && /^\+\d{10,15}$/.test(telefonoE164)) {
-        await NotificationService.sendNotification({
-          type: "sms",
-          to: telefonoE164,
-          message: `Hola ${user.nombre}, recuerda tu cita para ${servicioNombre} el ${fechaFormateada} a las ${horaFormateada}. Puedes reprogramarla hasta 1 hora antes.`,
-        });
-      }
+      // ======= USAR NUEVO SERVICIO PARA NOTIFICAR (EMAIL Y WHATSAPP) =======
+      const payload = {
+        nombre: user.nombre,
+        correo: user.correo,
+        telefono: clienteData.telefono,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        servicios: servicioNombre,
+        turno: cita.turno,
+        url: `${frontendUrl}/mis-citas/${cita._id}`
+      };
+      
+      await NotificationService.notify('CITA_RECORDATORIO', payload);
     } catch (err) {
       console.error('❌ Error enviando recordatorio:', err.message);
     }
