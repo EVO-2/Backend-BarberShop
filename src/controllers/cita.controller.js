@@ -239,25 +239,15 @@ const reprogramarCita = async (req, res) => {
 
     if (!fecha) return res.status(400).json({ message: 'La nueva fecha es obligatoria' });
 
-    const fechaInicio = new Date(fecha);
-    const fechaFin = new Date(fechaInicio.getTime() + 45 * 60 * 1000);
+    const citaActualizada = await CitaService.actualizarCita(id, {
+      fecha,
+      observaciones: observacion
+    });
 
-    const cita = await Cita.findByIdAndUpdate(
-      id,
-      {
-        fechaInicio,
-        fechaFin,
-        fecha: fechaInicio.toISOString(),
-        fechaBase: fechaInicio.toISOString(),
-        ...(observacion !== undefined ? { observacion } : {})
-      },
-      { new: true }
-    ).populate("cliente peluquero sede servicios puestoTrabajo");
-
-    if (!cita) return res.status(404).json({ message: 'Cita no encontrada' });
-    res.json(cita);
+    if (!citaActualizada) return res.status(404).json({ message: 'Cita no encontrada' });
+    res.json(citaActualizada);
   } catch (error) {
-    res.status(500).json({ message: 'Error interno del servidor' });
+    res.status(error.status || 500).json({ message: error.message || 'Error interno del servidor' });
   }
 };
 

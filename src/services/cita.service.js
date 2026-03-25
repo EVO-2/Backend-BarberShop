@@ -332,7 +332,7 @@ const obtenerCitaPorId = async (id) => {
   return cita;
 };
 
-const actualizarCita = async ({ id, data }) => {
+const actualizarCita = async (id, data) => {
   const { servicios, sede, puestoTrabajo, peluquero, fecha, observaciones } = data;
   const citaBase = await Cita.findById(id).lean();
   if (!citaBase) throw { status: 404, message: 'Cita no encontrada' };
@@ -346,10 +346,13 @@ const actualizarCita = async ({ id, data }) => {
     });
   }
 
-  let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio);
+  let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio || citaBase.fecha);
   let fechaFin = citaBase.fechaFin;
-  if (servicios) {
-    const duracion = await calcularDuracionTotal(servicios);
+  
+  // Recalcular siempre si cambian los servicios, la fecha o si falta fechaFin
+  if (servicios || fecha || !fechaFin) {
+    const serviciosFinales = servicios ?? citaBase.servicios;
+    const duracion = await calcularDuracionTotal(serviciosFinales);
     fechaFin = new Date(fechaInicio.getTime() + (duracion || 30) * 60 * 1000);
   }
 
@@ -369,6 +372,7 @@ const actualizarCita = async ({ id, data }) => {
     peluquero: peluquero ?? citaBase.peluquero,
     puestoTrabajo: puestoTrabajo ?? citaBase.puestoTrabajo,
     servicios: servicios ?? citaBase.servicios,
+    fecha: fechaInicio,
     fechaInicio,
     fechaFin,
     observaciones: observaciones ?? citaBase.observaciones

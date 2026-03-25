@@ -16,6 +16,8 @@ const CitaSchema = new Schema({
 
   fecha: { type: Date, required: true },        // Fecha y hora exacta de la cita
   fechaBase: { type: Date, required: true },    // Solo la fecha (sin hora) para índices
+  fechaInicio: { type: Date },                  // Fecha/Hora real de inicio para validación de solapes
+  fechaFin: { type: Date },                     // Fecha/Hora real de fin calculada a partir de los servicios
   turno: { type: Number, required: true },      // Turno incremental por peluquero
 
   // ⏱️ Nuevos campos para controlar tiempos reales

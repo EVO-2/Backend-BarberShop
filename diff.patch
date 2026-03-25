@@ -1,0 +1,214 @@
+﻿diff --git a/src/controllers/cita.controller.js b/src/controllers/cita.controller.js
+index d9dbf64..2404c36 100644
+--- a/src/controllers/cita.controller.js
++++ b/src/controllers/cita.controller.js
+@@ -239,25 +239,15 @@ const reprogramarCita = async (req, res) => {
+ 
+     if (!fecha) return res.status(400).json({ message: 'La nueva fecha es obligatoria' });
+ 
+-    const fechaInicio = new Date(fecha);
+-    const fechaFin = new Date(fechaInicio.getTime() + 45 * 60 * 1000);
+-
+-    const cita = await Cita.findByIdAndUpdate(
+-      id,
+-      {
+-        fechaInicio,
+-        fechaFin,
+-        fecha: fechaInicio.toISOString(),
+-        fechaBase: fechaInicio.toISOString(),
+-        ...(observacion !== undefined ? { observacion } : {})
+-      },
+-      { new: true }
+-    ).populate("cliente peluquero sede servicios puestoTrabajo");
+-
+-    if (!cita) return res.status(404).json({ message: 'Cita no encontrada' });
+-    res.json(cita);
++    const citaActualizada = await CitaService.actualizarCita(id, {
++      fecha,
++      observaciones: observacion
++    });
++
++    if (!citaActualizada) return res.status(404).json({ message: 'Cita no encontrada' });
++    res.json(citaActualizada);
+   } catch (error) {
+-    res.status(500).json({ message: 'Error interno del servidor' });
++    res.status(error.status || 500).json({ message: error.message || 'Error interno del servidor' });
+   }
+ };
+ 
+diff --git a/src/models/Cita.model.js b/src/models/Cita.model.js
+index 18ecb54..fe4dc5c 100644
+--- a/src/models/Cita.model.js
++++ b/src/models/Cita.model.js
+@@ -16,6 +16,8 @@ const CitaSchema = new Schema({
+ 
+   fecha: { type: Date, required: true },        // Fecha y hora exacta de la cita
+   fechaBase: { type: Date, required: true },    // Solo la fecha (sin hora) para ├¡ndices
++  fechaInicio: { type: Date },                  // Fecha/Hora real de inicio para validaci├│n de solapes
++  fechaFin: { type: Date },                     // Fecha/Hora real de fin calculada a partir de los servicios
+   turno: { type: Number, required: true },      // Turno incremental por peluquero
+ 
+   // ÔÅ▒´©Å Nuevos campos para controlar tiempos reales
+diff --git a/src/services/cita.service.js b/src/services/cita.service.js
+index 093aee6..5123b29 100644
+--- a/src/services/cita.service.js
++++ b/src/services/cita.service.js
+@@ -332,7 +332,7 @@ const obtenerCitaPorId = async (id) => {
+   return cita;
+ };
+ 
+-const actualizarCita = async ({ id, data }) => {
++const actualizarCita = async (id, data) => {
+   const { servicios, sede, puestoTrabajo, peluquero, fecha, observaciones } = data;
+   const citaBase = await Cita.findById(id).lean();
+   if (!citaBase) throw { status: 404, message: 'Cita no encontrada' };
+@@ -346,10 +346,13 @@ const actualizarCita = async ({ id, data }) => {
+     });
+   }
+ 
+-  let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio);
++  let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio || citaBase.fecha);
+   let fechaFin = citaBase.fechaFin;
+-  if (servicios) {
+-    const duracion = await calcularDuracionTotal(servicios);
++  
++  // Recalcular siempre si cambian los servicios, la fecha o si falta fechaFin
++  if (servicios || fecha || !fechaFin) {
++    const serviciosFinales = servicios ?? citaBase.servicios;
++    const duracion = await calcularDuracionTotal(serviciosFinales);
+     fechaFin = new Date(fechaInicio.getTime() + (duracion || 30) * 60 * 1000);
+   }
+ 
+@@ -369,6 +372,7 @@ const actualizarCita = async ({ id, data }) => {
+     peluquero: peluquero ?? citaBase.peluquero,
+     puestoTrabajo: puestoTrabajo ?? citaBase.puestoTrabajo,
+     servicios: servicios ?? citaBase.servicios,
++    fecha: fechaInicio,
+     fechaInicio,
+     fechaFin,
+     observaciones: observaciones ?? citaBase.observaciones
+diff --git a/src/services/whatsapp.service.js b/src/services/whatsapp.service.js
+index 70b079c..208e104 100644
+--- a/src/services/whatsapp.service.js
++++ b/src/services/whatsapp.service.js
+@@ -7,6 +7,11 @@ class WhatsAppService {
+ 
+             console.log(`­ƒô▒ Enviando WhatsApp a ${telefono}...`);
+ 
++            if (!process.env.WHATSAPP_API_URL) {
++                console.warn('ÔÜá´©Å No se ha definido WHATSAPP_API_URL en las variables de entorno. Omitiendo env├¡o.');
++                return;
++            }
++
+             // ­ƒöÑ EJEMPLO (Meta WhatsApp API o proveedor)
+             await axios.post(process.env.WHATSAPP_API_URL, {
+                 to: telefono,
+diff --git a/src/templates/recordatorio.template.js b/src/templates/recordatorio.template.js
+index dd55f09..0e719c8 100644
+--- a/src/templates/recordatorio.template.js
++++ b/src/templates/recordatorio.template.js
+@@ -1,22 +1,91 @@
+-const fs = require('fs');
+-const path = require('path');
+ const mjml2html = require('mjml');
+ 
+ const generarTemplateRecordatorio = (data) => {
+-  const filePath = path.join(__dirname, 'recordatorio.mjml');
++  const {
++    nombre,
++    fecha,
++    hora,
++    servicio,
++    turno,
++    url
++  } = data;
+ 
+-  let template = fs.readFileSync(filePath, 'utf8');
++  const mjml = `
++  <mjml>
++    <mj-head>
++      <mj-preview>Recordatorio de tu cita ÔÅ░</mj-preview>
+ 
+-  template = template
+-    .replace(/%%NOMBRE%%/g, data.nombre)
+-    .replace(/%%FECHA%%/g, data.fecha)
+-    .replace(/%%HORA%%/g, data.hora)
+-    .replace(/%%SERVICIO%%/g, data.servicio)
+-    .replace(/%%TURNO%%/g, data.turno)
+-    .replace(/%%URL%%/g, data.url)
+-    .replace(/%%YEAR%%/g, new Date().getFullYear());
++      <mj-attributes>
++        <mj-all font-family="Arial, sans-serif" />
++        <mj-text color="#333333" font-size="16px" />
++        <mj-button 
++          background-color="#032e4d" 
++          color="#ffffff" 
++          border-radius="8px" 
++          font-size="16px"
++          font-weight="600"
++        />
++      </mj-attributes>
++    </mj-head>
+ 
+-  const { html } = mjml2html(template);
++    <mj-body background-color="#f4f6f8">
++
++      <!-- HEADER -->
++      <mj-section background-color="#032e4d" padding="20px">
++        <mj-column>
++          <mj-text align="center" color="#ffffff" font-size="22px" font-weight="700">
++            ­ƒÆê BarberShop
++          </mj-text>
++        </mj-column>
++      </mj-section>
++
++      <!-- CARD -->
++      <mj-section padding="20px">
++        <mj-column background-color="#ffffff" border-radius="12px" padding="25px">
++
++          <mj-text font-size="20px" font-weight="600" color="#032e4d">
++            Hola ${nombre},
++          </mj-text>
++
++          <mj-text color="#555555">
++            Esto es un <strong>recordatorio</strong> de tu pr├│xima cita. Aqu├¡ tienes los detalles:
++          </mj-text>
++
++          <!-- DETALLES -->
++          <mj-section background-color="#f0f4f8" border-radius="10px" padding="15px">
++            <mj-column>
++              <mj-text align="center" font-size="16px" color="#000000">
++                ­ƒôà <strong>${fecha}</strong><br/>
++                ÔÅ░ <strong>${hora}</strong><br/>
++                ­ƒÆê <strong>${servicio}</strong><br/>
++                ­ƒåö Turno: <strong>#${turno}</strong>
++              </mj-text>
++            </mj-column>
++          </mj-section>
++
++          <!-- BOT├ôN -->
++          <mj-button href="${url}" padding-top="20px">
++            Ver mi cita
++          </mj-button>
++
++        </mj-column>
++      </mj-section>
++
++      <!-- FOOTER -->
++      <mj-section padding="20px">
++        <mj-column>
++          <mj-text align="center" font-size="13px" color="#999999">
++            BarberShop ┬® ${new Date().getFullYear()}<br/>
++            Este es un mensaje autom├ítico, por favor no responder.
++          </mj-text>
++        </mj-column>
++      </mj-section>
++
++    </mj-body>
++  </mjml>
++  `;
++
++  const { html } = mjml2html(mjml);
+ 
+   return html;
+ };
