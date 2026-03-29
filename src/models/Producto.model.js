@@ -1,12 +1,53 @@
 const mongoose = require('mongoose');
 
 const productoSchema = new mongoose.Schema({
-  nombre: { type: String, required: true },
-  categoria: { type: String },
-  cantidad: { type: Number, default: 0 },
-  precio: { type: Number, default: 0 },
-  usado: { type: Boolean, default: false },
-  fechaRegistro: { type: Date, default: Date.now },
-});
+  nombre: {
+    type: String,
+    required: true,
+    trim: true,
+    minlength: 2,
+    maxlength: 100
+  },
+  categoria: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Categoria',
+    required: true
+  },
+  proveedor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Proveedor',
+    required: true
+  },
+  sede: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Sede',
+    required: true
+  },
+  tipo: {
+    type: String,
+    enum: ['venta', 'uso_interno'],
+    default: 'venta'
+  },
+  cantidad: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  precio: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  usado: {
+    type: Boolean,
+    default: false
+  },
+  activo: {
+    type: Boolean,
+    default: true
+  }
+}, { timestamps: true });
+
+productoSchema.index({ nombre: 'text' });
 
 module.exports = mongoose.model('Producto', productoSchema);

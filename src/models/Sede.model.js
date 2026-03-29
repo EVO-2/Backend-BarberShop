@@ -5,7 +5,8 @@ const SedeSchema = new Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true 
+    trim: true,
+    uppercase: true
   },
   direccion: {
     type: String,
@@ -14,16 +15,24 @@ const SedeSchema = new Schema({
   },
   telefono: {
     type: String,
+    trim: true,
+    match: [/^[0-9+ ]+$/, 'Teléfono inválido']
+  },
+  ciudad: {
+    type: String,
     trim: true
   },
-  estado: {
+  activo: {
     type: Boolean,
     default: true
   }
 }, {
   timestamps: true,
-  versionKey: false 
+  versionKey: false
 });
 
-// ✅ Corrección para evitar OverwriteModelError
+// 🔎 Índice para búsquedas
+SedeSchema.index({ nombre: 1 });
+
+// ✅ Evita OverwriteModelError
 module.exports = models.Sede || model('Sede', SedeSchema);
