@@ -1,10 +1,16 @@
-import jwt from 'jsonwebtoken';
-import Usuario from '../models/Usuario.model.js';
+const jwt = require('jsonwebtoken');
+const Usuario = require('../models/Usuario.model');
+const Permiso = require('../models/Permiso.model');
 
-export const validarJWT = async (req, res, next) => {
+// ===============================
+// 🔐 VALIDAR JWT
+// ===============================
+const validarJWT = async (req, res, next) => {
+
   const authHeader = req.header('Authorization') || req.header('authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.error('❌ validarJWT: Token no proporcionado o formato incorrecto. authHeader:', authHeader);
     return res.status(401).json({
       mensaje: 'Token no proporcionado o formato incorrecto',
     });
@@ -13,33 +19,80 @@ export const validarJWT = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
+
     const { uid } = jwt.verify(token, process.env.JWT_SECRET);
-    const usuario = await Usuario.findById(uid).populate('rol');
+
+    // 🔥 Populate PRO: rol + permisos
+    const usuario = await Usuario.findById(uid).populate({
+      path: 'rol',
+      populate: {
+        path: 'permisos',
+        model: 'Permiso'
+      }
+    });
 
     if (!usuario) {
-      return res.status(401).json({ mensaje: 'Token no válido – usuario no existe' });
+      console.error('❌ validarJWT: Token no válido – usuario no existe para uid:', uid);
+      return res.status(401).json({
+        mensaje: 'Token no válido – usuario no existe'
+      });
     }
 
+    // ===============================
+    // ✅ DATA BASE
+    // ===============================
     req.usuario = usuario;
     req.uid = uid;
     req.usuarioId = usuario._id;
-    req.rol = (usuario.rol?.nombre || usuario.rol?.toString() || '').toLowerCase();
+
+    // ✅ NORMALIZAR ROL (CLAVE 🔥)
+    req.rol = String(
+      usuario.rol?.nombre || usuario.rol || ''
+    ).toLowerCase();
+
+    // ✅ PERMISOS (SEGURO)
+    req.permisos = (usuario.rol?.permisos || []).map(p => p.nombre);
 
     next();
+
   } catch (error) {
+    console.error('❌ validarJWT: Excepción capturada:', error.message);
     return res.status(401).json({
       mensaje: 'Token no válido',
       error: error.message,
     });
+
   }
 };
 
-// Opcional: verificación de roles
-export const verificarRol = (rolesPermitidos = []) => {
+// ===============================
+// 🔐 VERIFICAR ROL (FIX 🔥)
+// ===============================
+const verificarRol = (...rolesPermitidos) => {
+
   return (req, res, next) => {
-    if (!rolesPermitidos.includes(req.rol)) {
-      return res.status(403).json({ mensaje: 'Acceso denegado' });
+
+    if (!req.rol) {
+      console.error('❌ verificarRol: El rol no está definido en el request');
+      return res.status(500).json({
+        mensaje: 'El rol no está definido en el request'
+      });
     }
+
+    const roles = rolesPermitidos.map(r => r.toLowerCase());
+
+    if (!roles.includes(req.rol)) {
+      console.error('❌ verificarRol: Acceso denegado. Rol no autorizado:', req.rol);
+      return res.status(403).json({
+        mensaje: `Acceso denegado. Rol '${req.rol}' no autorizado`
+      });
+    }
+
     next();
   };
+};
+
+module.exports = {
+  validarJWT,
+  verificarRol
 };

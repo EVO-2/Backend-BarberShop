@@ -9,7 +9,8 @@ const pagoController = require('../controllers/pago.controller');
 const ROLES = {
   ADMIN: 'admin',
   CLIENTE: 'cliente',
-  BARBERO: 'barbero'
+  BARBERO: 'barbero',
+  MANICURISTA: 'manicurista'
 };
 
 /* ==================== RUTAS DE PAGOS ==================== */

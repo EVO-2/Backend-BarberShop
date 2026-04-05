@@ -6,11 +6,19 @@ const RolSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      enum: ['admin', 'cliente', 'barbero', 'recepcionista', 'gerente']
+      trim: true,
+      lowercase: true
     },
     descripcion: {
-      type: String
+      type: String,
+      default: ''
     },
+    permisos: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Permiso'
+      }
+    ],
     estado: {
       type: Boolean,
       default: true

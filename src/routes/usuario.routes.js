@@ -27,14 +27,14 @@ const router = Router();
 // 👤 Obtener perfil del usuario logueado
 router.get(
   '/perfil',
-  [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'admin')],
+  [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'manicurista', 'admin')],
   obtenerPerfil
 );
 
 // ✏️ Actualizar perfil del usuario logueado
 router.put(
   '/perfil',
-  [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'admin')],
+  [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'manicurista', 'admin')],
   upload.single('foto'),
   actualizarPerfil
 );
@@ -116,7 +116,7 @@ router.post(
   '/:id/foto',
   [
     validarJWT,
-    tieneRol('admin', 'cliente', 'barbero'),
+    tieneRol('admin', 'cliente', 'barbero', 'manicurista'),
     param('id').isMongoId().withMessage('ID inválido'),
     validarCampos,
     upload.single('foto')

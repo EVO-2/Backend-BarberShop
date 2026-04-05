@@ -133,7 +133,7 @@ const crearUsuario = async (req, res) => {
       });
       await nuevoCliente.save();
       nuevoUsuario.cliente = nuevoCliente._id;
-    } else if (existeRol.nombre === 'barbero') {
+    } else if (existeRol.nombre === 'barbero' || existeRol.nombre === 'manicurista') {
       const nuevoPeluquero = new Peluquero({
         usuario: nuevoUsuario._id,
         telefono_profesional: detalles.telefono,
@@ -172,50 +172,108 @@ const actualizarUsuario = async (req, res) => {
     const usuario = await Usuario.findById(id);
     if (!usuario) return res.status(404).json({ message: 'Usuario no encontrado' });
 
-    if (rol && !mongoose.Types.ObjectId.isValid(rol)) return res.status(400).json({ error: 'Rol inválido' });
+    let existeRol = null;
+    if (rol && !mongoose.Types.ObjectId.isValid(rol)) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+    
+    if (rol) {
+      existeRol = await Rol.findById(rol);
+      if (!existeRol) return res.status(404).json({ error: 'Rol no encontrado' });
+      usuario.rol = rol;
+    } else {
+      existeRol = await Rol.findById(usuario.rol);
+    }
 
     usuario.nombre = nombre ?? usuario.nombre;
     usuario.correo = correo ?? usuario.correo;
     if (password) usuario.password = password;
-    usuario.rol = rol ?? usuario.rol;
     usuario.estado = estado ?? usuario.estado;
     await usuario.save();
 
-    if (usuario.cliente && detalles) {
-      await Cliente.findByIdAndUpdate(usuario.cliente, {
-        telefono: detalles.telefono,
-        direccion: detalles.direccion,
-        genero: detalles.genero,
-        fecha_nacimiento: detalles.fecha_nacimiento
-      });
-    } else if (usuario.peluquero && detalles) {
-      const peluquero = await Peluquero.findById(usuario.peluquero);
-      if (!peluquero) return res.status(404).json({ message: 'Peluquero no encontrado' });
-
-      peluquero.telefono_profesional = detalles.telefono ?? peluquero.telefono_profesional;
-      peluquero.direccion_profesional = detalles.direccion ?? peluquero.direccion_profesional;
-      peluquero.genero = detalles.genero ?? peluquero.genero;
-      peluquero.fecha_nacimiento = detalles.fecha_nacimiento ?? peluquero.fecha_nacimiento;
-      peluquero.especialidades = detalles.especialidades ?? peluquero.especialidades;
-      peluquero.experiencia = detalles.experiencia ?? peluquero.experiencia;
-      peluquero.sede = detalles.sede ?? peluquero.sede;
-      peluquero.estado = estado !== undefined ? estado : peluquero.estado;
-
-      // 👇 usamos la función auxiliar
-      if (detalles.puestoTrabajo || estado === false) {
-        try {
-          await actualizarPuestoPeluquero(peluquero, detalles.puestoTrabajo, estado);
-        } catch (error) {
-          return res.status(400).json({ message: error.message });
+    if (detalles) {
+      if (existeRol.nombre === 'cliente') {
+        if (!usuario.cliente) {
+          const nuevoCliente = new Cliente({
+            usuario: usuario._id,
+            telefono: detalles.telefono,
+            direccion: detalles.direccion,
+            genero: detalles.genero,
+            fecha_nacimiento: detalles.fecha_nacimiento
+          });
+          await nuevoCliente.save();
+          usuario.cliente = nuevoCliente._id;
+          await usuario.save();
+        } else {
+          await Cliente.findByIdAndUpdate(usuario.cliente, {
+            telefono: detalles.telefono,
+            direccion: detalles.direccion,
+            genero: detalles.genero,
+            fecha_nacimiento: detalles.fecha_nacimiento
+          });
         }
-      } else {
-        await peluquero.save();
+      } else if (existeRol.nombre === 'barbero' || existeRol.nombre === 'manicurista') {
+        let peluquero = null;
+        
+        if (usuario.peluquero) {
+          peluquero = await Peluquero.findById(usuario.peluquero);
+        } else {
+          peluquero = await Peluquero.findOne({ usuario: usuario._id });
+        }
+
+        if (!peluquero) {
+          peluquero = new Peluquero({
+            usuario: usuario._id,
+            telefono_profesional: detalles.telefono || '',
+            direccion_profesional: detalles.direccion || '',
+            genero: detalles.genero || 'otro',
+            fecha_nacimiento: detalles.fecha_nacimiento || null,
+            especialidades: detalles.especialidades || [],
+            experiencia: detalles.experiencia || 0,
+            sede: detalles.sede || null,
+            puestoTrabajo: detalles.puestoTrabajo || null
+          });
+          await peluquero.save();
+          usuario.peluquero = peluquero._id;
+          await usuario.save();
+
+          if (detalles.puestoTrabajo) {
+            await PuestoTrabajo.findByIdAndUpdate(detalles.puestoTrabajo, { peluquero: peluquero._id });
+          }
+        } else {
+          if (!usuario.peluquero || usuario.peluquero.toString() !== peluquero._id.toString()) {
+             usuario.peluquero = peluquero._id;
+             await usuario.save();
+          }
+
+          peluquero.telefono_profesional = detalles.telefono ?? peluquero.telefono_profesional;
+          peluquero.direccion_profesional = detalles.direccion ?? peluquero.direccion_profesional;
+          peluquero.genero = detalles.genero ?? peluquero.genero;
+          peluquero.fecha_nacimiento = detalles.fecha_nacimiento || peluquero.fecha_nacimiento;
+          peluquero.especialidades = detalles.especialidades ?? peluquero.especialidades;
+          peluquero.experiencia = detalles.experiencia ?? peluquero.experiencia;
+          
+          if (detalles.sede) peluquero.sede = detalles.sede;
+          peluquero.estado = estado !== undefined ? estado : peluquero.estado;
+
+          // 👇 usamos la función auxiliar
+          if (detalles.puestoTrabajo || estado === false) {
+            try {
+              await actualizarPuestoPeluquero(peluquero, detalles.puestoTrabajo || null, estado);
+            } catch (error) {
+              return res.status(400).json({ message: error.message });
+            }
+          } else {
+            await peluquero.save();
+          }
+        }
       }
     }
 
     res.status(200).json({ message: 'Usuario actualizado correctamente' });
   } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar usuario' });
+    console.error('❌ Error en actualizarUsuario:', error);
+    res.status(500).json({ message: 'Error al actualizar usuario', error: error.message });
   }
 };
 
@@ -342,9 +400,9 @@ const obtenerPerfil = async (req, res) => {
       });
     }
 
-    if (rolNombre === 'barbero' && usuario.peluquero) {
+    if ((rolNombre === 'barbero' || rolNombre === 'manicurista') && usuario.peluquero) {
       return res.json({
-        tipo: 'barbero',
+        tipo: rolNombre,
         ...usuario.peluquero.toObject(),
         usuario: {
           id: usuario._id,
@@ -404,6 +462,7 @@ const actualizarPerfil = async (req, res) => {
     switch (usuarioActualizado.rol.nombre) {
 
       case "barbero":
+      case "manicurista":
 
         perfilExtra = await Peluquero.findOneAndUpdate(
           { usuario: usuarioId },

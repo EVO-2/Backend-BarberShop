@@ -40,7 +40,7 @@ const login = async (req, res) => {
 
     if (usuario.rol?.nombre === 'cliente') {
       datosRol = await Cliente.findOne({ usuario: usuario._id });
-    } else if (usuario.rol?.nombre === 'barbero') {
+    } else if (usuario.rol?.nombre === 'barbero' || usuario.rol?.nombre === 'manicurista') {
       datosRol = await Peluquero.findOne({ usuario: usuario._id });
     }
 
@@ -52,7 +52,7 @@ const login = async (req, res) => {
         rol: usuario.rol?.nombre,
         foto: usuario.foto,
         cliente: usuario.rol?.nombre === 'cliente' ? datosRol : undefined,
-        peluquero: usuario.rol?.nombre === 'barbero' ? datosRol : undefined
+        peluquero: (usuario.rol?.nombre === 'barbero' || usuario.rol?.nombre === 'manicurista') ? datosRol : undefined
       },
       token,
       expiraEn: expDate
@@ -91,7 +91,8 @@ const registro = async (req, res) => {
       return res.status(400).json({ mensaje: 'El correo ya está registrado' });
     }
 
-    const rolCliente = await Rol.findOne({ nombre: 'cliente' });
+    const rolNombre = 'cliente';
+    const rolCliente = await Rol.findOne({ nombre: rolNombre.toLowerCase() });
     if (!rolCliente) {
       return res.status(500).json({ mensaje: 'No se encontró el rol cliente' });
     }

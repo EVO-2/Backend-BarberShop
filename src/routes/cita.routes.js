@@ -9,7 +9,8 @@ const citaController = require('../controllers/cita.controller');
 const ROLES = {
   ADMIN: 'admin',
   CLIENTE: 'cliente',
-  BARBERO: 'barbero'
+  BARBERO: 'barbero',
+  MANICURISTA: 'manicurista'
 };
 
 /* ───────────── Rutas de citas ───────────── */
@@ -18,7 +19,7 @@ const ROLES = {
 router.get(
   '/mis-citas',
   validarJWT,
-  tieneRol(ROLES.CLIENTE, ROLES.BARBERO, ROLES.ADMIN),
+  tieneRol(ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA, ROLES.ADMIN),
   citaController.obtenerMisCitas
 );
 
@@ -26,7 +27,7 @@ router.get(
 router.get(
   '/por-sede-fecha',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.getCitasPorSedeYFecha
 );
 
@@ -34,7 +35,7 @@ router.get(
 router.get(
   '/por-fecha-hora',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.obtenerCitasPorFechaYHora
 );
 
@@ -46,11 +47,11 @@ router.get(
   citaController.obtenerCitas
 );
 
-// 🔹 Admin y barbero: obtener citas paginadas
+// 🔹 Admin y barbero/manicurista: obtener citas paginadas
 router.get(
   '/paginadas',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.obtenerCitasPaginadas
 );
 
@@ -84,7 +85,7 @@ router.put(
 router.put(
   '/:id/iniciar',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.iniciarCita
 );
 
@@ -92,7 +93,7 @@ router.put(
 router.put(
   '/:id/finalizar',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.finalizarCita
 );
 
@@ -100,7 +101,7 @@ router.put(
 router.put(
   '/:id/cancelar',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.cancelarCita
 );
 
@@ -120,11 +121,11 @@ router.put(
   citaController.pagarCita
 );
 
-// 🔹 Obtener citas en un rango de fechas (Admin, Cliente, Barbero)
+// 🔹 Obtener citas en un rango de fechas (Admin, Cliente, profesional)
 router.get(
   '/rango',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.obtenerCitasPorRango
 );
 
@@ -132,7 +133,7 @@ router.get(
 router.get(
   '/servicios',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.obtenerServicios
 );
 

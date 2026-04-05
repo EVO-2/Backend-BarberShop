@@ -18,7 +18,8 @@ const servicioCtrl = require('../controllers/servicio.controller');
 const ROLES = {
   ADMIN: 'admin',
   CLIENTE: 'cliente',
-  BARBERO: 'barbero'
+  BARBERO: 'barbero',
+  MANICURISTA: 'manicurista'
 };
 
 // ============================================================
@@ -67,11 +68,11 @@ router.post(
   servicioCtrl.crearServicio
 );
 
-// 🔹 Obtener todos los servicios (admin, cliente y barbero)
+// 🔹 Obtener todos los servicios (admin, cliente y barbero/manicurista)
 router.get(
   '/',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA),
   servicioCtrl.obtenerServicios
 );
 
@@ -79,7 +80,7 @@ router.get(
 router.get(
   '/:id',
   validarJWT,
-  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO),
+  tieneRol(ROLES.ADMIN, ROLES.CLIENTE, ROLES.BARBERO, ROLES.MANICURISTA),
   servicioCtrl.obtenerServicioPorId
 );
 
