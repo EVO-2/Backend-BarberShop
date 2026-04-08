@@ -57,7 +57,8 @@ const listarUsuarios = async (req, res) => {
         path: 'peluquero',
         populate: [
           { path: 'sede', select: 'nombre' },
-          { path: 'puestoTrabajo', select: 'nombre' }
+          { path: 'puestoTrabajo', select: 'nombre' },
+          { path: 'usuario', populate: { path: 'rol', select: 'nombre' } }
         ],
         select: 'telefono_profesional direccion_profesional genero fecha_nacimiento especialidades experiencia'
       })
@@ -117,10 +118,15 @@ const crearUsuario = async (req, res) => {
   try {
     const { nombre, correo, password, rol, estado, detalles } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(rol)) return res.status(400).json({ error: 'Rol inválido' });
-    const existeRol = await Rol.findById(rol);
-    if (!existeRol) return res.status(404).json({ error: 'Rol no encontrado' });
+    // Validar rol
+    if (!mongoose.Types.ObjectId.isValid(rol))
+      return res.status(400).json({ error: 'Rol inválido' });
 
+    const existeRol = await Rol.findById(rol);
+    if (!existeRol)
+      return res.status(404).json({ error: 'Rol no encontrado' });
+
+    // Crear usuario
     const nuevoUsuario = new Usuario({ nombre, correo, password, rol, estado });
 
     if (existeRol.nombre === 'cliente') {
@@ -133,6 +139,7 @@ const crearUsuario = async (req, res) => {
       });
       await nuevoCliente.save();
       nuevoUsuario.cliente = nuevoCliente._id;
+
     } else if (existeRol.nombre === 'barbero' || existeRol.nombre === 'manicurista') {
       const nuevoPeluquero = new Peluquero({
         usuario: nuevoUsuario._id,
@@ -152,9 +159,16 @@ const crearUsuario = async (req, res) => {
       if (detalles.puestoTrabajo) {
         await PuestoTrabajo.findByIdAndUpdate(detalles.puestoTrabajo, { peluquero: nuevoPeluquero._id });
       }
+
+      // 🔥 Populate usuario → rol para el peluquero
+      await nuevoPeluquero.populate({ path: 'usuario', populate: { path: 'rol', select: 'nombre' } });
     }
 
+    // 🔥 Populate rol del usuario recién creado
+    await nuevoUsuario.populate('rol');
+
     await nuevoUsuario.save();
+
     res.status(201).json(nuevoUsuario);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear usuario', detalles: error.message });
@@ -176,7 +190,7 @@ const actualizarUsuario = async (req, res) => {
     if (rol && !mongoose.Types.ObjectId.isValid(rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
-    
+
     if (rol) {
       existeRol = await Rol.findById(rol);
       if (!existeRol) return res.status(404).json({ error: 'Rol no encontrado' });
@@ -214,7 +228,7 @@ const actualizarUsuario = async (req, res) => {
         }
       } else if (existeRol.nombre === 'barbero' || existeRol.nombre === 'manicurista') {
         let peluquero = null;
-        
+
         if (usuario.peluquero) {
           peluquero = await Peluquero.findById(usuario.peluquero);
         } else {
@@ -242,8 +256,8 @@ const actualizarUsuario = async (req, res) => {
           }
         } else {
           if (!usuario.peluquero || usuario.peluquero.toString() !== peluquero._id.toString()) {
-             usuario.peluquero = peluquero._id;
-             await usuario.save();
+            usuario.peluquero = peluquero._id;
+            await usuario.save();
           }
 
           peluquero.telefono_profesional = detalles.telefono ?? peluquero.telefono_profesional;
@@ -252,7 +266,7 @@ const actualizarUsuario = async (req, res) => {
           peluquero.fecha_nacimiento = detalles.fecha_nacimiento || peluquero.fecha_nacimiento;
           peluquero.especialidades = detalles.especialidades ?? peluquero.especialidades;
           peluquero.experiencia = detalles.experiencia ?? peluquero.experiencia;
-          
+
           if (detalles.sede) peluquero.sede = detalles.sede;
           peluquero.estado = estado !== undefined ? estado : peluquero.estado;
 
@@ -435,16 +449,16 @@ const obtenerPerfil = async (req, res) => {
 // ==========================
 const actualizarPerfil = async (req, res) => {
   try {
-
     const usuarioId = req.usuario.id;
     const datos = req.body;
 
+    // Obtener usuario actual
     const usuarioActual = await Usuario.findById(usuarioId);
-
     if (!usuarioActual) {
       return res.status(404).json({ mensaje: "Usuario no encontrado" });
     }
 
+    // Actualizar datos generales del usuario
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
       usuarioId,
       {
@@ -460,10 +474,9 @@ const actualizarPerfil = async (req, res) => {
     let perfilExtra = null;
 
     switch (usuarioActualizado.rol.nombre) {
-
       case "barbero":
       case "manicurista":
-
+        // Actualizar perfil de peluquero y poblar usuario → rol
         perfilExtra = await Peluquero.findOneAndUpdate(
           { usuario: usuarioId },
           {
@@ -473,12 +486,13 @@ const actualizarPerfil = async (req, res) => {
             telefono_profesional: datos.telefono_profesional
           },
           { new: true }
-        );
-
+        ).populate({
+          path: 'usuario',
+          populate: { path: 'rol', select: 'nombre' }
+        });
         break;
 
       case "cliente":
-
         perfilExtra = await Cliente.findOneAndUpdate(
           { usuario: usuarioId },
           {
@@ -487,16 +501,14 @@ const actualizarPerfil = async (req, res) => {
           },
           { new: true }
         );
-
         break;
 
       case "admin":
-
         perfilExtra = { permisos: "completos" };
-
         break;
     }
 
+    // Combinar datos del usuario con su perfil específico
     const perfilCompleto = {
       ...usuarioActualizado.toObject(),
       [usuarioActualizado.rol.nombre]: perfilExtra
@@ -506,9 +518,9 @@ const actualizarPerfil = async (req, res) => {
       mensaje: "Perfil actualizado correctamente",
       usuario: perfilCompleto
     });
-
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al actualizar perfil" });
+    console.error("❌ Error en actualizarPerfil:", error);
+    res.status(500).json({ mensaje: "Error al actualizar perfil", error: error.message });
   }
 };
 

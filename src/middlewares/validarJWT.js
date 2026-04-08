@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 const Usuario = require('../models/Usuario.model');
-const Permiso = require('../models/Permiso.model');
 
 // ===============================
 // 🔐 VALIDAR JWT
@@ -22,14 +21,16 @@ const validarJWT = async (req, res, next) => {
 
     const { uid } = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 🔥 Populate PRO: rol + permisos
-    const usuario = await Usuario.findById(uid).populate({
-      path: 'rol',
-      populate: {
-        path: 'permisos',
-        model: 'Permiso'
-      }
-    });
+    // 🔥 POPULATE PRO (ROL + PERMISOS CON NOMBRE Y MODULO)
+    const usuario = await Usuario.findById(uid)
+      .populate({
+        path: 'rol',
+        select: 'nombre permisos',
+        populate: {
+          path: 'permisos',
+          select: 'nombre modulo'
+        }
+      });
 
     if (!usuario) {
       console.error('❌ validarJWT: Token no válido – usuario no existe para uid:', uid);
@@ -50,7 +51,7 @@ const validarJWT = async (req, res, next) => {
       usuario.rol?.nombre || usuario.rol || ''
     ).toLowerCase();
 
-    // ✅ PERMISOS (SEGURO)
+    // ✅ PERMISOS (AHORA SÍ 100% FUNCIONAL)
     req.permisos = (usuario.rol?.permisos || []).map(p => p.nombre);
 
     next();
@@ -66,7 +67,7 @@ const validarJWT = async (req, res, next) => {
 };
 
 // ===============================
-// 🔐 VERIFICAR ROL (FIX 🔥)
+// 🔐 VERIFICAR ROL
 // ===============================
 const verificarRol = (...rolesPermitidos) => {
 

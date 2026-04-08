@@ -55,7 +55,11 @@ const crearPeluquero = async (req, res) => {
 const obtenerPeluqueros = async (req, res) => {
   try {
     const peluqueros = await Peluquero.find()
-      .populate('usuario', 'nombre correo foto estado')
+      .populate({
+        path: 'usuario',
+        select: 'nombre correo foto estado',
+        populate: { path: 'rol', select: 'nombre' }
+      })
       .populate('sede', 'nombre direccion')
       .populate('puestoTrabajo', 'nombre');
 
@@ -72,7 +76,8 @@ const obtenerPeluquerosDisponibles = async (req, res) => {
       .populate({
         path: 'usuario',
         match: { estado: true },
-        select: 'nombre correo foto estado'
+        select: 'nombre correo foto estado',
+        populate: { path: 'rol', select: 'nombre' }
       })
       .populate('sede', 'nombre direccion')
       .populate('puestoTrabajo', 'nombre');
@@ -89,7 +94,11 @@ const obtenerPeluquerosDisponibles = async (req, res) => {
 const obtenerPeluqueroPorId = async (req, res) => {
   try {
     const peluquero = await Peluquero.findById(req.params.id)
-      .populate('usuario', 'nombre correo foto estado')
+      .populate({
+        path: 'usuario',
+        select: 'nombre correo foto estado',
+        populate: { path: 'rol', select: 'nombre' }
+      })
       .populate('sede', 'nombre direccion')
       .populate('puestoTrabajo', 'nombre');
 

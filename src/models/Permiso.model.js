@@ -5,7 +5,6 @@ const PermisoSchema = new mongoose.Schema(
         nombre: {
             type: String,
             required: true,
-            unique: true,
             trim: true,
             lowercase: true
         },
@@ -15,6 +14,16 @@ const PermisoSchema = new mongoose.Schema(
             trim: true,
             lowercase: true
         },
+        clave: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        tipo: {
+            type: String,
+            enum: ['crear', 'leer', 'editar', 'eliminar'],
+            required: true
+        },
         descripcion: {
             type: String,
             default: ''
@@ -22,5 +31,7 @@ const PermisoSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+PermisoSchema.index({ nombre: 1, modulo: 1 }, { unique: true });
 
 module.exports = mongoose.model('Permiso', PermisoSchema);

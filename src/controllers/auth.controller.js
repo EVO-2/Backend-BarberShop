@@ -11,7 +11,14 @@ const login = async (req, res) => {
 
     const usuario = await Usuario.findOne({ correo })
       .select('+password')
-      .populate('rol', 'nombre');
+      .populate({
+        path: 'rol',
+        select: 'nombre',
+        populate: {
+          path: 'permisos',
+          select: 'nombre modulo'
+        }
+      });
 
     if (!usuario || !usuario.estado) {
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
@@ -40,7 +47,10 @@ const login = async (req, res) => {
 
     if (usuario.rol?.nombre === 'cliente') {
       datosRol = await Cliente.findOne({ usuario: usuario._id });
-    } else if (usuario.rol?.nombre === 'barbero' || usuario.rol?.nombre === 'manicurista') {
+    } else if (
+      usuario.rol?.nombre === 'barbero' ||
+      usuario.rol?.nombre === 'manicurista'
+    ) {
       datosRol = await Peluquero.findOne({ usuario: usuario._id });
     }
 
@@ -51,8 +61,18 @@ const login = async (req, res) => {
         correo: usuario.correo,
         rol: usuario.rol?.nombre,
         foto: usuario.foto,
-        cliente: usuario.rol?.nombre === 'cliente' ? datosRol : undefined,
-        peluquero: (usuario.rol?.nombre === 'barbero' || usuario.rol?.nombre === 'manicurista') ? datosRol : undefined
+
+        // 🔥 NUEVO: enviar permisos al frontend
+        permisos: usuario.rol?.permisos?.map(p => p.nombre) || [],
+
+        cliente:
+          usuario.rol?.nombre === 'cliente' ? datosRol : undefined,
+
+        peluquero:
+          usuario.rol?.nombre === 'barbero' ||
+            usuario.rol?.nombre === 'manicurista'
+            ? datosRol
+            : undefined
       },
       token,
       expiraEn: expDate

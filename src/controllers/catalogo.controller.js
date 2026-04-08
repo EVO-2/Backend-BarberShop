@@ -28,7 +28,11 @@ const CatalogoController = {
   obtenerPeluqueros: async (_req, res) => {
     try {
         const peluqueros = await Peluquero.find({ estado: true })
-        .populate('usuario', 'nombre'); // <- Esto trae solo el campo 'nombre' del usuario
+        .populate({
+          path: 'usuario',
+          select: 'nombre rol',
+          populate: { path: 'rol', select: 'nombre' }
+        });
         res.json(peluqueros);
     } catch (error) {
         console.error('Error al obtener peluqueros:', error);

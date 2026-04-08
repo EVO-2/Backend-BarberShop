@@ -22,7 +22,7 @@ const obtenerRutasDeImagenes = (req) => {
 // ============================================================
 exports.crearServicio = async (req, res) => {
   try {
-    const { nombre, precio, duracion, estado, descripcion } = req.body;
+    const { nombre, precio, duracion, estado, descripcion, asignadoA } = req.body;
 
     // ✅ Validación básica
     if (!nombre?.trim() || !precio) {
@@ -34,6 +34,14 @@ exports.crearServicio = async (req, res) => {
     // ✅ Procesar imágenes con multer
     const imagenes = obtenerRutasDeImagenes(req);
 
+    let rolesAsignados = ['barbero'];
+    if (asignadoA) {
+      if (Array.isArray(asignadoA)) rolesAsignados = asignadoA;
+      else if (typeof asignadoA === 'string') {
+        try { rolesAsignados = JSON.parse(asignadoA); } catch (e) { rolesAsignados = [asignadoA]; }
+      }
+    }
+
     // ✅ Crear y guardar el nuevo servicio
     const nuevoServicio = new Servicio({
       nombre: nombre.trim(),
@@ -42,6 +50,7 @@ exports.crearServicio = async (req, res) => {
       duracion,
       imagenes,
       estado: estado ?? true,
+      asignadoA: rolesAsignados,
     });
 
     const servicioGuardado = await nuevoServicio.save();
@@ -112,42 +121,87 @@ exports.obtenerServicioPorId = async (req, res) => {
 exports.actualizarServicio = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, precio, duracion, estado, descripcion, imagenesExistentes = [] } = req.body;
+    const {
+      nombre,
+      precio,
+      duracion,
+      estado,
+      descripcion,
+      asignadoA,
+      imagenesExistentes = []
+    } = req.body;
 
-    // 🔍 Verificar si el servicio existe
     const servicioExistente = await Servicio.findById(id);
     if (!servicioExistente) {
       return res.status(404).json({ mensaje: '❌ Servicio no encontrado' });
     }
 
-    // ✅ Obtener nuevas imágenes subidas (si existen)
     const nuevasImagenes = obtenerRutasDeImagenes(req);
 
-    // Buscar imágenes eliminadas (las que estaban antes y ya no están)
     const imagenesEliminadas = servicioExistente.imagenes.filter(
       (img) => !imagenesExistentes.includes(img)
     );
 
-    // 🗑️ Eliminar físicamente las imágenes descartadas
+    // ✅ Eliminación segura (NO rompe el flujo)
     for (const imgUrl of imagenesEliminadas) {
-      const relativePath = imgUrl.split('/uploads/')[1]; // obtiene solo la parte después de /uploads/
+      const relativePath = imgUrl.split('/uploads/')[1];
       const rutaCompleta = path.join(__dirname, `../uploads/${relativePath}`);
-      if (fs.existsSync(rutaCompleta)) fs.unlinkSync(rutaCompleta);
+
+      if (fs.existsSync(rutaCompleta)) {
+        fs.unlink(rutaCompleta, (err) => {
+          if (err) {
+            console.error('⚠️ Error eliminando imagen:', err.message);
+          }
+        });
+      }
     }
 
-
-    // ✅ Combinar las imágenes existentes + las nuevas
     const imagenesActualizadas = [...imagenesExistentes, ...nuevasImagenes];
 
-    // ============================================================
-    // 💾 Actualizar el servicio
-    // ============================================================
+    let rolesAsignados = servicioExistente.asignadoA;
+
+    if (asignadoA) {
+
+      if (Array.isArray(asignadoA)) {
+        rolesAsignados = asignadoA;
+
+      } else if (typeof asignadoA === 'string') {
+
+        try {
+          const parsed = JSON.parse(asignadoA);
+
+          rolesAsignados = Array.isArray(parsed)
+            ? parsed
+            : [parsed];
+
+        } catch (e) {
+          rolesAsignados = [asignadoA];
+        }
+
+      }
+
+      rolesAsignados = rolesAsignados
+        .map(r => String(r)
+          .replace(/[\[\]"]/g, '')
+          .toLowerCase()
+          .trim()
+        )
+        .filter(r => r.length > 0);
+
+    }
+
+    // ✅ Normalizar roles
+    rolesAsignados = rolesAsignados.map(r => r.toLowerCase().trim());
+
+    console.log('🧪 Roles asignados:', rolesAsignados);
+
     servicioExistente.nombre = nombre?.trim() || servicioExistente.nombre;
     servicioExistente.descripcion = descripcion?.trim() || servicioExistente.descripcion;
     servicioExistente.precio = precio ?? servicioExistente.precio;
     servicioExistente.duracion = duracion ?? servicioExistente.duracion;
     servicioExistente.estado = estado ?? servicioExistente.estado;
     servicioExistente.imagenes = imagenesActualizadas;
+    servicioExistente.asignadoA = rolesAsignados;
 
     const servicioActualizado = await servicioExistente.save();
 
@@ -155,6 +209,7 @@ exports.actualizarServicio = async (req, res) => {
       mensaje: '✅ Servicio actualizado exitosamente',
       data: servicioActualizado,
     });
+
   } catch (error) {
     console.error('❌ [actualizarServicio] Error:', error);
     res.status(500).json({
@@ -163,7 +218,6 @@ exports.actualizarServicio = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // Cambiar estado (activar/desactivar servicio)
