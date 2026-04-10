@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rolController = require('../controllers/rol.controller');
+const Rol = require('../models/Rol.model');
 
 // ===============================
 // 📌 CREAR ROL
@@ -12,29 +13,69 @@ router.post('/', rolController.crearRol);
 // ===============================
 router.get('/', async (req, res) => {
   try {
-    const roles = await require('../models/Rol.model')
-      .find({ estado: true })
+    const roles = await Rol.find({ estado: true })
       .populate('permisos', 'nombre modulo');
 
-    res.json(roles);
+    return res.json({
+      ok: true,
+      roles
+    });
+
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener roles' });
+    console.error('Error al obtener roles:', error);
+    return res.status(500).json({
+      ok: false,
+      mensaje: 'Error al obtener roles'
+    });
   }
 });
 
 // ===============================
 // 📌 OBTENER ROL POR ID
 // ===============================
-router.get('/:id', rolController.obtenerRol);
+router.get('/:id', (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id || id.trim() === '') {
+    return res.status(400).json({
+      ok: false,
+      mensaje: 'ID inválido'
+    });
+  }
+
+  return rolController.obtenerRol(req, res, next);
+});
 
 // ===============================
 // 📌 ACTUALIZAR ROL
 // ===============================
-router.put('/:id', rolController.actualizarRol);
+router.put('/:id', (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id || id.trim() === '') {
+    return res.status(400).json({
+      ok: false,
+      mensaje: 'ID inválido'
+    });
+  }
+
+  return rolController.actualizarRol(req, res, next);
+});
 
 // ===============================
 // 📌 ELIMINAR ROL (SOFT DELETE)
 // ===============================
-router.delete('/:id', rolController.eliminarRol);
+router.delete('/:id', (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id || id.trim() === '') {
+    return res.status(400).json({
+      ok: false,
+      mensaje: 'ID inválido'
+    });
+  }
+
+  return rolController.eliminarRol(req, res, next);
+});
 
 module.exports = router;

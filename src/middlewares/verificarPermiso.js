@@ -7,7 +7,6 @@ const verificarPermiso = (...permisosRequeridos) => {
                 });
             }
 
-            // 🔹 El rol puede venir poblado o como string
             const rol = req.usuario.rol;
 
             if (!rol) {
@@ -16,15 +15,16 @@ const verificarPermiso = (...permisosRequeridos) => {
                 });
             }
 
-            // 🔹 Si no viene populate, aquí se rompe → solución abajo
             const permisosUsuario = rol.permisos || [];
 
-            // 🔹 Convertimos a nombres de permisos
-            const nombresPermisos = permisosUsuario.map(p =>
-                typeof p === 'string' ? p : p.nombre
-            );
+            // 🔹 Convertimos a nombres de permisos de forma segura
+            const nombresPermisos = permisosUsuario.map(p => {
+                if (typeof p === 'string') return p;
+                if (p.nombre) return p.nombre;
+                if (p.toString) return p.toString();
+                return null;
+            }).filter(Boolean);
 
-            // 🔹 Verificar si tiene al menos uno
             const tienePermiso = permisosRequeridos.some(p =>
                 nombresPermisos.includes(p)
             );

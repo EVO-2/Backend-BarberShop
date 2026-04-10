@@ -17,7 +17,7 @@ exports.crearRol = async (req, res) => {
             nombre,
             descripcion,
             permisos,
-            activo: true
+            estado: true
         });
 
         await rol.save();
@@ -98,7 +98,7 @@ exports.actualizarRol = async (req, res) => {
 // ===============================
 exports.eliminarRol = async (req, res) => {
     try {
-        await Rol.findByIdAndUpdate(req.params.id, { activo: false });
+        await Rol.findByIdAndUpdate(req.params.id, { estado: false });
 
         res.json({ msg: 'Rol desactivado correctamente' });
 

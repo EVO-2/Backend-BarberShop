@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+const app = express();
+
 // ======================= Rutas =======================
 const rolRoutes = require('./routes/rol.routes');
 const sedeRoutes = require('./routes/sede.routes');
@@ -20,26 +22,47 @@ const reportesRoutes = require('./routes/reportes.routes');
 const equipoRoutes = require('./routes/equipo.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 
-const app = express();
-
 // =================== Middlewares ===================
 
-// Configuración CORS
+// 🔥 Lista de orígenes permitidos (dev + móvil + producción)
+const allowedOrigins = [
+  'http://localhost:4200',
+  'http://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
+  'http://192.168.1.17:8100',
+  'http://192.168.1.17:4200',
+  // 👉 PRODUCCIÓN (cuando tengas dominio)
+  // 'https://tudominio.com'
+];
+
+// 🔥 Configuración CORS dinámica (PRO)
 const corsOptions = {
-  origin: '*', // ⚠️ En producción debes limitar dominios
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  origin: function (origin, callback) {
+
+    // Permitir herramientas como Postman o apps móviles sin origin
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.warn('❌ CORS bloqueado para origen:', origin);
+      return callback(new Error('No permitido por CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   credentials: true
 };
 
+// ✅ CORS correcto (maneja preflight automáticamente)
 app.use(cors(corsOptions));
+//app.options('*', cors(corsOptions));
 
-// Parseo de JSON
+// =================== Parsers ===================
 app.use(express.json());
+//app.use(express.urlencoded({ extended: true }));
 
-// Parseo de formularios
-app.use(express.urlencoded({ extended: true }));
-
-// Servir archivos estáticos (imágenes, uploads)
+// =================== Archivos estáticos ===================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // =================== Ruta raíz ===================
@@ -65,7 +88,7 @@ app.use('/api/equipos', equipoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // =================== Manejo de errores 404 ===================
-app.use((req, res, next) => {
+app.use((req, res) => {
   res.status(404).json({
     ok: false,
     mensaje: '❌ Ruta no encontrada'

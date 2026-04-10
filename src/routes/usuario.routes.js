@@ -5,7 +5,7 @@ const {
   listarUsuarios,
   obtenerUsuarioPorId,
   crearUsuario,
-  actualizarUsuario, 
+  actualizarUsuario,
   eliminarUsuario,
   cambiarEstadoUsuario,
   subirFotoPerfil,
@@ -84,7 +84,7 @@ router.put(
     validarCampos
   ],
   actualizarUsuario
-); 
+);
 
 // 🗑️ Eliminar usuario (Soft Delete)
 router.delete(
