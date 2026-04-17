@@ -6,26 +6,37 @@ const Permiso = require('../models/Permiso.model');
 // ===============================
 exports.crearRol = async (req, res) => {
     try {
-        const { nombre, descripcion, permisos } = req.body;
+        const { nombre, descripcion, permisos, estado } = req.body;
 
-        const rolExistente = await Rol.findOne({ nombre });
-        if (rolExistente) {
-            return res.status(400).json({ msg: 'El rol ya existe' });
+        // 🔥 Validación clave
+        if (!permisos || permisos.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'Debe enviar al menos un permiso'
+            });
         }
 
         const rol = new Rol({
             nombre,
             descripcion,
             permisos,
-            estado: true
+            estado: estado ?? true
         });
 
         await rol.save();
 
-        res.json({ msg: 'Rol creado correctamente', rol });
+        res.json({
+            ok: true,
+            rol
+        });
 
     } catch (error) {
-        res.status(500).json({ msg: 'Error al crear rol', error });
+        console.error(error);
+        res.status(400).json({
+            ok: false,
+            mensaje: 'Error creando rol',
+            error
+        });
     }
 };
 
@@ -43,10 +54,17 @@ exports.listarRoles = async (req, res) => {
             estado: r.estado ?? true
         }));
 
-        res.json(rolesFormateados);
+        res.json({
+            ok: true,
+            roles: rolesFormateados
+        });
 
     } catch (error) {
-        res.status(500).json({ msg: 'Error al listar roles', error });
+        res.status(500).json({
+            ok: false,
+            msg: 'Error al listar roles',
+            error
+        });
     }
 };
 // ===============================

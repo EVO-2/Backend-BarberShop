@@ -21,6 +21,10 @@ const notificationRoutes = require('./routes/notification.routes');
 const reportesRoutes = require('./routes/reportes.routes');
 const equipoRoutes = require('./routes/equipo.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const productoRoutes = require('./routes/producto.routes');
+
+// 🔥 NUEVA RUTA (PERMISOS)
+const permisosRoutes = require('./routes/permisos.routes');
 
 // =================== Middlewares ===================
 
@@ -32,7 +36,7 @@ const allowedOrigins = [
   'ionic://localhost',
   'http://192.168.1.17:8100',
   'http://192.168.1.17:4200',
-  // 👉 PRODUCCIÓN (cuando tengas dominio)
+  // 👉 PRODUCCIÓN
   // 'https://tudominio.com'
 ];
 
@@ -54,13 +58,12 @@ const corsOptions = {
   credentials: true
 };
 
-// ✅ CORS correcto (maneja preflight automáticamente)
+// ✅ CORS correcto (NO usar app.options('*') porque rompe en Express 5)
 app.use(cors(corsOptions));
-//app.options('*', cors(corsOptions));
 
 // =================== Parsers ===================
 app.use(express.json());
-//app.use(express.urlencoded({ extended: true }));
+// app.use(express.urlencoded({ extended: true }));
 
 // =================== Archivos estáticos ===================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -86,6 +89,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/equipos', equipoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/permisos', permisosRoutes);
 
 // =================== Manejo de errores 404 ===================
 app.use((req, res) => {

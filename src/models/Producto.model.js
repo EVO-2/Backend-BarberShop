@@ -42,7 +42,7 @@ const productoSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  activo: {
+  estado: {
     type: Boolean,
     default: true
   }
@@ -50,4 +50,4 @@ const productoSchema = new mongoose.Schema({
 
 productoSchema.index({ nombre: 'text' });
 
-module.exports = mongoose.model('Producto', productoSchema);
+module.exports = mongoose.models.Producto || mongoose.model('Producto', productoSchema);

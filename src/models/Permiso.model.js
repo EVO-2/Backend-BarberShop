@@ -34,4 +34,4 @@ const PermisoSchema = new mongoose.Schema(
 
 PermisoSchema.index({ nombre: 1, modulo: 1 }, { unique: true });
 
-module.exports = mongoose.model('Permiso', PermisoSchema);
+module.exports = mongoose.models.Permiso || mongoose.model('Permiso', PermisoSchema);
