@@ -37,7 +37,8 @@ const allowedOrigins = [
   'http://192.168.1.17:8100',
   'http://192.168.1.17:4200',
   // 👉 PRODUCCIÓN
-  // 'https://tudominio.com'
+  'https://frontend-barber-shop-git-master-evo6.vercel.app',
+  process.env.FRONTEND_URL // Opcional por si en un futuro configuras otra variable en Railway
 ];
 
 // 🔥 Configuración CORS dinámica (PRO)
