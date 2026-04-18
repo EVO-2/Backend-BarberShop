@@ -5,8 +5,9 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const multerS3 = require('multer-s3');
+const { s3Client } = require('../config/minio');
 const path = require('path');
-const fs = require('fs');
 
 const { validarJWT } = require('../middlewares/validarJWT');
 const { tieneRol } = require('../middlewares/validarRol');
@@ -25,21 +26,15 @@ const ROLES = {
 // ============================================================
 // Configuración de Multer para subir imágenes de servicios
 // ============================================================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '..', 'uploads', 'servicios');
-
-    // ✅ Crea la carpeta si no existe
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
+const storage = multerS3({
+  s3: s3Client,
+  bucket: process.env.MINIO_BUCKET_NAME,
+  acl: 'public-read',
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  key: function (req, file, cb) {
     const ext = path.extname(file.originalname);
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, uniqueName);
+    cb(null, `servicios/${uniqueName}`);
   }
 });
 

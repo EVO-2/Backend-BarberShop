@@ -1,22 +1,18 @@
 const multer = require('multer');
+const multerS3 = require('multer-s3');
 const path = require('path');
-const fs = require('fs');
+const { s3Client } = require('../config/minio');
 
-// === Crear carpeta de destino si no existe ===
-const storageDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(storageDir)) {
-  fs.mkdirSync(storageDir, { recursive: true });
-}
-
-// === Configuración del almacenamiento ===
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, storageDir);
-  },
-  filename: (req, file, cb) => {
+// === Configuración del almacenamiento en MinIO ===
+const storage = multerS3({
+  s3: s3Client,
+  bucket: process.env.MINIO_BUCKET_NAME,
+  acl: 'public-read', // Asumimos que los buckets para assets suelen ser públicos. Si no, lo gestiona MinIO.
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  key: function (req, file, cb) {
     const ext = path.extname(file.originalname);
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueSuffix}${ext}`);
+    cb(null, `generales/${uniqueSuffix}${ext}`);
   }
 });
 

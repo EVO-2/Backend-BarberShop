@@ -2,9 +2,8 @@
 // CONTROLADOR DE SERVICIOS - Backend BarberShop
 // ===============================================
 
-const fs = require('fs');
-const path = require('path');
 const Servicio = require('../models/Servicio.model');
+const { eliminarArchivoMinio } = require('../config/minio');
 
 // ============================================================
 // Función utilitaria para obtener rutas de imágenes subidas
@@ -12,8 +11,8 @@ const Servicio = require('../models/Servicio.model');
 const obtenerRutasDeImagenes = (req) => {
   if (!req.files || req.files.length === 0) return [];
 
-  // Retorna solo la ruta relativa, sin incluir http://localhost:3000
-  return req.files.map((file) => `/uploads/servicios/${file.filename}`);
+  // Con MinIO multerS3 nos proporciona directamente el URL público en file.location
+  return req.files.map((file) => file.location);
 };
 
 
@@ -142,18 +141,9 @@ exports.actualizarServicio = async (req, res) => {
       (img) => !imagenesExistentes.includes(img)
     );
 
-    // ✅ Eliminación segura (NO rompe el flujo)
+    // ✅ Eliminación en la nube
     for (const imgUrl of imagenesEliminadas) {
-      const relativePath = imgUrl.split('/uploads/')[1];
-      const rutaCompleta = path.join(__dirname, `../uploads/${relativePath}`);
-
-      if (fs.existsSync(rutaCompleta)) {
-        fs.unlink(rutaCompleta, (err) => {
-          if (err) {
-            console.error('⚠️ Error eliminando imagen:', err.message);
-          }
-        });
-      }
+      eliminarArchivoMinio(imgUrl);
     }
 
     const imagenesActualizadas = [...imagenesExistentes, ...nuevasImagenes];

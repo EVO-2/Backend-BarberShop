@@ -333,7 +333,7 @@ const subirFotoPerfil = async (req, res) => {
 
     const usuario = await Usuario.findByIdAndUpdate(
       id,
-      { foto: req.file.filename },
+      { foto: req.file.location },
       { new: true }
     );
 

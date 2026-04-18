@@ -45,7 +45,7 @@ const actualizarPerfilCliente = async (req, res) => {
       const salt = await bcrypt.genSalt(10);
       usuario.password = await bcrypt.hash(password, salt);
     }
-    if (req.file) usuario.foto = req.file.filename;
+    if (req.file) usuario.foto = req.file.location;
 
     await usuario.save();
 
