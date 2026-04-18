@@ -20,7 +20,7 @@ const eliminarArchivoMinio = async (fileUrl) => {
     try {
         // fileUrl usualmente es: https://[endpoint]/[bucket]/ruta/al/archivo.jpg
         const urlObj = new URL(fileUrl);
-        const bucketName = process.env.MINIO_BUCKET_NAME;
+        const bucketName = process.env.MINIO_BUCKET_NAME || 'BACKEND-BARBERSHOP';
 
         // Limpiar el pathname (ej. "/BACKEND-BARBERSHOP/servicios/foto.jpg" -> "BACKEND-BARBERSHOP/servicios/foto.jpg")
         let key = urlObj.pathname.substring(1); 

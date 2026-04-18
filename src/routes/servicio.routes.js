@@ -28,7 +28,7 @@ const ROLES = {
 // ============================================================
 const storage = multerS3({
   s3: s3Client,
-  bucket: process.env.MINIO_BUCKET_NAME,
+  bucket: process.env.MINIO_BUCKET_NAME || 'BACKEND-BARBERSHOP',
   acl: 'public-read',
   contentType: multerS3.AUTO_CONTENT_TYPE,
   key: function (req, file, cb) {

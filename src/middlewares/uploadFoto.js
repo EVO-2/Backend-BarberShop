@@ -6,7 +6,7 @@ const { s3Client } = require('../config/minio');
 // === Configuración del almacenamiento en MinIO ===
 const storage = multerS3({
   s3: s3Client,
-  bucket: process.env.MINIO_BUCKET_NAME,
+  bucket: process.env.MINIO_BUCKET_NAME || 'BACKEND-BARBERSHOP',
   acl: 'public-read', // Asumimos que los buckets para assets suelen ser públicos. Si no, lo gestiona MinIO.
   contentType: multerS3.AUTO_CONTENT_TYPE,
   key: function (req, file, cb) {
