@@ -1,4 +1,4 @@
-const Permiso = require('../models/permiso.model');
+const Permiso = require('../models/Permiso.model');
 
 // =============================
 // GET
