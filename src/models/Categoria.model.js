@@ -11,10 +11,10 @@ const categoriaSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    activo: {
+    estado: {
         type: Boolean,
         default: true
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Categoria', categoriaSchema);
+module.exports = mongoose.models.Categoria || mongoose.model('Categoria', categoriaSchema);

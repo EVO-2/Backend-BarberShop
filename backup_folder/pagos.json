@@ -1,0 +1,426 @@
+[
+  {
+    "_id": "68a21008dc82b0c80fa3eadf",
+    "cita": "68a21008dc82b0c80fa3eadd",
+    "monto": 8000,
+    "metodo": "tarjeta",
+    "estado": "pagado",
+    "observaciones": "Pago por Barba",
+    "createdAt": "2025-08-17T17:23:20.081Z",
+    "updatedAt": "2025-08-17T17:23:20.081Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eae3",
+    "cita": "68a21008dc82b0c80fa3eae1",
+    "monto": 20000,
+    "metodo": "transferencia",
+    "estado": "pagado",
+    "observaciones": "Pago por Corte + Barba",
+    "createdAt": "2025-08-17T17:23:20.088Z",
+    "updatedAt": "2025-08-17T17:23:20.088Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eaeb",
+    "cita": "68a21008dc82b0c80fa3eae9",
+    "monto": 20000,
+    "metodo": "transferencia",
+    "estado": "pagado",
+    "observaciones": "Pago por Corte + Barba",
+    "createdAt": "2025-08-17T17:23:20.106Z",
+    "updatedAt": "2025-08-17T17:23:20.106Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eaef",
+    "cita": "68a21008dc82b0c80fa3eaed",
+    "monto": 15000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "observaciones": "Pago por Corte de cabello",
+    "createdAt": "2025-08-17T17:23:20.114Z",
+    "updatedAt": "2025-08-17T17:23:20.114Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a7dd232733e8d094627415",
+    "cita": "69a7d14d454b6923a22c1ac2",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-04T07:20:03.208Z",
+    "updatedAt": "2026-03-04T08:04:34.832Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a7e7ba76c434431a9b7daa",
+    "cita": "69a7d1ff454b6923a22c1b34",
+    "monto": 15000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-04T08:05:14.179Z",
+    "updatedAt": "2026-03-04T08:05:35.680Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a925fecc7eee5cd0784b64",
+    "cita": "69a91b8eb4ba2ded046dd541",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-05T06:43:10.062Z",
+    "updatedAt": "2026-03-05T06:43:35.057Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a93593d39de0eeccd11791",
+    "cita": "69a92b7cd99655ce3926c600",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-05T07:49:39.802Z",
+    "updatedAt": "2026-03-05T07:50:00.917Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a93a4bd39de0eeccd11882",
+    "cita": "69a92b7dd99655ce3926c618",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-05T08:09:47.822Z",
+    "updatedAt": "2026-03-05T08:10:12.090Z",
+    "__v": 0
+  },
+  {
+    "_id": "69aa7a90cb80643e2648bc94",
+    "cita": "69aa7333cb80643e2648bbdf",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-06T06:56:16.325Z",
+    "updatedAt": "2026-03-06T06:56:42.306Z",
+    "__v": 0
+  },
+  {
+    "_id": "69aa83844dfd1566a39052b4",
+    "cita": "69aa7640cb80643e2648bc65",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-06T07:34:28.440Z",
+    "updatedAt": "2026-03-06T07:34:59.159Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b4b95a69e5a502199bef33",
+    "cita": "69b3c93d9485962338b5107c",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-14T01:26:50.021Z",
+    "updatedAt": "2026-03-14T01:27:12.170Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b4c6c369e5a502199bef8d",
+    "cita": "69b4b37069e5a502199bee69",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-14T02:24:03.068Z",
+    "updatedAt": "2026-03-14T02:24:18.447Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b62f977aaff2c8fdd27c31",
+    "cita": "69b617517aaff2c8fdd27af6",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-15T04:03:35.934Z",
+    "updatedAt": "2026-03-15T04:04:00.285Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b62f9b7aaff2c8fdd27c44",
+    "cita": "69b6177e7aaff2c8fdd27b26",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-15T04:03:39.633Z",
+    "updatedAt": "2026-03-15T04:03:56.332Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b62f9e7aaff2c8fdd27c57",
+    "cita": "69b617bd7aaff2c8fdd27b5c",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-15T04:03:42.576Z",
+    "updatedAt": "2026-03-15T04:04:04.376Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b6f6b4fd9182b30f17a13c",
+    "cita": "69b6f19bfd9182b30f179ff4",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-15T18:13:08.764Z",
+    "updatedAt": "2026-03-15T18:13:49.447Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8d88e07dd12483f92766a",
+    "cita": "69b8c7834d42df716e2ae2bc",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T04:29:02.624Z",
+    "updatedAt": "2026-03-17T04:29:57.072Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8d89a07dd12483f92767d",
+    "cita": "69b8ca93580e9a543fa43eb5",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T04:29:14.339Z",
+    "updatedAt": "2026-03-17T04:29:43.977Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8d8a407dd12483f927690",
+    "cita": "69b8cc7ab7f053b7a296c55b",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T04:29:24.043Z",
+    "updatedAt": "2026-03-17T04:29:52.928Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8d8ab07dd12483f9276a3",
+    "cita": "69b8cd7649ade7d9ad7fa63c",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T04:29:31.367Z",
+    "updatedAt": "2026-03-17T04:30:01.657Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8de57fdf77133d7b19ea0",
+    "cita": "69b8cf54425758156b9b99e9",
+    "monto": 22000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T04:53:43.691Z",
+    "updatedAt": "2026-03-17T04:54:09.111Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8ea1992a6ea1c533d2889",
+    "cita": "69b8e0e4fdf77133d7b19f83",
+    "monto": 15000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T05:43:53.710Z",
+    "updatedAt": "2026-03-17T06:09:39.814Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b8f00c046d7ec4d5317757",
+    "cita": "69b8db1f07dd12483f9277ac",
+    "monto": 8000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-17T06:09:16.809Z",
+    "updatedAt": "2026-03-17T06:09:44.258Z",
+    "__v": 0
+  },
+  {
+    "_id": "69bcc3958861a45e84698474",
+    "cita": "69b8f0cc046d7ec4d53177f3",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-20T03:48:37.248Z",
+    "updatedAt": "2026-03-20T03:49:04.857Z",
+    "__v": 0
+  },
+  {
+    "_id": "69bcc39d8861a45e84698487",
+    "cita": "69ba1cb9e3031e9aba41200d",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-20T03:48:45.673Z",
+    "updatedAt": "2026-03-20T03:48:59.860Z",
+    "__v": 0
+  },
+  {
+    "_id": "69bdfb41b1ca84a1f2d76bdc",
+    "cita": "69bdc4de04262512570b178f",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-21T01:58:25.579Z",
+    "updatedAt": "2026-03-21T01:58:42.597Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c34b5ca55ffe3d0c2482a3",
+    "cita": "69c2e0af163700eb32204a1a",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-25T02:41:32.372Z",
+    "updatedAt": "2026-03-25T02:41:44.814Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c5cd679e5eeb2dda901184",
+    "cita": "69c337439c8d0467e5156c29",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-27T00:20:55.783Z",
+    "updatedAt": "2026-03-27T00:21:24.692Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c5d92cdeb662831e57c80d",
+    "cita": "69c5cccc9e5eeb2dda901125",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-27T01:11:08.258Z",
+    "updatedAt": "2026-03-27T02:01:17.819Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c76c4252466a0cc8a14f6e",
+    "cita": "69c70df452466a0cc8a14ebf",
+    "monto": 35000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-28T05:50:58.722Z",
+    "updatedAt": "2026-03-28T05:51:12.665Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c7eee9917ad48400202662",
+    "cita": "69c70e9c52466a0cc8a14f03",
+    "monto": 20000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-28T15:08:25.394Z",
+    "updatedAt": "2026-03-28T15:46:52.902Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8381d917ad48400202722",
+    "cita": "69c7e988917ad48400202592",
+    "monto": 35000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-28T20:20:45.656Z",
+    "updatedAt": "2026-03-28T20:20:57.638Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c83821917ad48400202735",
+    "cita": "69c7ecba917ad48400202632",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-03-28T20:20:49.427Z",
+    "updatedAt": "2026-03-28T20:21:00.853Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d1bc0d1331ea3a80e10345",
+    "cita": "69c8b67954c57e1a406be249",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-05T01:34:05.342Z",
+    "updatedAt": "2026-04-05T01:34:29.353Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d1bc111331ea3a80e1035a",
+    "cita": "69c8b2c254c57e1a406be18d",
+    "monto": 35000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-05T01:34:09.840Z",
+    "updatedAt": "2026-04-05T01:34:25.983Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d1bc141331ea3a80e1036f",
+    "cita": "69c888e0917ad484002028c7",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-05T01:34:12.916Z",
+    "updatedAt": "2026-04-05T01:34:21.791Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d43683cefaa8f0fd5c9088",
+    "cita": "69d1d52e6031524bb5fec2f6",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-06T22:41:07.857Z",
+    "updatedAt": "2026-04-06T22:41:50.274Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d43689cefaa8f0fd5c909d",
+    "cita": "69d23871641dc906241b4fa7",
+    "monto": 100000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-06T22:41:13.206Z",
+    "updatedAt": "2026-04-06T22:41:34.287Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d43690cefaa8f0fd5c90b2",
+    "cita": "69d1e2cf3610cc4f1bfa0fe9",
+    "monto": 35000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-06T22:41:20.783Z",
+    "updatedAt": "2026-04-06T22:41:46.359Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d43694cefaa8f0fd5c90c7",
+    "cita": "69d21279641dc906241b4c90",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-06T22:41:24.899Z",
+    "updatedAt": "2026-04-06T22:41:41.768Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e2b054f5f0b1e55963def9",
+    "cita": "69e2af42f5f0b1e55963de96",
+    "monto": 80000,
+    "metodo": "efectivo",
+    "estado": "pagado",
+    "createdAt": "2026-04-17T22:12:36.554Z",
+    "updatedAt": "2026-04-17T22:13:01.364Z",
+    "__v": 0
+  }
+]

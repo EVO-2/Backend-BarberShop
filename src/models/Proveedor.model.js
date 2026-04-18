@@ -19,10 +19,10 @@ const proveedorSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
-    activo: {
+    estado: {
         type: Boolean,
         default: true
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Proveedor', proveedorSchema);
+module.exports = mongoose.models.Proveedor || mongoose.model('Proveedor', proveedorSchema);

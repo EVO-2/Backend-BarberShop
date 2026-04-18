@@ -1,6 +1,10 @@
 const Producto = require('../models/Producto.model');
 const mongoose = require('mongoose');
 
+require('../models/Categoria.model');
+require('../models/Proveedor.model');
+require('../models/Sede.model');
+
 // ===============================
 // Crear producto
 // ===============================
@@ -11,12 +15,18 @@ const crearProducto = async (req, res) => {
         const producto = new Producto(data);
         await producto.save();
 
+        const productoPopulado = await Producto.findById(producto._id)
+            .populate('categoria', 'nombre')
+            .populate('proveedor', 'nombre')
+            .populate('sede', 'nombre');
+
         res.status(201).json({
             ok: true,
-            producto
+            producto: productoPopulado
         });
 
     } catch (error) {
+        console.error('❌ ERROR CREAR PRODUCTO:', error);
         res.status(500).json({
             ok: false,
             mensaje: 'Error al crear producto',
@@ -30,38 +40,49 @@ const crearProducto = async (req, res) => {
 // ===============================
 const obtenerProductos = async (req, res) => {
     try {
-        const { desde = 0, limite = 10, busqueda = '' } = req.query;
+        const { nombre, categoria, sede, estado } = req.query;
 
-        const query = {
-            estado: true
-        };
+        let filtros = {};
 
-        // 🔍 búsqueda por nombre
-        if (busqueda) {
-            query.$text = { $search: busqueda };
+        // 🔥 SOLO activos por defecto
+        filtros.estado = true;
+
+        if (nombre && nombre.trim() !== '') {
+            filtros.nombre = { $regex: nombre, $options: 'i' };
         }
 
-        const [total, productos] = await Promise.all([
-            Producto.countDocuments(query),
-            Producto.find(query)
-                .skip(Number(desde))
-                .limit(Number(limite))
-                .populate('categoria', 'nombre')
-                .populate('proveedor', 'nombre')
-                .populate('sede', 'nombre')
-                .sort({ createdAt: -1 })
-        ]);
+        if (categoria && mongoose.Types.ObjectId.isValid(categoria)) {
+            filtros.categoria = categoria;
+        }
+
+        if (sede && mongoose.Types.ObjectId.isValid(sede)) {
+            filtros.sede = sede;
+        }
+
+        if (estado !== undefined && estado !== '') {
+            filtros.estado = estado === 'true';
+        }
+
+        console.log('📡 FILTROS BACKEND:', filtros);
+
+        const productos = await Producto.find(filtros)
+            .populate('categoria', 'nombre')
+            .populate('proveedor', 'nombre')
+            .populate('sede', 'nombre')
+            .sort({ createdAt: -1 })
+            .lean(); // 🔥 mejora rendimiento
 
         res.json({
             ok: true,
-            total,
+            total: productos.length,
             productos
         });
 
     } catch (error) {
+        console.error('❌ ERROR BACKEND PRODUCTOS:', error);
         res.status(500).json({
             ok: false,
-            mensaje: 'Error al obtener productos',
+            mensaje: 'Error obteniendo productos',
             error: error.message
         });
     }
@@ -84,7 +105,8 @@ const obtenerProducto = async (req, res) => {
         const producto = await Producto.findById(id)
             .populate('categoria', 'nombre')
             .populate('proveedor', 'nombre')
-            .populate('sede', 'nombre');
+            .populate('sede', 'nombre')
+            .lean();
 
         if (!producto || !producto.estado) {
             return res.status(404).json({
@@ -99,6 +121,7 @@ const obtenerProducto = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('❌ ERROR OBTENER PRODUCTO:', error);
         res.status(500).json({
             ok: false,
             mensaje: 'Error al obtener producto',
@@ -114,6 +137,13 @@ const actualizarProducto = async (req, res) => {
     try {
         const { id } = req.params;
         const data = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'ID inválido'
+            });
+        }
 
         const producto = await Producto.findByIdAndUpdate(
             id,
@@ -137,6 +167,7 @@ const actualizarProducto = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('❌ ERROR ACTUALIZAR PRODUCTO:', error);
         res.status(500).json({
             ok: false,
             mensaje: 'Error al actualizar producto',
@@ -151,6 +182,13 @@ const actualizarProducto = async (req, res) => {
 const eliminarProducto = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'ID inválido'
+            });
+        }
 
         const producto = await Producto.findByIdAndUpdate(
             id,
@@ -172,6 +210,7 @@ const eliminarProducto = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('❌ ERROR ELIMINAR PRODUCTO:', error);
         res.status(500).json({
             ok: false,
             mensaje: 'Error al eliminar producto',

@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "69e1c481e4888e79dccce0f7",
+    "nombre": "L’Oréal Pro",
+    "__v": 0,
+    "createdAt": "2026-04-17T05:26:25.242Z",
+    "empresa": "L’Oréal",
+    "estado": true,
+    "updatedAt": "2026-04-17T05:26:25.242Z"
+  },
+  {
+    "_id": "69e1c481e4888e79dccce0f9",
+    "nombre": "Babyliss Colombia",
+    "__v": 0,
+    "createdAt": "2026-04-17T05:26:25.250Z",
+    "empresa": "Babyliss",
+    "estado": true,
+    "updatedAt": "2026-04-17T05:26:25.250Z"
+  },
+  {
+    "_id": "69e1c481e4888e79dccce0fb",
+    "nombre": "Wella Professionals",
+    "__v": 0,
+    "createdAt": "2026-04-17T05:26:25.258Z",
+    "empresa": "Wella",
+    "estado": true,
+    "updatedAt": "2026-04-17T05:26:25.258Z"
+  }
+]

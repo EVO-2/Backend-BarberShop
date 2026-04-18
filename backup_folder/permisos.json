@@ -1,0 +1,317 @@
+[
+  {
+    "_id": "69d19e96e4888e79dcc87e7f",
+    "nombre": "ver_productos",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:22.863Z",
+    "descripcion": "",
+    "modulo": "productos",
+    "updatedAt": "2026-04-17T05:26:24.681Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e81",
+    "nombre": "crear_producto",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.014Z",
+    "descripcion": "",
+    "modulo": "productos",
+    "updatedAt": "2026-04-17T05:26:24.844Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e84",
+    "nombre": "editar_producto",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.022Z",
+    "descripcion": "",
+    "modulo": "productos",
+    "updatedAt": "2026-04-17T05:26:24.905Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e86",
+    "nombre": "eliminar_producto",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.030Z",
+    "descripcion": "",
+    "modulo": "productos",
+    "updatedAt": "2026-04-17T05:26:24.913Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e88",
+    "nombre": "ver_movimientos",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.073Z",
+    "descripcion": "",
+    "modulo": "equipomovimientos",
+    "updatedAt": "2026-04-17T05:26:24.942Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e8a",
+    "nombre": "registrar_movimiento",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.080Z",
+    "descripcion": "",
+    "modulo": "equipomovimientos",
+    "updatedAt": "2026-04-17T05:26:24.952Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e8c",
+    "nombre": "ver_equipos",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.087Z",
+    "descripcion": "",
+    "modulo": "equipos",
+    "updatedAt": "2026-04-17T05:26:24.960Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e8e",
+    "nombre": "crear_equipo",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.095Z",
+    "descripcion": "",
+    "modulo": "equipos",
+    "updatedAt": "2026-04-17T05:26:24.968Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e90",
+    "nombre": "editar_equipo",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.105Z",
+    "descripcion": "",
+    "modulo": "equipos",
+    "updatedAt": "2026-04-17T05:26:24.975Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e93",
+    "nombre": "ver_citas",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.115Z",
+    "descripcion": "",
+    "modulo": "citas",
+    "updatedAt": "2026-04-17T05:26:24.985Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e96",
+    "nombre": "crear_cita",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.124Z",
+    "descripcion": "",
+    "modulo": "citas",
+    "updatedAt": "2026-04-17T05:26:24.993Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e99",
+    "nombre": "editar_cita",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.134Z",
+    "descripcion": "",
+    "modulo": "citas",
+    "updatedAt": "2026-04-17T05:26:25.002Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e9b",
+    "nombre": "cancelar_cita",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.141Z",
+    "descripcion": "",
+    "modulo": "citas",
+    "updatedAt": "2026-04-17T05:26:25.010Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e9d",
+    "nombre": "ver_pagos",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.148Z",
+    "descripcion": "",
+    "modulo": "pagos",
+    "updatedAt": "2026-04-17T05:26:25.018Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87e9f",
+    "nombre": "registrar_pago",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.156Z",
+    "descripcion": "",
+    "modulo": "pagos",
+    "updatedAt": "2026-04-17T05:26:25.027Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ea1",
+    "nombre": "ver_clientes",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.164Z",
+    "descripcion": "",
+    "modulo": "clientes",
+    "updatedAt": "2026-04-17T05:26:25.034Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ea3",
+    "nombre": "crear_cliente",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.171Z",
+    "descripcion": "",
+    "modulo": "clientes",
+    "updatedAt": "2026-04-17T05:26:25.045Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ea5",
+    "nombre": "editar_cliente",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.179Z",
+    "descripcion": "",
+    "modulo": "clientes",
+    "updatedAt": "2026-04-17T05:26:25.053Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ea7",
+    "nombre": "ver_peluqueros",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.186Z",
+    "descripcion": "",
+    "modulo": "peluqueros",
+    "updatedAt": "2026-04-17T05:26:25.060Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ea9",
+    "nombre": "crear_peluquero",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.194Z",
+    "descripcion": "",
+    "modulo": "peluqueros",
+    "updatedAt": "2026-04-17T05:26:25.067Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eab",
+    "nombre": "editar_peluquero",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.200Z",
+    "descripcion": "",
+    "modulo": "peluqueros",
+    "updatedAt": "2026-04-17T05:26:25.075Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ead",
+    "nombre": "ver_puestos",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.207Z",
+    "descripcion": "",
+    "modulo": "puestotrabajos",
+    "updatedAt": "2026-04-17T05:26:25.082Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eaf",
+    "nombre": "asignar_puesto",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.213Z",
+    "descripcion": "",
+    "modulo": "puestotrabajos",
+    "updatedAt": "2026-04-17T05:26:25.088Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eb1",
+    "nombre": "ver_sedes",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.220Z",
+    "descripcion": "",
+    "modulo": "sedes",
+    "updatedAt": "2026-04-17T05:26:25.094Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eb3",
+    "nombre": "crear_sede",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.225Z",
+    "descripcion": "",
+    "modulo": "sedes",
+    "updatedAt": "2026-04-17T05:26:25.100Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eb5",
+    "nombre": "editar_sede",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.236Z",
+    "descripcion": "",
+    "modulo": "sedes",
+    "updatedAt": "2026-04-17T05:26:25.106Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eb7",
+    "nombre": "ver_servicios",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.242Z",
+    "descripcion": "",
+    "modulo": "servicios",
+    "updatedAt": "2026-04-17T05:26:25.112Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87eb9",
+    "nombre": "crear_servicio",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.247Z",
+    "descripcion": "",
+    "modulo": "servicios",
+    "updatedAt": "2026-04-17T05:26:25.120Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ebb",
+    "nombre": "editar_servicio",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.254Z",
+    "descripcion": "",
+    "modulo": "servicios",
+    "updatedAt": "2026-04-17T05:26:25.126Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ebd",
+    "nombre": "ver_usuarios",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.261Z",
+    "descripcion": "",
+    "modulo": "usuarios",
+    "updatedAt": "2026-04-17T05:26:25.131Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ebf",
+    "nombre": "crear_usuario",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.268Z",
+    "descripcion": "",
+    "modulo": "usuarios",
+    "updatedAt": "2026-04-17T05:26:25.137Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ec1",
+    "nombre": "editar_usuario",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.274Z",
+    "descripcion": "",
+    "modulo": "usuarios",
+    "updatedAt": "2026-04-17T05:26:25.143Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ec3",
+    "nombre": "ver_roles",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.281Z",
+    "descripcion": "",
+    "modulo": "roles",
+    "updatedAt": "2026-04-17T05:26:25.149Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ec5",
+    "nombre": "asignar_roles",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.286Z",
+    "descripcion": "",
+    "modulo": "roles",
+    "updatedAt": "2026-04-17T05:26:25.156Z"
+  },
+  {
+    "_id": "69d19e97e4888e79dcc87ec7",
+    "nombre": "ver_dashboard",
+    "__v": 0,
+    "createdAt": "2026-04-04T23:28:23.292Z",
+    "descripcion": "",
+    "modulo": "dashboard",
+    "updatedAt": "2026-04-17T05:26:25.162Z"
+  }
+]

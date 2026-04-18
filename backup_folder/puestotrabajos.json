@@ -1,0 +1,119 @@
+[
+  {
+    "_id": "68a21008dc82b0c80fa3eac9",
+    "nombre": "Puesto 1",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "peluquero": "68a21007dc82b0c80fa3eaad",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.018Z",
+    "updatedAt": "2025-08-17T17:23:20.018Z"
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eaca",
+    "nombre": "Puesto 2",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "peluquero": "68a21007dc82b0c80fa3eab2",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.018Z",
+    "updatedAt": "2025-08-17T17:23:20.018Z"
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eacb",
+    "nombre": "Puesto 3",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "peluquero": "68a21007dc82b0c80fa3eab7",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.018Z",
+    "updatedAt": "2025-08-17T17:23:20.018Z"
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eacd",
+    "nombre": "Puesto 1",
+    "sede": "68a21007dc82b0c80fa3eaa9",
+    "peluquero": "68a21007dc82b0c80fa3eabc",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.026Z",
+    "updatedAt": "2025-10-16T19:01:59.921Z"
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eace",
+    "nombre": "Puesto 2",
+    "sede": "68a21007dc82b0c80fa3eaa9",
+    "peluquero": "68a21007dc82b0c80fa3eac1",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.026Z",
+    "updatedAt": "2025-10-10T10:04:47.314Z"
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eacf",
+    "nombre": "Puesto 3",
+    "sede": "68a21007dc82b0c80fa3eaa9",
+    "peluquero": "68a21008dc82b0c80fa3eac6",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.026Z",
+    "updatedAt": "2025-08-17T17:23:20.026Z"
+  },
+  {
+    "_id": "68f1dae91811725f229db5e0",
+    "nombre": "Puesto 4",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "peluquero": "68f280171ad0db495b131578",
+    "estado": true,
+    "createdAt": "2025-10-17T05:58:01.238Z",
+    "updatedAt": "2025-10-17T17:47:29.368Z"
+  },
+  {
+    "_id": "68f299a21ad0db495b1315cc",
+    "nombre": "Silla 1",
+    "sede": "68e6129924f976793db02a61",
+    "peluquero": "69c8b5e054c57e1a406be214",
+    "estado": true,
+    "createdAt": "2025-10-17T19:31:46.027Z",
+    "updatedAt": "2026-03-29T05:17:20.764Z"
+  },
+  {
+    "_id": "68f299b41ad0db495b1315d4",
+    "nombre": "Silla 2",
+    "sede": "68e6129924f976793db02a61",
+    "peluquero": "69d1a4b3bfacebbef60e506f",
+    "estado": true,
+    "createdAt": "2025-10-17T19:32:04.018Z",
+    "updatedAt": "2026-04-05T02:51:34.722Z"
+  },
+  {
+    "_id": "68f299c51ad0db495b1315dc",
+    "nombre": "Silla 3",
+    "sede": "68e6129924f976793db02a61",
+    "peluquero": "69d1a4b3bfacebbef60e5075",
+    "estado": true,
+    "createdAt": "2025-10-17T19:32:21.421Z",
+    "updatedAt": "2026-04-05T02:54:11.076Z"
+  },
+  {
+    "_id": "69d1c2834ef8b11bb4d50659",
+    "nombre": "silla 4",
+    "sede": "68e6129924f976793db02a61",
+    "peluquero": null,
+    "estado": true,
+    "createdAt": "2026-04-05T02:01:39.860Z",
+    "updatedAt": "2026-04-05T02:01:39.860Z"
+  },
+  {
+    "_id": "69d1c5324ef8b11bb4d50731",
+    "nombre": "Silla 5",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "peluquero": "69d1a4b3bfacebbef60e5069",
+    "estado": true,
+    "createdAt": "2026-04-05T02:13:06.017Z",
+    "updatedAt": "2026-04-05T02:48:58.942Z"
+  },
+  {
+    "_id": "69d1c55b4ef8b11bb4d50749",
+    "nombre": "Silla 6",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "peluquero": null,
+    "estado": true,
+    "createdAt": "2026-04-05T02:13:47.817Z",
+    "updatedAt": "2026-04-05T02:13:47.817Z"
+  }
+]

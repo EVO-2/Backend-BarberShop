@@ -1,0 +1,207 @@
+[
+  {
+    "_id": "68a21007dc82b0c80fa3eaad",
+    "usuario": "68a21007dc82b0c80fa3eaab",
+    "especialidades": [
+      "Corte clásico",
+      "Barba"
+    ],
+    "experiencia": 3,
+    "telefono_profesional": "3100000001",
+    "direccion_profesional": "Local 1 - Sede Principal ",
+    "genero": "masculino",
+    "fecha_nacimiento": "1985-02-01T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "puestoTrabajo": "68a21008dc82b0c80fa3eac9",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.350Z",
+    "updatedAt": "2025-09-03T06:47:09.391Z",
+    "__v": 1
+  },
+  {
+    "_id": "68a21007dc82b0c80fa3eab2",
+    "usuario": "68a21007dc82b0c80fa3eab0",
+    "especialidades": [
+      "Corte clásico",
+      "Fade"
+    ],
+    "experiencia": 3,
+    "telefono_profesional": "3100000002",
+    "direccion_profesional": "Local 2 - Sede Principal",
+    "genero": "femenino",
+    "fecha_nacimiento": "1986-03-02T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "puestoTrabajo": "68a21008dc82b0c80fa3eaca",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.485Z",
+    "updatedAt": "2025-08-17T17:23:20.040Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21007dc82b0c80fa3eab7",
+    "usuario": "68a21007dc82b0c80fa3eab5",
+    "especialidades": [
+      "Corte clásico",
+      "Fade",
+      "Barba"
+    ],
+    "experiencia": 4,
+    "telefono_profesional": "3100000003",
+    "direccion_profesional": "Local 3 - Sede Principal",
+    "genero": "masculino",
+    "fecha_nacimiento": "1987-04-03T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "puestoTrabajo": "68a21008dc82b0c80fa3eacb",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.617Z",
+    "updatedAt": "2025-08-17T17:23:20.040Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21007dc82b0c80fa3eabc",
+    "usuario": "68a21007dc82b0c80fa3eaba",
+    "especialidades": [
+      "Corte clásico"
+    ],
+    "experiencia": 4,
+    "telefono_profesional": "3200000004",
+    "direccion_profesional": "Local 4 - Sede Norte",
+    "genero": "masculino",
+    "fecha_nacimiento": "1980-01-01T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa9",
+    "puestoTrabajo": "68a21008dc82b0c80fa3eacd",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.752Z",
+    "updatedAt": "2025-08-17T17:23:20.040Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21007dc82b0c80fa3eac1",
+    "usuario": "68a21007dc82b0c80fa3eabf",
+    "especialidades": [
+      "Corte clásico",
+      "Fade"
+    ],
+    "experiencia": 5,
+    "telefono_profesional": "3200000005",
+    "direccion_profesional": "Local 5 - Sede Norte",
+    "genero": "femenino",
+    "fecha_nacimiento": "1981-02-02T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa9",
+    "puestoTrabajo": "68a21008dc82b0c80fa3eace",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.882Z",
+    "updatedAt": "2025-08-17T17:23:20.040Z",
+    "__v": 0
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3eac6",
+    "usuario": "68a21007dc82b0c80fa3eac4",
+    "especialidades": [
+      "Corte clásico",
+      "Fade",
+      "Barba"
+    ],
+    "experiencia": 6,
+    "telefono_profesional": "3200000006",
+    "direccion_profesional": "Local 6 - Sede Norte",
+    "genero": "masculino",
+    "fecha_nacimiento": "1982-03-03T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa9",
+    "puestoTrabajo": "68a21008dc82b0c80fa3eacf",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:20.010Z",
+    "updatedAt": "2026-03-21T00:55:00.727Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f280171ad0db495b131578",
+    "usuario": "68f280171ad0db495b131577",
+    "especialidades": [
+      "Tinte, Rayas "
+    ],
+    "experiencia": 11,
+    "telefono_profesional": "3159013979",
+    "direccion_profesional": "cra-14a #20-08",
+    "genero": "masculino",
+    "fecha_nacimiento": "1989-06-12T05:00:00.000Z",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "puestoTrabajo": "68f1dae91811725f229db5e0",
+    "estado": true,
+    "createdAt": "2025-10-17T17:42:47.557Z",
+    "updatedAt": "2025-10-17T17:42:47.557Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8b5e054c57e1a406be214",
+    "usuario": "69c8b5e054c57e1a406be213",
+    "especialidades": [
+      "Uñas"
+    ],
+    "experiencia": 6,
+    "telefono_profesional": "3138996791",
+    "direccion_profesional": "cra 56c #56a-32",
+    "genero": "otro",
+    "fecha_nacimiento": "2008-08-08T05:00:00.000Z",
+    "sede": "68e6129924f976793db02a61",
+    "puestoTrabajo": "68f299a21ad0db495b1315cc",
+    "estado": true,
+    "createdAt": "2026-03-29T05:17:20.755Z",
+    "updatedAt": "2026-03-29T05:17:20.755Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d1a4b3bfacebbef60e5069",
+    "usuario": "69d1a39829ed6b0a0d756f7d",
+    "especialidades": [
+      "Uñas"
+    ],
+    "experiencia": 6,
+    "telefono_profesional": "3210026500",
+    "direccion_profesional": "Cra 41a #52a-9",
+    "genero": "femenino",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "puestoTrabajo": "69d1c5324ef8b11bb4d50731",
+    "estado": true,
+    "createdAt": "2026-04-04T23:54:27.217Z",
+    "updatedAt": "2026-04-05T02:48:58.965Z",
+    "__v": 1,
+    "fecha_nacimiento": "2000-05-11T05:00:00.000Z"
+  },
+  {
+    "_id": "69d1a4b3bfacebbef60e506f",
+    "usuario": "69d1a4b3bfacebbef60e506c",
+    "especialidades": [
+      "Uñas y Tintes"
+    ],
+    "experiencia": 8,
+    "telefono_profesional": "3025698741",
+    "direccion_profesional": "Cra 14a #52a-15",
+    "genero": "femenino",
+    "sede": "68e6129924f976793db02a61",
+    "puestoTrabajo": "68f299b41ad0db495b1315d4",
+    "estado": true,
+    "createdAt": "2026-04-04T23:54:27.611Z",
+    "updatedAt": "2026-04-05T02:51:34.728Z",
+    "__v": 1,
+    "fecha_nacimiento": "1995-07-18T05:00:00.000Z"
+  },
+  {
+    "_id": "69d1a4b3bfacebbef60e5075",
+    "usuario": "69d1a4b3bfacebbef60e5072",
+    "especialidades": [
+      "Uñas acrilicas"
+    ],
+    "experiencia": 5,
+    "telefono_profesional": "3115489702",
+    "direccion_profesional": "Cl 53b #100-23",
+    "genero": "femenino",
+    "sede": "68e6129924f976793db02a61",
+    "puestoTrabajo": "68f299c51ad0db495b1315dc",
+    "estado": true,
+    "createdAt": "2026-04-04T23:54:27.970Z",
+    "updatedAt": "2026-04-05T02:54:11.083Z",
+    "__v": 1,
+    "fecha_nacimiento": "1992-09-23T04:00:00.000Z"
+  }
+]

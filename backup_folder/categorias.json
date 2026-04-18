@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "69e1c481e4888e79dccce0fd",
+    "nombre": "Cuidado Capilar",
+    "__v": 0,
+    "createdAt": "2026-04-17T05:26:25.266Z",
+    "descripcion": "",
+    "estado": true,
+    "updatedAt": "2026-04-17T05:26:25.266Z"
+  },
+  {
+    "_id": "69e1c481e4888e79dccce0ff",
+    "nombre": "Herramientas",
+    "__v": 0,
+    "createdAt": "2026-04-17T05:26:25.278Z",
+    "descripcion": "",
+    "estado": true,
+    "updatedAt": "2026-04-17T05:26:25.278Z"
+  },
+  {
+    "_id": "69e1c481e4888e79dccce101",
+    "nombre": "Tintes",
+    "__v": 0,
+    "createdAt": "2026-04-17T05:26:25.285Z",
+    "descripcion": "",
+    "estado": true,
+    "updatedAt": "2026-04-17T05:26:25.285Z"
+  }
+]

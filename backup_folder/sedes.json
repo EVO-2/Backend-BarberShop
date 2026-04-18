@@ -1,0 +1,30 @@
+[
+  {
+    "_id": "68a21007dc82b0c80fa3eaa7",
+    "nombre": "Sede Principal",
+    "direccion": "Cra 123 #45-67",
+    "telefono": "3001234567",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.205Z",
+    "updatedAt": "2025-08-17T17:23:19.205Z"
+  },
+  {
+    "_id": "68a21007dc82b0c80fa3eaa9",
+    "nombre": "Sede Norte",
+    "direccion": "Av 45 #10-20",
+    "telefono": "3019876543",
+    "estado": true,
+    "createdAt": "2025-08-17T17:23:19.208Z",
+    "updatedAt": "2025-10-08T07:26:33.058Z"
+  },
+  {
+    "_id": "68e6129924f976793db02a61",
+    "nombre": "SEDE ORIENTE",
+    "direccion": "Cra-50b #101a-30",
+    "telefono": "3112365412",
+    "estado": true,
+    "createdAt": "2025-10-08T07:28:25.612Z",
+    "updatedAt": "2026-03-29T05:08:53.880Z",
+    "activo": true
+  }
+]

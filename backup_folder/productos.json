@@ -1,0 +1,50 @@
+[
+  {
+    "_id": "69e1c481e4888e79dccce103",
+    "nombre": "Gel fijador profesional",
+    "__v": 0,
+    "cantidad": 20,
+    "categoria": "69e1c481e4888e79dccce0fd",
+    "createdAt": "2026-04-17T05:26:25.294Z",
+    "estado": true,
+    "imagen": "https://res.cloudinary.com/demo/image/upload/v1/gel.jpg",
+    "precio": 15000,
+    "proveedor": "69e1c481e4888e79dccce0f7",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "tipo": "venta",
+    "updatedAt": "2026-04-17T05:26:25.294Z",
+    "usado": false
+  },
+  {
+    "_id": "69e1c481e4888e79dccce105",
+    "nombre": "Secador Babyliss 3000",
+    "__v": 0,
+    "cantidad": 5,
+    "categoria": "69e1c481e4888e79dccce0ff",
+    "createdAt": "2026-04-17T05:26:25.312Z",
+    "estado": true,
+    "imagen": "https://res.cloudinary.com/demo/image/upload/v1/secador.jpg",
+    "precio": 180000,
+    "proveedor": "69e1c481e4888e79dccce0f9",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "tipo": "uso_interno",
+    "updatedAt": "2026-04-17T05:26:25.312Z",
+    "usado": false
+  },
+  {
+    "_id": "69e1c481e4888e79dccce107",
+    "nombre": "Tinte Wella Color",
+    "__v": 0,
+    "cantidad": 30,
+    "categoria": "69e1c481e4888e79dccce101",
+    "createdAt": "2026-04-17T05:26:25.318Z",
+    "estado": true,
+    "imagen": "https://res.cloudinary.com/demo/image/upload/v1/tinte.jpg",
+    "precio": 25000,
+    "proveedor": "69e1c481e4888e79dccce0fb",
+    "sede": "68a21007dc82b0c80fa3eaa7",
+    "tipo": "venta",
+    "updatedAt": "2026-04-17T05:26:25.318Z",
+    "usado": false
+  }
+]

@@ -42,6 +42,12 @@ const productoSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  imagen: {
+    type: String,
+    trim: true,
+    match: /^https?:\/\/.+\.(jpg|jpeg|png|webp)$/i,
+    default: null
+  },
   estado: {
     type: Boolean,
     default: true

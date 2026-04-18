@@ -1,0 +1,103 @@
+[
+  {
+    "_id": "68a21008dc82b0c80fa3ead1",
+    "nombre": "Corte de cabello",
+    "precio": 15000,
+    "duracion": 30,
+    "estado": true,
+    "__v": 2,
+    "createdAt": "2025-08-17T17:23:20.037Z",
+    "updatedAt": "2026-04-05T04:29:57.562Z",
+    "inicioServicio": "2025-09-24T03:28:27.391Z",
+    "duracionRealMin": 2,
+    "finServicio": "2025-09-23T08:18:00.000Z",
+    "imagenes": [
+      "/uploads/servicios/1775363397535-739632358.png",
+      "/uploads/servicios/1775363397537-426471384.png",
+      "/uploads/servicios/1775363397540-924006371.png"
+    ],
+    "descripcion": "Corte profesional de cabello con estilo moderno y acabado limpio.",
+    "asignadoA": [
+      "barbero"
+    ]
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3ead2",
+    "nombre": "Barba",
+    "precio": 8000,
+    "duracion": 15,
+    "estado": true,
+    "__v": 2,
+    "createdAt": "2025-08-17T17:23:20.037Z",
+    "updatedAt": "2026-04-05T04:31:27.487Z",
+    "inicioServicio": "2025-09-24T03:28:27.391Z",
+    "duracionRealMin": 2,
+    "finServicio": "2025-09-23T08:18:00.000Z",
+    "imagenes": [
+      "/uploads/servicios/1775363487456-440465205.png",
+      "/uploads/servicios/1775363487457-456571687.jpeg",
+      "/uploads/servicios/1775363487458-167455099.png"
+    ],
+    "descripcion": "Arreglo de barba con perfilado preciso y acabado definido.",
+    "asignadoA": [
+      "barbero"
+    ]
+  },
+  {
+    "_id": "68a21008dc82b0c80fa3ead3",
+    "nombre": "Corte + Barba",
+    "precio": 20000,
+    "duracion": 45,
+    "estado": true,
+    "__v": 0,
+    "createdAt": "2025-08-17T17:23:20.038Z",
+    "updatedAt": "2025-10-18T03:32:41.511Z",
+    "inicioServicio": "2025-09-23T07:20:32.256Z",
+    "duracionRealMin": 1229,
+    "finServicio": "2025-09-24T03:50:00.000Z",
+    "imagenes": [
+      "/uploads/servicios/1759016700648-imagenes.jpeg",
+      "/uploads/servicios/1759016700649-imagenes.png",
+      "/uploads/servicios/1759016700653-imagenes.png"
+    ],
+    "descripcion": "Servicio completo de corte de cabello más barba con un estilo impecable."
+  },
+  {
+    "_id": "69b89c62afa0dc73c9785f07",
+    "nombre": "Uñas acrilicas",
+    "descripcion": "Uñas modernas y elegantes",
+    "precio": 80000,
+    "duracion": 60,
+    "imagenes": [
+      "/uploads/servicios/1775363164000-819180383.png",
+      "/uploads/servicios/1775363164002-342446897.png",
+      "/uploads/servicios/1775363164009-536786683.png"
+    ],
+    "estado": true,
+    "createdAt": "2026-03-17T00:12:18.521Z",
+    "updatedAt": "2026-04-05T04:26:04.043Z",
+    "__v": 3,
+    "asignadoA": [
+      "manicurista"
+    ]
+  },
+  {
+    "_id": "69c70b4852466a0cc8a14e6e",
+    "nombre": "Drop fade",
+    "descripcion": "destaca por dar un aspecto limpio, elegante y con un toque contemporáneo.",
+    "precio": 35000,
+    "duracion": 40,
+    "imagenes": [
+      "/uploads/servicios/1775363048510-196631272.png",
+      "/uploads/servicios/1775363048518-549823865.jpeg",
+      "/uploads/servicios/1775363048521-256504297.png"
+    ],
+    "estado": true,
+    "createdAt": "2026-03-27T22:57:12.555Z",
+    "updatedAt": "2026-04-05T04:24:08.565Z",
+    "__v": 3,
+    "asignadoA": [
+      "barbero"
+    ]
+  }
+]
