@@ -13,7 +13,7 @@ yarn-error.log*
 .env.*.local
 
 # Directorios de subida de archivos
-uploads/
+# uploads/
 
 # Caché
 .cache/
