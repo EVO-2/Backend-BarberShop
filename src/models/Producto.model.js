@@ -52,7 +52,7 @@ const productoSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   }
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 productoSchema.index({ nombre: 'text' });
 
