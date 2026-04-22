@@ -56,7 +56,7 @@ const equipoSchema = new mongoose.Schema({
     default: null
   },
 
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 // índice compuesto ejemplo (tipo + sede)
 equipoSchema.index({ tipo: 1, sede: 1 });

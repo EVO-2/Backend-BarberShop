@@ -26,6 +26,8 @@ const compraSchema = new mongoose.Schema({
         required: true,
         min: 0
     }
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
+
+
 
 module.exports = mongoose.model('Compra', compraSchema);

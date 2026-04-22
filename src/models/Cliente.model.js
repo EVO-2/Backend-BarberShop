@@ -21,7 +21,8 @@ const ClienteSchema = new Schema({
   fechaAlta: { type: Date, default: Date.now },
   estado: { type: Boolean, default: true }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 module.exports = model('Cliente', ClienteSchema);

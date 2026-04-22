@@ -43,7 +43,8 @@ const UsuarioSchema = new Schema({
   }
 
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 // 🔐 Middleware para hashear contraseña automáticamente

@@ -21,7 +21,8 @@ const HistorialAccesoSchema = new Schema({
     default: true // false si fue intento fallido
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 module.exports = model('HistorialAcceso', HistorialAccesoSchema);

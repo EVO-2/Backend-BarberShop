@@ -28,7 +28,8 @@ const PagoSchema = new Schema({
     type: String
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 module.exports = model('Pago', PagoSchema);

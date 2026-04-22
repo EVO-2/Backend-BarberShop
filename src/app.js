@@ -22,6 +22,8 @@ const reportesRoutes = require('./routes/reportes.routes');
 const equipoRoutes = require('./routes/equipo.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const productoRoutes = require('./routes/producto.routes');
+const proveedorRoutes = require('./routes/proveedor.routes');
+const categoriaRoutes = require('./routes/categoria.routes');
 
 // 🔥 NUEVA RUTA (PERMISOS)
 const permisosRoutes = require('./routes/permisos.routes');
@@ -38,7 +40,7 @@ const allowedOrigins = [
   'http://192.168.1.17:4200',
   // 👉 PRODUCCIÓN
   'https://frontend-barber-shop-git-master-evo6.vercel.app',
-  process.env.FRONTEND_URL // Opcional por si en un futuro configuras otra variable en Railway
+  process.env.FRONTEND_URL
 ];
 
 // 🔥 Configuración CORS dinámica (PRO)
@@ -59,12 +61,11 @@ const corsOptions = {
   credentials: true
 };
 
-// ✅ CORS correcto (NO usar app.options('*') porque rompe en Express 5)
+// ✅ CORS correcto
 app.use(cors(corsOptions));
 
 // =================== Parsers ===================
 app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
 
 // =================== Archivos estáticos ===================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -83,7 +84,7 @@ app.use('/api/peluqueros', peluqueroRoutes);
 app.use('/api/citas', citaRoutes);
 app.use('/api/sedes', sedeRoutes);
 app.use('/api/puestos', puestoRoutes);
-app.use('/api', catalogoRoutes);
+app.use('/api', catalogoRoutes); // ⚠️ revisar si aquí ya existen categorías
 app.use('/api/pagos', pagoRoutes);
 app.use('/api/servicios', servicioRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -91,6 +92,8 @@ app.use('/api/reportes', reportesRoutes);
 app.use('/api/equipos', equipoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/productos', productoRoutes);
+app.use('/api/proveedores', proveedorRoutes);
+app.use('/api/categorias', categoriaRoutes);
 app.use('/api/permisos', permisosRoutes);
 
 // =================== Manejo de errores 404 ===================

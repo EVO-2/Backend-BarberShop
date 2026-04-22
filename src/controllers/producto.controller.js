@@ -10,9 +10,66 @@ require('../models/Sede.model');
 // ===============================
 const crearProducto = async (req, res) => {
     try {
-        const data = req.body;
+        const {
+            nombre,
+            categoria,
+            proveedor,
+            sede,
+            tipo,
+            cantidad,
+            precio,
+            imagen
+        } = req.body;
 
-        const producto = new Producto(data);
+        // 🔴 Validar ObjectId
+        if (
+            !mongoose.Types.ObjectId.isValid(categoria) ||
+            !mongoose.Types.ObjectId.isValid(proveedor) ||
+            !mongoose.Types.ObjectId.isValid(sede)
+        ) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'IDs inválidos (categoria/proveedor/sede)'
+            });
+        }
+
+        // 🔴 Validar existencia real
+        const [cat, prov, sed] = await Promise.all([
+            mongoose.model('Categoria').findById(categoria),
+            mongoose.model('Proveedor').findById(proveedor),
+            mongoose.model('Sede').findOne({
+                _id: sede,
+                $or: [{ estado: true }, { activo: true }]
+            })
+        ]);
+
+        if (!cat) {
+            return res.status(400).json({ ok: false, mensaje: 'Categoría inválida' });
+        }
+
+        if (!prov) {
+            return res.status(400).json({ ok: false, mensaje: 'Proveedor inválido' });
+        }
+
+        if (!sed) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'Sede no válida o inactiva'
+            });
+        }
+
+        const producto = new Producto({
+            nombre: nombre?.trim(),
+            categoria,
+            proveedor,
+            sede,
+            tipo: tipo || 'venta',
+            cantidad: cantidad ?? 0,
+            precio: precio ?? 0,
+            imagen: imagen || null,
+            estado: true
+        });
+
         await producto.save();
 
         const productoPopulado = await Producto.findById(producto._id)
@@ -36,18 +93,17 @@ const crearProducto = async (req, res) => {
 };
 
 // ===============================
-// Obtener productos (con filtros)
+// Obtener productos
 // ===============================
 const obtenerProductos = async (req, res) => {
     try {
         const { nombre, categoria, sede, estado } = req.query;
 
-        let filtros = {};
+        let filtros = {
+            estado: true
+        };
 
-        // 🔥 SOLO activos por defecto
-        filtros.estado = true;
-
-        if (nombre && nombre.trim() !== '') {
+        if (nombre?.trim()) {
             filtros.nombre = { $regex: nombre, $options: 'i' };
         }
 
@@ -70,7 +126,7 @@ const obtenerProductos = async (req, res) => {
             .populate('proveedor', 'nombre')
             .populate('sede', 'nombre')
             .sort({ createdAt: -1 })
-            .lean(); // 🔥 mejora rendimiento
+            .lean();
 
         res.json({
             ok: true,
@@ -145,10 +201,41 @@ const actualizarProducto = async (req, res) => {
             });
         }
 
+        // 🔴 Validar IDs
+        if (data.categoria && !mongoose.Types.ObjectId.isValid(data.categoria)) {
+            return res.status(400).json({ ok: false, mensaje: 'Categoría inválida' });
+        }
+
+        if (data.proveedor && !mongoose.Types.ObjectId.isValid(data.proveedor)) {
+            return res.status(400).json({ ok: false, mensaje: 'Proveedor inválido' });
+        }
+
+        if (data.sede && !mongoose.Types.ObjectId.isValid(data.sede)) {
+            return res.status(400).json({ ok: false, mensaje: 'Sede inválida' });
+        }
+
+        // 🔴 Validar existencia real si cambian
+        if (data.sede) {
+            const sede = await mongoose.model('Sede').findOne({
+                _id: data.sede,
+                $or: [{ estado: true }, { activo: true }]
+            });
+
+            if (!sede) {
+                return res.status(400).json({
+                    ok: false,
+                    mensaje: 'Sede no válida o inactiva'
+                });
+            }
+        }
+
         const producto = await Producto.findByIdAndUpdate(
             id,
             data,
-            { new: true }
+            {
+                new: true,
+                runValidators: true
+            }
         )
             .populate('categoria', 'nombre')
             .populate('proveedor', 'nombre')
@@ -177,7 +264,7 @@ const actualizarProducto = async (req, res) => {
 };
 
 // ===============================
-// Eliminar producto (SOFT DELETE)
+// Eliminar producto
 // ===============================
 const eliminarProducto = async (req, res) => {
     try {

@@ -1,21 +1,26 @@
-const mongoose = require('mongoose');
+const { Schema, model, models } = require('mongoose');
 
-const proveedorSchema = new mongoose.Schema({
+const ProveedorSchema = new Schema({
     nombre: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        uppercase: true,
+        minlength: 2,
+        maxlength: 100
     },
-    contacto: {
-        nombre: { type: String, trim: true },
-        telefono: { type: String, trim: true },
-        email: { type: String, trim: true }
+    telefono: {
+        type: String,
+        trim: true,
+        match: [/^[0-9+ ]+$/, 'Teléfono inválido']
+    },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        match: [/^\S+@\S+\.\S+$/, 'Email inválido']
     },
     direccion: {
-        type: String,
-        trim: true
-    },
-    empresa: {
         type: String,
         trim: true
     },
@@ -23,6 +28,12 @@ const proveedorSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     }
-}, { timestamps: true });
+}, {
+    timestamps: true,
+    versionKey: false
+});
 
-module.exports = mongoose.models.Proveedor || mongoose.model('Proveedor', proveedorSchema);
+// 🔎 Índice para búsquedas rápidas
+ProveedorSchema.index({ nombre: 1 });
+
+module.exports = models.Proveedor || model('Proveedor', ProveedorSchema);

@@ -28,7 +28,8 @@ const InventarioSchema = new Schema({
     default: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 module.exports = model('Inventario', InventarioSchema);

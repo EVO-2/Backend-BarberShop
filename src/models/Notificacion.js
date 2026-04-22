@@ -11,6 +11,6 @@ const NotificacionSchema = new mongoose.Schema({
     },
     payload: Object,
     error: String
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Notificacion', NotificacionSchema);

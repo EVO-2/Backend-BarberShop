@@ -28,6 +28,6 @@ const movimientoSchema = new mongoose.Schema({
   referencia: {
     type: String
   }
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Movimiento', movimientoSchema);

@@ -29,7 +29,7 @@ const PermisoSchema = new mongoose.Schema(
             default: ''
         }
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 PermisoSchema.index({ nombre: 1, modulo: 1 }, { unique: true });

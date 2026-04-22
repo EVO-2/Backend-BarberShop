@@ -34,7 +34,8 @@ const ReporteSchema = new Schema({
     default: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 module.exports = model('Reporte', ReporteSchema);

@@ -33,7 +33,8 @@ const CitaSchema = new Schema({
 
   observacion: { type: String, maxlength: 500 }
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 /**

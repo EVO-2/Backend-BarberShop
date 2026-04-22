@@ -36,6 +36,6 @@ const movimientoSchema = new mongoose.Schema({
 
   creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null },
 
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('EquipoMovimiento', movimientoSchema);
