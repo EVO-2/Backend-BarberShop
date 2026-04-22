@@ -1,41 +1,60 @@
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 require('dotenv').config();
 
+// 🔹 Nombre del bucket centralizado
+const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'backend-barbershop';
+
+// 🔹 Cliente S3 compatible con MinIO
 const s3Client = new S3Client({
-    region: 'us-east-1', // Requisito de AWS SDK (MinIO lo ignora si no está configurado)
+    region: 'us-east-1', // Requisito del SDK
     credentials: {
         accessKeyId: process.env.MINIO_ACCESS_KEY,
         secretAccessKey: process.env.MINIO_SECRET_KEY,
     },
-    // Construye el Endpoint con o sin puerto dependiendo de cómo se envíe, 
-    // en easypanel usualmente 443 no hace falta especificarlo en la URL si HTTPS es estándar, pero lo uniremos.
-    endpoint: `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT}${process.env.MINIO_PORT === '443' || process.env.MINIO_PORT === '80' ? '' : ':' + process.env.MINIO_PORT}`,
-    forcePathStyle: true, // Esto es OBLIGATORIO para MinIO u otros S3 compatibles
+    endpoint: `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT}${process.env.MINIO_PORT === '443' || process.env.MINIO_PORT === '80'
+            ? ''
+            : ':' + process.env.MINIO_PORT
+        }`,
+    forcePathStyle: true, // 🔴 OBLIGATORIO para MinIO
 });
 
-// Utilidad para eliminar imágenes del Bucket cuando se actualicen o borren registros
+// 🔹 Utilidad para eliminar imágenes del Bucket
 const eliminarArchivoMinio = async (fileUrl) => {
     if (!fileUrl) return;
 
     try {
-        // fileUrl usualmente es: https://[endpoint]/[bucket]/ruta/al/archivo.jpg
-        const urlObj = new URL(fileUrl);
-        const bucketName = process.env.MINIO_BUCKET_NAME || 'BACKEND-BARBERSHOP';
+        // Validar que sea una URL válida
+        let urlObj;
+        try {
+            urlObj = new URL(fileUrl);
+        } catch (err) {
+            console.warn('⚠️ URL inválida, no se elimina archivo:', fileUrl);
+            return;
+        }
 
-        // Limpiar el pathname (ej. "/BACKEND-BARBERSHOP/servicios/foto.jpg" -> "BACKEND-BARBERSHOP/servicios/foto.jpg")
-        let key = urlObj.pathname.substring(1); 
-        
-        // Quitar el nombre del bucket al inicio si existe en el path
-        if (key.startsWith(`${bucketName}/`)) {
-            key = key.replace(`${bucketName}/`, '');
+        // Ejemplo:
+        // https://dominio/bucket/perfiles/imagen.jpg
+        // pathname: /bucket/perfiles/imagen.jpg
+        let key = urlObj.pathname.substring(1); // quita el "/"
+
+        // 🔹 Remover bucket si viene incluido en el path
+        if (key.startsWith(`${BUCKET_NAME}/`)) {
+            key = key.replace(`${BUCKET_NAME}/`, '');
+        }
+
+        // 🔹 Validación extra
+        if (!key || key.trim() === '') {
+            console.warn('⚠️ Key vacío, no se elimina archivo');
+            return;
         }
 
         const command = new DeleteObjectCommand({
-            Bucket: bucketName,
+            Bucket: BUCKET_NAME,
             Key: key,
         });
 
         await s3Client.send(command);
+
         console.log(`🗑️ Archivo eliminado de MinIO: ${key}`);
     } catch (error) {
         console.error('⚠️ Error eliminando archivo de MinIO:', error.message);
@@ -44,5 +63,6 @@ const eliminarArchivoMinio = async (fileUrl) => {
 
 module.exports = {
     s3Client,
-    eliminarArchivoMinio
+    eliminarArchivoMinio,
+    BUCKET_NAME,
 };

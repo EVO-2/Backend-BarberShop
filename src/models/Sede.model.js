@@ -22,7 +22,7 @@ const SedeSchema = new Schema({
     type: String,
     trim: true
   },
-  activo: {
+  estado: {
     type: Boolean,
     default: true
   }

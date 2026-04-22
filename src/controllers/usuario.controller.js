@@ -323,6 +323,8 @@ const cambiarEstadoUsuario = async (req, res) => {
 // ==========================
 //     Subir Foto de Perfil
 // ==========================
+const { eliminarArchivoMinio, BUCKET_NAME } = require('../config/minio');
+
 const subirFotoPerfil = async (req, res) => {
   try {
     const { id } = req.params;
@@ -331,17 +333,36 @@ const subirFotoPerfil = async (req, res) => {
       return res.status(400).json({ mensaje: 'No se subió ninguna foto' });
     }
 
-    const usuario = await Usuario.findByIdAndUpdate(
-      id,
-      { foto: req.file.location },
-      { new: true }
-    );
+    // 🔹 Buscar usuario primero (no actualizar aún)
+    const usuario = await Usuario.findById(id);
 
-    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
 
-    res.status(200).json({ foto: usuario.foto, usuario });
+    // 🗑️ Eliminar imagen anterior si existe
+    if (usuario.foto) {
+      await eliminarArchivoMinio(usuario.foto);
+    }
+
+    // 🔹 Construir URL real de MinIO
+    const fotoUrl = `${process.env.MINIO_PUBLIC_URL}/${BUCKET_NAME}/${req.file.key}`;
+
+    // 🔹 Guardar nueva foto
+    usuario.foto = fotoUrl;
+    await usuario.save();
+
+    res.status(200).json({
+      foto: usuario.foto,
+      usuario
+    });
+
   } catch (error) {
-    return res.status(500).json({ mensaje: 'Error al subir la foto de perfil', error: error.message });
+    console.error("🔥 ERROR MINIO:", error);
+    return res.status(500).json({
+      mensaje: 'Error al subir la foto de perfil',
+      error: error.message
+    });
   }
 };
 
