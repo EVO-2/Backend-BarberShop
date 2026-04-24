@@ -352,11 +352,63 @@ const cambiarEstadoProducto = async (req, res) => {
     }
 };
 
+const { eliminarArchivoMinio, BUCKET_NAME } = require('../config/minio');
+
+// ===============================
+// Subir o actualizar imagen de un producto
+// ===============================
+const subirImagenProducto = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!req.file) {
+            return res.status(400).json({ mensaje: "No se subió ninguna imagen" });
+        }
+
+        const producto = await Producto.findById(id);
+        if (!producto) {
+            // Si el producto no existe pero se subió imagen, eliminarla para no dejar basura
+            await eliminarArchivoMinio(`${BUCKET_NAME}/${req.file.key}`);
+            return res.status(404).json({ mensaje: "Producto no encontrado" });
+        }
+
+        // Obtener la URL de MinIO usando el mismo fallback seguro que en usuarios
+        let imagenUrl = req.file.location;
+        if (!imagenUrl) {
+            const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+            const port = process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? `:${process.env.MINIO_PORT}` : '';
+            const minioPublicUrl = process.env.MINIO_PUBLIC_URL || `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpoint}${port}`;
+            imagenUrl = `${minioPublicUrl}/${BUCKET_NAME}/${req.file.key}`;
+        }
+
+        // Si ya tenía imagen, borrar la anterior
+        if (producto.imagen) {
+            await eliminarArchivoMinio(producto.imagen);
+        }
+
+        producto.imagen = imagenUrl;
+        await producto.save();
+
+        res.json({
+            ok: true,
+            mensaje: "Imagen actualizada exitosamente",
+            imagenUrl,
+            producto
+        });
+
+    } catch (error) {
+        console.error("❌ Error en subirImagenProducto:", error);
+        res.status(500).json({ mensaje: "Hubo un error al subir la imagen", error: error.message });
+    }
+};
+
+
 module.exports = {
     crearProducto,
     obtenerProductos,
     obtenerProducto,
     actualizarProducto,
     eliminarProducto,
-    cambiarEstadoProducto
+    cambiarEstadoProducto,
+    subirImagenProducto
 };

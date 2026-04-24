@@ -6,7 +6,8 @@ const {
    obtenerProducto,
    actualizarProducto,
    eliminarProducto,
-   cambiarEstadoProducto
+   cambiarEstadoProducto,
+   subirImagenProducto
 } = require('../controllers/producto.controller');
 
 const { validarJWT } = require('../middlewares/validarJWT');
@@ -40,5 +41,23 @@ router.delete('/:id', eliminarProducto);
 
 // 🔄 Cambiar estado (activar/desactivar)
 router.patch('/:id/estado', cambiarEstadoProducto);
+
+// 📷 Subir o actualizar imagen del producto
+const { createUploadMiddleware } = require('../middlewares/upload');
+const uploadProductos = createUploadMiddleware('productos');
+
+router.post(
+  '/:id/imagen',
+  (req, res, next) => {
+    uploadProductos.single('imagen')(req, res, function (err) {
+      if (err) {
+        console.error('❌ Error de multer/S3 (Productos):', err);
+        return res.status(500).json({ mensaje: 'Error al procesar la imagen', error: err.message });
+      }
+      next();
+    });
+  },
+  subirImagenProducto
+);
 
 module.exports = router;
