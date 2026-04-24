@@ -9,7 +9,7 @@ const secretAccessKey = process.env.MINIO_SECRET_KEY ? process.env.MINIO_SECRET_
 const endpointVal = process.env.MINIO_ENDPOINT ? process.env.MINIO_ENDPOINT.trim() : undefined;
 
 if (!accessKeyId || !secretAccessKey) {
-    console.error('❌ ERROR CRÍTICO: MINIO_ACCESS_KEY o MINIO_SECRET_KEY no están definidos o están vacíos en las variables de entorno.');
+    throw new Error('❌ ERROR FATAL: MINIO_ACCESS_KEY o MINIO_SECRET_KEY no están definidos en Railway. Revisa la pestaña de variables.');
 }
 
 // 🔹 Cliente S3 compatible con MinIO
