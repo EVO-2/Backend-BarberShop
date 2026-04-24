@@ -1,4 +1,4 @@
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectCommand, CreateBucketCommand, HeadBucketCommand, PutBucketPolicyCommand } = require('@aws-sdk/client-s3');
 require('dotenv').config();
 
 // 🔹 Nombre del bucket centralizado
@@ -75,3 +75,44 @@ module.exports = {
     eliminarArchivoMinio,
     BUCKET_NAME,
 };
+
+// 🔹 Inicializar Bucket
+const initBucket = async () => {
+    try {
+        await s3Client.send(new HeadBucketCommand({ Bucket: BUCKET_NAME }));
+        console.log(`✅ MinIO Bucket '${BUCKET_NAME}' listo.`);
+    } catch (err) {
+        if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+            console.log(`⚠️ MinIO Bucket '${BUCKET_NAME}' no existe. Creando...`);
+            try {
+                await s3Client.send(new CreateBucketCommand({ Bucket: BUCKET_NAME }));
+                console.log(`✅ MinIO Bucket '${BUCKET_NAME}' creado exitosamente.`);
+                
+                // Configurar política pública
+                const policy = {
+                    Version: "2012-10-17",
+                    Statement: [
+                        {
+                            Effect: "Allow",
+                            Principal: "*",
+                            Action: ["s3:GetObject"],
+                            Resource: [`arn:aws:s3:::${BUCKET_NAME}/*`]
+                        }
+                    ]
+                };
+                await s3Client.send(new PutBucketPolicyCommand({
+                    Bucket: BUCKET_NAME,
+                    Policy: JSON.stringify(policy)
+                }));
+                console.log(`✅ Política pública configurada para el bucket '${BUCKET_NAME}'.`);
+                
+            } catch (createErr) {
+                console.error(`❌ Error al crear bucket MinIO '${BUCKET_NAME}':`, createErr.message);
+            }
+        } else {
+            console.error(`❌ Error al verificar bucket MinIO '${BUCKET_NAME}':`, err.message);
+        }
+    }
+};
+
+initBucket();
