@@ -11,10 +11,9 @@ const s3Client = new S3Client({
         accessKeyId: process.env.MINIO_ACCESS_KEY,
         secretAccessKey: process.env.MINIO_SECRET_KEY,
     },
-    endpoint: `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT}${process.env.MINIO_PORT === '443' || process.env.MINIO_PORT === '80'
-            ? ''
-            : ':' + process.env.MINIO_PORT
-        }`,
+    endpoint: process.env.MINIO_ENDPOINT 
+        ? `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT}${process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? ':' + process.env.MINIO_PORT : ''}`
+        : undefined,
     forcePathStyle: true, // 🔴 OBLIGATORIO para MinIO
 });
 

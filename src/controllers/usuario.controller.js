@@ -346,7 +346,13 @@ const subirFotoPerfil = async (req, res) => {
     }
 
     // 🔹 Construir URL real de MinIO
-    const fotoUrl = `${process.env.MINIO_PUBLIC_URL}/${BUCKET_NAME}/${req.file.key}`;
+    let fotoUrl = req.file.location;
+    if (!fotoUrl) {
+      const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+      const port = process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? `:${process.env.MINIO_PORT}` : '';
+      const minioPublicUrl = process.env.MINIO_PUBLIC_URL || `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpoint}${port}`;
+      fotoUrl = `${minioPublicUrl}/${BUCKET_NAME}/${req.file.key}`;
+    }
 
     // 🔹 Guardar nueva foto
     usuario.foto = fotoUrl;
@@ -479,6 +485,25 @@ const actualizarPerfil = async (req, res) => {
       return res.status(404).json({ mensaje: "Usuario no encontrado" });
     }
 
+    let nuevaFoto = datos.foto ?? usuarioActual.foto;
+    if (req.file) {
+      nuevaFoto = req.file.location;
+      if (!nuevaFoto) {
+        const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+        const port = process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? `:${process.env.MINIO_PORT}` : '';
+        const minioPublicUrl = process.env.MINIO_PUBLIC_URL || `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpoint}${port}`;
+        nuevaFoto = `${minioPublicUrl}/${BUCKET_NAME}/${req.file.key}`;
+      }
+      // Opcional: Eliminar foto anterior si cambió
+      if (usuarioActual.foto && usuarioActual.foto !== nuevaFoto) {
+        try {
+          await eliminarArchivoMinio(usuarioActual.foto);
+        } catch (e) {
+          console.error("No se pudo eliminar la foto anterior", e);
+        }
+      }
+    }
+
     // Actualizar datos generales del usuario
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
       usuarioId,
@@ -487,7 +512,7 @@ const actualizarPerfil = async (req, res) => {
         correo: datos.correo ?? usuarioActual.correo,
         genero: datos.genero ?? usuarioActual.genero,
         fecha_nacimiento: datos.fecha_nacimiento ?? usuarioActual.fecha_nacimiento,
-        foto: datos.foto ?? usuarioActual.foto
+        foto: nuevaFoto
       },
       { new: true }
     ).populate("rol");

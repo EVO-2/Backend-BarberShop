@@ -35,7 +35,15 @@ router.get(
 router.put(
   '/perfil',
   [validarJWT, tieneRol('cliente', 'peluquero', 'barbero', 'manicurista', 'admin')],
-  upload.single('foto'),
+  (req, res, next) => {
+    upload.single('foto')(req, res, function (err) {
+      if (err) {
+        console.error('❌ Error de multer/S3:', err);
+        return res.status(500).json({ mensaje: 'Error al procesar la imagen', error: err.message });
+      }
+      next();
+    });
+  },
   actualizarPerfil
 );
 
@@ -118,9 +126,17 @@ router.post(
     validarJWT,
     tieneRol('admin', 'cliente', 'barbero', 'manicurista'),
     param('id').isMongoId().withMessage('ID inválido'),
-    validarCampos,
-    upload.single('foto')
+    validarCampos
   ],
+  (req, res, next) => {
+    upload.single('foto')(req, res, function (err) {
+      if (err) {
+        console.error('❌ Error de multer/S3:', err);
+        return res.status(500).json({ mensaje: 'Error al procesar la imagen', error: err.message });
+      }
+      next();
+    });
+  },
   subirFotoPerfil
 );
 
