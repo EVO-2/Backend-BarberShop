@@ -75,7 +75,8 @@ const crearProducto = async (req, res) => {
         const productoPopulado = await Producto.findById(producto._id)
             .populate('categoria', 'nombre')
             .populate('proveedor', 'nombre')
-            .populate('sede', 'nombre');
+            .populate('sede', 'nombre')
+            .lean();
 
         res.status(201).json({
             ok: true,
@@ -214,7 +215,7 @@ const actualizarProducto = async (req, res) => {
             return res.status(400).json({ ok: false, mensaje: 'Sede inválida' });
         }
 
-        // 🔴 Validar existencia real si cambian
+        // 🔴 Validar sede activa
         if (data.sede) {
             const sede = await mongoose.model('Sede').findOne({
                 _id: data.sede,
@@ -239,7 +240,8 @@ const actualizarProducto = async (req, res) => {
         )
             .populate('categoria', 'nombre')
             .populate('proveedor', 'nombre')
-            .populate('sede', 'nombre');
+            .populate('sede', 'nombre')
+            .lean();
 
         if (!producto) {
             return res.status(404).json({
@@ -264,7 +266,7 @@ const actualizarProducto = async (req, res) => {
 };
 
 // ===============================
-// Eliminar producto
+// Eliminar producto (soft delete)
 // ===============================
 const eliminarProducto = async (req, res) => {
     try {
@@ -281,7 +283,11 @@ const eliminarProducto = async (req, res) => {
             id,
             { estado: false },
             { new: true }
-        );
+        )
+            .populate('categoria', 'nombre')
+            .populate('proveedor', 'nombre')
+            .populate('sede', 'nombre')
+            .lean();
 
         if (!producto) {
             return res.status(404).json({
@@ -306,10 +312,106 @@ const eliminarProducto = async (req, res) => {
     }
 };
 
+// ===============================
+// 🔴 Desactivar producto
+// ===============================
+const desactivarProducto = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'ID inválido'
+            });
+        }
+
+        const producto = await Producto.findByIdAndUpdate(
+            id,
+            { estado: false },
+            { new: true }
+        )
+            .populate('categoria', 'nombre')
+            .populate('proveedor', 'nombre')
+            .populate('sede', 'nombre')
+            .lean();
+
+        if (!producto) {
+            return res.status(404).json({
+                ok: false,
+                mensaje: 'Producto no encontrado'
+            });
+        }
+
+        res.json({
+            ok: true,
+            mensaje: 'Producto desactivado',
+            producto
+        });
+
+    } catch (error) {
+        console.error('❌ ERROR DESACTIVAR PRODUCTO:', error);
+        res.status(500).json({
+            ok: false,
+            mensaje: 'Error al desactivar producto',
+            error: error.message
+        });
+    }
+};
+
+// ===============================
+// 🟢 Activar producto
+// ===============================
+const activarProducto = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: 'ID inválido'
+            });
+        }
+
+        const producto = await Producto.findByIdAndUpdate(
+            id,
+            { estado: true },
+            { new: true }
+        )
+            .populate('categoria', 'nombre')
+            .populate('proveedor', 'nombre')
+            .populate('sede', 'nombre')
+            .lean();
+
+        if (!producto) {
+            return res.status(404).json({
+                ok: false,
+                mensaje: 'Producto no encontrado'
+            });
+        }
+
+        res.json({
+            ok: true,
+            mensaje: 'Producto activado',
+            producto
+        });
+
+    } catch (error) {
+        console.error('❌ ERROR ACTIVAR PRODUCTO:', error);
+        res.status(500).json({
+            ok: false,
+            mensaje: 'Error al activar producto',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     crearProducto,
     obtenerProductos,
     obtenerProducto,
     actualizarProducto,
-    eliminarProducto
+    eliminarProducto,
+    desactivarProducto,
+    activarProducto
 };

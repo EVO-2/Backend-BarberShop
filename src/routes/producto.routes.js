@@ -1,11 +1,13 @@
 const { Router } = require('express');
 
 const {
-    crearProducto,
-    obtenerProductos,
-    obtenerProducto,
-    actualizarProducto,
-    eliminarProducto
+   crearProducto,
+   obtenerProductos,
+   obtenerProducto,
+   actualizarProducto,
+   eliminarProducto,
+   desactivarProducto,
+   activarProducto
 } = require('../controllers/producto.controller');
 
 const { validarJWT } = require('../middlewares/validarJWT');
@@ -36,5 +38,11 @@ router.put('/:id', actualizarProducto);
 
 // 🗑️ Eliminar (soft delete)
 router.delete('/:id', eliminarProducto);
+
+// 🔴 Desactivar producto
+router.put('/desactivar/:id', desactivarProducto);
+
+// 🟢 Activar producto
+router.put('/activar/:id', activarProducto);
 
 module.exports = router;
