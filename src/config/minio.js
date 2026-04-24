@@ -4,15 +4,23 @@ require('dotenv').config();
 // 🔹 Nombre del bucket centralizado
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'backend-barbershop';
 
+const accessKeyId = process.env.MINIO_ACCESS_KEY ? process.env.MINIO_ACCESS_KEY.trim() : undefined;
+const secretAccessKey = process.env.MINIO_SECRET_KEY ? process.env.MINIO_SECRET_KEY.trim() : undefined;
+const endpointVal = process.env.MINIO_ENDPOINT ? process.env.MINIO_ENDPOINT.trim() : undefined;
+
+if (!accessKeyId || !secretAccessKey) {
+    console.error('❌ ERROR CRÍTICO: MINIO_ACCESS_KEY o MINIO_SECRET_KEY no están definidos o están vacíos en las variables de entorno.');
+}
+
 // 🔹 Cliente S3 compatible con MinIO
 const s3Client = new S3Client({
     region: 'us-east-1', // Requisito del SDK
     credentials: {
-        accessKeyId: process.env.MINIO_ACCESS_KEY,
-        secretAccessKey: process.env.MINIO_SECRET_KEY,
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey,
     },
-    endpoint: process.env.MINIO_ENDPOINT 
-        ? `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT}${process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? ':' + process.env.MINIO_PORT : ''}`
+    endpoint: endpointVal 
+        ? `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpointVal}${process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? ':' + process.env.MINIO_PORT.trim() : ''}`
         : undefined,
     forcePathStyle: true, // 🔴 OBLIGATORIO para MinIO
 });
