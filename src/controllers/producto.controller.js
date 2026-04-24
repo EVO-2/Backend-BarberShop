@@ -312,12 +312,10 @@ const eliminarProducto = async (req, res) => {
     }
 };
 
-// ===============================
-// 🔴 Desactivar producto
-// ===============================
-const desactivarProducto = async (req, res) => {
+const cambiarEstadoProducto = async (req, res) => {
     try {
         const { id } = req.params;
+        const { estado } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -328,13 +326,9 @@ const desactivarProducto = async (req, res) => {
 
         const producto = await Producto.findByIdAndUpdate(
             id,
-            { estado: false },
+            { estado },
             { new: true }
-        )
-            .populate('categoria', 'nombre')
-            .populate('proveedor', 'nombre')
-            .populate('sede', 'nombre')
-            .lean();
+        );
 
         if (!producto) {
             return res.status(404).json({
@@ -345,62 +339,14 @@ const desactivarProducto = async (req, res) => {
 
         res.json({
             ok: true,
-            mensaje: 'Producto desactivado',
             producto
         });
 
     } catch (error) {
-        console.error('❌ ERROR DESACTIVAR PRODUCTO:', error);
+        console.error('❌ ERROR CAMBIAR ESTADO:', error);
         res.status(500).json({
             ok: false,
-            mensaje: 'Error al desactivar producto',
-            error: error.message
-        });
-    }
-};
-
-// ===============================
-// 🟢 Activar producto
-// ===============================
-const activarProducto = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                ok: false,
-                mensaje: 'ID inválido'
-            });
-        }
-
-        const producto = await Producto.findByIdAndUpdate(
-            id,
-            { estado: true },
-            { new: true }
-        )
-            .populate('categoria', 'nombre')
-            .populate('proveedor', 'nombre')
-            .populate('sede', 'nombre')
-            .lean();
-
-        if (!producto) {
-            return res.status(404).json({
-                ok: false,
-                mensaje: 'Producto no encontrado'
-            });
-        }
-
-        res.json({
-            ok: true,
-            mensaje: 'Producto activado',
-            producto
-        });
-
-    } catch (error) {
-        console.error('❌ ERROR ACTIVAR PRODUCTO:', error);
-        res.status(500).json({
-            ok: false,
-            mensaje: 'Error al activar producto',
+            mensaje: 'Error al cambiar estado',
             error: error.message
         });
     }
@@ -412,6 +358,5 @@ module.exports = {
     obtenerProducto,
     actualizarProducto,
     eliminarProducto,
-    desactivarProducto,
-    activarProducto
+    cambiarEstadoProducto
 };

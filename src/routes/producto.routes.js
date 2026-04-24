@@ -6,8 +6,7 @@ const {
    obtenerProducto,
    actualizarProducto,
    eliminarProducto,
-   desactivarProducto,
-   activarProducto
+   cambiarEstadoProducto
 } = require('../controllers/producto.controller');
 
 const { validarJWT } = require('../middlewares/validarJWT');
@@ -39,10 +38,7 @@ router.put('/:id', actualizarProducto);
 // 🗑️ Eliminar (soft delete)
 router.delete('/:id', eliminarProducto);
 
-// 🔴 Desactivar producto
-router.put('/desactivar/:id', desactivarProducto);
-
-// 🟢 Activar producto
-router.put('/activar/:id', activarProducto);
+// 🔄 Cambiar estado (activar/desactivar)
+router.patch('/:id/estado', cambiarEstadoProducto);
 
 module.exports = router;
