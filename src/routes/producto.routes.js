@@ -7,7 +7,8 @@ const {
    actualizarProducto,
    eliminarProducto,
    cambiarEstadoProducto,
-   subirImagenProducto
+   subirImagenProducto,
+   registrarVentaProducto
 } = require('../controllers/producto.controller');
 
 const { validarJWT } = require('../middlewares/validarJWT');

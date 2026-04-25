@@ -358,8 +358,7 @@ const { eliminarArchivoMinio, BUCKET_NAME } = require('../config/minio');
 // ===============================
 // Subir o actualizar imagen de un producto
 // ===============================
-const subirImagenProducto,
-    registrarVentaProducto = async (req, res) => {
+const subirImagenProducto = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -454,5 +453,6 @@ module.exports = {
     actualizarProducto,
     eliminarProducto,
     cambiarEstadoProducto,
-    subirImagenProducto
+    subirImagenProducto,
+    registrarVentaProducto
 };

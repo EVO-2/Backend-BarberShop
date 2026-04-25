@@ -80,8 +80,7 @@ const obtenerResumenDashboard = async (req, res) => {
             clientesUnicos,
             peluquerosUnicos,
             peluqueroTopAgg,
-            clienteTop,
-            productosTopAgg
+            clienteTopAgg
         ] = await Promise.all([
 
             Cita.countDocuments({
@@ -414,7 +413,8 @@ const obtenerResumenDashboard = async (req, res) => {
             serviciosTop,
 
             peluqueroTop,
-            clienteTop
+            clienteTop,
+            productosTop
         });
 
     } catch (error) {
