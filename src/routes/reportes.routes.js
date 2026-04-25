@@ -47,4 +47,12 @@ router.get(
   obtenerReporteInventario
 );
 
+// 🛒 Reporte de productos agrupados por sede
+router.get(
+  '/productos',
+  validarJWT,
+  verificarRol('admin'),
+  require('../controllers/reportes.controller').obtenerReporteProductos
+);
+
 module.exports = router;

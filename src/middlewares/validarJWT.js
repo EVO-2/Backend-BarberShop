@@ -9,7 +9,6 @@ const validarJWT = async (req, res, next) => {
   const authHeader = req.header('Authorization') || req.header('authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.error('❌ validarJWT: Token no proporcionado o formato incorrecto. authHeader:', authHeader);
     return res.status(401).json({
       mensaje: 'Token no proporcionado o formato incorrecto',
     });
@@ -33,7 +32,6 @@ const validarJWT = async (req, res, next) => {
       });
 
     if (!usuario) {
-      console.error('❌ validarJWT: Token no válido – usuario no existe para uid:', uid);
       return res.status(401).json({
         mensaje: 'Token no válido – usuario no existe'
       });
@@ -57,7 +55,6 @@ const validarJWT = async (req, res, next) => {
     next();
 
   } catch (error) {
-    console.error('❌ validarJWT: Excepción capturada:', error.message);
     return res.status(401).json({
       mensaje: 'Token no válido',
       error: error.message,
@@ -74,7 +71,6 @@ const verificarRol = (...rolesPermitidos) => {
   return (req, res, next) => {
 
     if (!req.rol) {
-      console.error('❌ verificarRol: El rol no está definido en el request');
       return res.status(500).json({
         mensaje: 'El rol no está definido en el request'
       });
@@ -83,7 +79,6 @@ const verificarRol = (...rolesPermitidos) => {
     const roles = rolesPermitidos.map(r => r.toLowerCase());
 
     if (!roles.includes(req.rol)) {
-      console.error('❌ verificarRol: Acceso denegado. Rol no autorizado:', req.rol);
       return res.status(403).json({
         mensaje: `Acceso denegado. Rol '${req.rol}' no autorizado`
       });

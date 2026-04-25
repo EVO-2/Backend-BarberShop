@@ -186,8 +186,6 @@ const obtenerReporteIngresos = async (req, res) => {
 
   } catch (error) {
 
-    console.error('❌ Error al obtener reporte de ingresos:', error);
-
     res.status(500).json({
       ok: false,
       mensaje: 'Error al generar el reporte de ingresos',
@@ -288,8 +286,6 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
     res.json(resultado);
 
   } catch (error) {
-
-    console.error('❌ Error al obtener reporte de citas por barbero:', error);
 
     res.status(500).json({
       ok: false,
@@ -393,8 +389,6 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 
   } catch (error) {
 
-    console.error('❌ Error al obtener reporte de clientes frecuentes:', error);
-
     res.status(500).json({
       ok: false,
       mensaje: 'Error generando reporte de clientes frecuentes',
@@ -463,10 +457,86 @@ const obtenerReporteInventario = async (req, res) => {
       reporte: resultado,
     });
   } catch (error) {
-    console.error('❌ Error al obtener reporte de inventario por sede:', error);
     res.status(500).json({
       ok: false,
       mensaje: 'Error generando reporte de inventario',
+      error: error.message,
+    });
+  }
+};
+
+// =================== 📦 Reporte de Productos ===================
+const obtenerReporteProductos = async (req, res) => {
+  try {
+    const resultado = await Producto.aggregate([
+      // 1️⃣ Agrupar por sede y categoría, sumando cantidades reales
+      {
+        $group: {
+          _id: {
+            sede: '$sede',
+            categoria: '$categoria',
+          },
+          cantidadTotal: { $sum: '$cantidad' },
+        },
+      },
+
+      // 2️⃣ Lookup para traer nombre de la sede
+      {
+        $lookup: {
+          from: 'sedes',
+          localField: '_id.sede',
+          foreignField: '_id',
+          as: 'sede',
+        },
+      },
+      { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
+
+      // 3️⃣ Lookup para traer nombre de la categoría
+      {
+        $lookup: {
+          from: 'categorias',
+          localField: '_id.categoria',
+          foreignField: '_id',
+          as: 'categoria',
+        },
+      },
+      { $unwind: { path: '$categoria', preserveNullAndEmptyArrays: true } },
+
+      // 4️⃣ Agrupar nuevamente por sede
+      {
+        $group: {
+          _id: '$sede.nombre',
+          categorias: {
+            $push: {
+              categoria: '$categoria.nombre',
+              cantidad: '$cantidadTotal',
+            },
+          },
+          totalSede: { $sum: '$cantidadTotal' },
+        },
+      },
+
+      // 5️⃣ Formato final limpio
+      {
+        $project: {
+          _id: 0,
+          sede: { $ifNull: ['$_id', 'Sin Sede'] },
+          categorias: 1,
+          totalSede: 1,
+        },
+      },
+
+      { $sort: { sede: 1 } },
+    ]);
+
+    res.json({
+      ok: true,
+      reporte: resultado,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: 'Error generando reporte de productos',
       error: error.message,
     });
   }
@@ -478,4 +548,5 @@ module.exports = {
   obtenerReporteCitasPorBarbero,
   obtenerReporteClientesFrecuentes,
   obtenerReporteInventario,
+  obtenerReporteProductos,
 };
