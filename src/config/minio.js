@@ -8,7 +8,6 @@ const accessKeyId = process.env.MINIO_ACCESS_KEY ? process.env.MINIO_ACCESS_KEY.
 const secretAccessKey = process.env.MINIO_SECRET_KEY ? process.env.MINIO_SECRET_KEY.trim() : undefined;
 const endpointVal = process.env.MINIO_ENDPOINT ? process.env.MINIO_ENDPOINT.trim() : undefined;
 
-console.error("🔍 Variables de MinIO detectadas por Node.js:", Object.keys(process.env).filter(key => key.startsWith('MINIO_')));
 
 if (!accessKeyId || !secretAccessKey) {
     throw new Error('❌ ERROR FATAL: MINIO_ACCESS_KEY o MINIO_SECRET_KEY no están definidos en Railway. Revisa la pestaña de variables.');
