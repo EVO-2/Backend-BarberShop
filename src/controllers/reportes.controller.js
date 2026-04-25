@@ -20,15 +20,15 @@ const obtenerReporteIngresos = async (req, res) => {
 
     // 📅 Rango de fechas
     const rangoFechas = {
-      $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
-      $lte: new Date(`${fechaFin}T23:59:59.999Z`)
+      $gte: new Date(`${fechaInicio}T05:00:00.000Z`),
+      $lte: new Date(new Date(`${fechaFin}T04:59:59.999Z`).getTime() + 24 * 60 * 60 * 1000)
     };
 
     // 🔎 Match dinámico
     const match = {
       estado: 'pagada',
       pago: { $ne: null },
-      fechaBase: rangoFechas
+      fecha: rangoFechas
     };
 
     if (sede) {
@@ -210,8 +210,8 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
     }
 
     const rangoFechas = {
-      $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
-      $lte: new Date(`${fechaFin}T23:59:59.999Z`),
+      $gte: new Date(`${fechaInicio}T05:00:00.000Z`),
+      $lte: new Date(new Date(`${fechaFin}T04:59:59.999Z`).getTime() + 24 * 60 * 60 * 1000)
     };
 
     const resultado = await Cita.aggregate([
@@ -219,7 +219,7 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
       {
         $match: {
           estado: { $in: ['finalizada', 'pagada'] },
-          fechaBase: rangoFechas,
+          fecha: rangoFechas,
         },
       },
 
@@ -311,8 +311,8 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
     }
 
     const rangoFechas = {
-      $gte: new Date(`${fechaInicio}T00:00:00.000Z`),
-      $lte: new Date(`${fechaFin}T23:59:59.999Z`),
+      $gte: new Date(`${fechaInicio}T05:00:00.000Z`),
+      $lte: new Date(new Date(`${fechaFin}T04:59:59.999Z`).getTime() + 24 * 60 * 60 * 1000)
     };
 
     const resultado = await Cita.aggregate([
@@ -320,7 +320,7 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
       {
         $match: {
           estado: { $in: ['finalizada', 'pagada'] },
-          fechaBase: rangoFechas,
+          fecha: rangoFechas,
         },
       },
 

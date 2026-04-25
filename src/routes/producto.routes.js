@@ -36,6 +36,9 @@ router.get('/:id', obtenerProducto);
 // ✏️ Actualizar
 router.put('/:id', actualizarProducto);
 
+// 💰 Registrar Venta
+router.post('/:id/venta', registrarVentaProducto);
+
 // 🗑️ Eliminar (soft delete)
 router.delete('/:id', eliminarProducto);
 

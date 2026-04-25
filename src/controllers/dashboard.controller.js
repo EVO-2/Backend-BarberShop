@@ -5,6 +5,8 @@ const Cita = require('../models/Cita.model');
 const Usuario = require('../models/Usuario.model');
 const Rol = require('../models/Rol.model');
 const Pago = require('../models/Pago.model');
+const Movimiento = require('../models/Movimientos.model');
+const Producto = require('../models/Producto.model');
 
 const obtenerResumenDashboard = async (req, res) => {
     try {
@@ -78,7 +80,8 @@ const obtenerResumenDashboard = async (req, res) => {
             clientesUnicos,
             peluquerosUnicos,
             peluqueroTopAgg,
-            clienteTopAgg
+            clienteTop,
+            productosTopAgg
         ] = await Promise.all([
 
             Cita.countDocuments({
@@ -350,6 +353,47 @@ const obtenerResumenDashboard = async (req, res) => {
         /* =====================================================
            📤 RESPUESTA
         ===================================================== */
+
+        
+        /* =====================================================
+           📦 PRODUCTOS MÁS VENDIDOS
+        ===================================================== */
+        const productosTop = await Movimiento.aggregate([
+            {
+                $match: {
+                    sede: sedeId,
+                    tipo: 'salida',
+                    createdAt: {
+                        $gte: inicioSemanaActual,
+                        $lte: finSemanaActual
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: '$producto',
+                    totalVendidos: { $sum: '$cantidad' }
+                }
+            },
+            { $sort: { totalVendidos: -1 } },
+            { $limit: 3 },
+            {
+                $lookup: {
+                    from: 'productos',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'productoInfo'
+                }
+            },
+            { $unwind: '$productoInfo' },
+            {
+                $project: {
+                    _id: 0,
+                    nombre: '$productoInfo.nombre',
+                    total: '$totalVendidos'
+                }
+            }
+        ]);
 
         res.json({
             totalClientes,

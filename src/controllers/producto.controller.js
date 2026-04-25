@@ -1,4 +1,5 @@
 const Producto = require('../models/Producto.model');
+const Movimiento = require('../models/Movimientos.model');
 const mongoose = require('mongoose');
 
 require('../models/Categoria.model');
@@ -357,7 +358,8 @@ const { eliminarArchivoMinio, BUCKET_NAME } = require('../config/minio');
 // ===============================
 // Subir o actualizar imagen de un producto
 // ===============================
-const subirImagenProducto = async (req, res) => {
+const subirImagenProducto,
+    registrarVentaProducto = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -402,6 +404,48 @@ const subirImagenProducto = async (req, res) => {
     }
 };
 
+
+
+// ===============================
+// Registrar Venta (Reduce stock y crea movimiento)
+// ===============================
+const registrarVentaProducto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { cantidadVenta } = req.body;
+
+        if (!cantidadVenta || cantidadVenta <= 0) {
+            return res.status(400).json({ ok: false, msg: 'La cantidad a vender debe ser mayor a 0' });
+        }
+
+        const producto = await Producto.findById(id);
+        if (!producto) return res.status(404).json({ ok: false, msg: 'Producto no encontrado' });
+
+        if (producto.cantidad < cantidadVenta) {
+            return res.status(400).json({ ok: false, msg: 'Stock insuficiente para realizar esta venta' });
+        }
+
+        // Restar stock
+        producto.cantidad -= cantidadVenta;
+        await producto.save();
+
+        // Registrar movimiento de salida para el Dashboard
+        await Movimiento.create({
+            producto: producto._id,
+            sede: producto.sede,
+            tipo: 'salida',
+            cantidad: cantidadVenta,
+            motivo: 'Venta Directa',
+            referencia: 'Venta registrada desde inventario'
+        });
+
+        res.json({ ok: true, msg: 'Venta registrada correctamente', producto });
+
+    } catch (error) {
+        console.error('Error al registrar venta:', error);
+        res.status(500).json({ ok: false, msg: 'Hable con el administrador' });
+    }
+};
 
 module.exports = {
     crearProducto,
