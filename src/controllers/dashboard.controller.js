@@ -357,8 +357,7 @@ const obtenerResumenDashboard = async (req, res) => {
         /* =====================================================
            📦 PRODUCTOS MÁS VENDIDOS
         ===================================================== */
-        const productosTop,
-            ingresosProductosHoy = await Movimiento.aggregate([
+        const productosTop = await Movimiento.aggregate([
             {
                 $match: {
                     sede: sedeId,
@@ -451,7 +450,8 @@ const obtenerResumenDashboard = async (req, res) => {
 
             peluqueroTop,
             clienteTop,
-            productosTop
+            productosTop,
+            ingresosProductosHoy
         });
 
     } catch (error) {
