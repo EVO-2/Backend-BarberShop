@@ -19,7 +19,7 @@ const router = express.Router();
 router.get(
   '/ingresos',
   validarJWT,
-  verificarRol(['admin']),
+  verificarRol('admin'),
   obtenerReporteIngresos
 );
 
@@ -27,7 +27,7 @@ router.get(
 router.get(
   '/barberos',
   validarJWT,
-  verificarRol(['admin']),
+  verificarRol('admin'),
   obtenerReporteCitasPorBarbero
 );
 
@@ -35,7 +35,7 @@ router.get(
 router.get(
   '/clientes',
   validarJWT,
-  verificarRol(['admin']),
+  verificarRol('admin'),
   obtenerReporteClientesFrecuentes
 );
 
@@ -43,7 +43,7 @@ router.get(
 router.get(
   '/inventario',
   validarJWT,
-  verificarRol(['admin']),
+  verificarRol('admin'),
   obtenerReporteInventario
 );
 
