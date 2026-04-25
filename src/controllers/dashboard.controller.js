@@ -357,7 +357,8 @@ const obtenerResumenDashboard = async (req, res) => {
         /* =====================================================
            📦 PRODUCTOS MÁS VENDIDOS
         ===================================================== */
-        const productosTop = await Movimiento.aggregate([
+        const productosTop,
+            ingresosProductosHoy = await Movimiento.aggregate([
             {
                 $match: {
                     sede: sedeId,
@@ -393,6 +394,42 @@ const obtenerResumenDashboard = async (req, res) => {
                 }
             }
         ]);
+
+        
+        /* =====================================================
+           💰 INGRESOS PRODUCTOS HOY
+        ===================================================== */
+        const ingresosProductosAgg = await Movimiento.aggregate([
+            {
+                $match: {
+                    sede: sedeId,
+                    tipo: 'salida',
+                    createdAt: {
+                        $gte: inicioHoy,
+                        $lte: finHoy
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'productos',
+                    localField: 'producto',
+                    foreignField: '_id',
+                    as: 'productoInfo'
+                }
+            },
+            { $unwind: '$productoInfo' },
+            {
+                $group: {
+                    _id: null,
+                    totalIngresos: { 
+                        $sum: { $multiply: ['$cantidad', '$productoInfo.precio'] } 
+                    }
+                }
+            }
+        ]);
+
+        const ingresosProductosHoy = ingresosProductosAgg.length > 0 ? ingresosProductosAgg[0].totalIngresos : 0;
 
         res.json({
             totalClientes,
