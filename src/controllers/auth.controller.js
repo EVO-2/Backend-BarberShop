@@ -6,11 +6,16 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const login = async (req, res) => {
+  const traceId = `LOGIN-${Date.now()}`;
+
   try {
     const { correo, password } = req.body;
 
+    console.log(`🟢 [${traceId}] Inicio login`, { correo });
+
     const usuario = await Usuario.findOne({ correo })
       .select('+password')
+      .populate('cliente')
       .populate({
         path: 'rol',
         select: 'nombre',
@@ -20,14 +25,21 @@ const login = async (req, res) => {
         }
       });
 
+    console.log(`🔍 [${traceId}] Usuario encontrado:`, usuario?._id);
+
     if (!usuario || !usuario.estado) {
+      console.warn(`⚠️ [${traceId}] Usuario no válido o inactivo`);
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
     const validPassword = await bcrypt.compare(password, usuario.password);
+
     if (!validPassword) {
+      console.warn(`⚠️ [${traceId}] Contraseña incorrecta`);
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
     }
+
+    console.log(`🔐 [${traceId}] Password correcto`);
 
     const token = jwt.sign(
       {
@@ -45,16 +57,47 @@ const login = async (req, res) => {
 
     let datosRol = null;
 
+    // ================= CLIENTE =================
     if (usuario.rol?.nombre === 'cliente') {
-      datosRol = await Cliente.findOne({ usuario: usuario._id });
-    } else if (
+
+      console.log(`👤 [${traceId}] Cliente detectado`);
+
+      // 🔥 USAR RELACIÓN DIRECTA (CORRECTO SEGÚN TU MODELO)
+      if (usuario.cliente) {
+
+        datosRol = await Cliente.findById(usuario.cliente);
+
+        if (datosRol) {
+          console.log(`✅ [${traceId}] Cliente obtenido por ID directo:`, datosRol._id);
+        } else {
+          console.error(`🚨 [${traceId}] Cliente no encontrado en BD`, usuario.cliente);
+        }
+
+      } else {
+
+        console.error(`🚨 [${traceId}] Usuario cliente SIN relación cliente en usuario`, usuario._id);
+      }
+    }
+
+    // ================= PELUQUERO =================
+    else if (
       usuario.rol?.nombre === 'barbero' ||
       usuario.rol?.nombre === 'manicurista'
     ) {
+
+      console.log(`✂️ [${traceId}] Usuario con rol PELUQUERO`);
+
       datosRol = await Peluquero.findOne({ usuario: usuario._id });
+
+      if (!datosRol) {
+        console.error(`🚨 [${traceId}] Peluquero no encontrado`, usuario._id);
+      } else {
+        console.log(`✅ [${traceId}] Peluquero encontrado`, datosRol._id);
+      }
     }
 
-    res.json({
+    // ================= RESPUESTA =================
+    const response = {
       usuario: {
         id: usuario._id,
         nombre: usuario.nombre,
@@ -62,11 +105,13 @@ const login = async (req, res) => {
         rol: usuario.rol?.nombre,
         foto: usuario.foto,
 
-        // 🔥 NUEVO: enviar permisos al frontend
         permisos: usuario.rol?.permisos?.map(p => p.nombre) || [],
 
+        // 🔥 GARANTÍA FINAL
         cliente:
-          usuario.rol?.nombre === 'cliente' ? datosRol : undefined,
+          usuario.rol?.nombre === 'cliente'
+            ? (usuario.cliente ? usuario.cliente.toString() : null)
+            : undefined,
 
         peluquero:
           usuario.rol?.nombre === 'barbero' ||
@@ -76,10 +121,23 @@ const login = async (req, res) => {
       },
       token,
       expiraEn: expDate
+    };
+
+    console.log(`📤 [${traceId}] Response enviado`, {
+      usuarioId: response.usuario.id,
+      rol: response.usuario.rol,
+      cliente: response.usuario.cliente?._id || response.usuario.cliente || null,
+      peluquero: response.usuario.peluquero?._id || null
     });
 
+    res.json(response);
+
   } catch (error) {
-    console.error('Error en login:', error);
+    console.error(`💥 Error en login`, {
+      message: error.message,
+      stack: error.stack
+    });
+
     res.status(500).json({
       mensaje: 'Error al iniciar sesión'
     });
