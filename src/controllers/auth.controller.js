@@ -13,6 +13,7 @@ const login = async (req, res) => {
 
     console.log(`🟢 [${traceId}] Inicio login`, { correo });
 
+    // 1. Buscamos usuario y traemos sus relaciones
     const usuario = await Usuario.findOne({ correo })
       .select('+password')
       .populate('cliente')
@@ -25,15 +26,13 @@ const login = async (req, res) => {
         }
       });
 
-    console.log(`🔍 [${traceId}] Usuario encontrado:`, usuario?._id);
-
     if (!usuario || !usuario.estado) {
       console.warn(`⚠️ [${traceId}] Usuario no válido o inactivo`);
       return res.status(400).json({ mensaje: 'Credenciales inválidas' });
     }
 
+    // 2. Validar contraseña
     const validPassword = await bcrypt.compare(password, usuario.password);
-
     if (!validPassword) {
       console.warn(`⚠️ [${traceId}] Contraseña incorrecta`);
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
@@ -41,6 +40,7 @@ const login = async (req, res) => {
 
     console.log(`🔐 [${traceId}] Password correcto`);
 
+    // 3. Generación de Token
     const token = jwt.sign(
       {
         uid: usuario._id,
@@ -55,80 +55,56 @@ const login = async (req, res) => {
     const { exp } = jwt.decode(token);
     const expDate = new Date(exp * 1000);
 
-    let datosRol = null;
+    // 4. Lógica de limpieza de datos de Rol (Evitar Strings sucios)
+    const nombreRol = usuario.rol?.nombre?.toLowerCase();
+    let datosRolFinal = null;
 
-    // ================= CLIENTE =================
-    if (usuario.rol?.nombre === 'cliente') {
-
+    if (nombreRol === 'cliente') {
       console.log(`👤 [${traceId}] Cliente detectado`);
 
-      // 🔥 USAR RELACIÓN DIRECTA (CORRECTO SEGÚN TU MODELO)
-      if (usuario.cliente) {
+      // Intentamos obtener el objeto plano del cliente
+      const clienteDoc = usuario.cliente;
+      datosRolFinal = clienteDoc && typeof clienteDoc.toObject === 'function'
+        ? clienteDoc.toObject()
+        : clienteDoc;
 
-        datosRol = await Cliente.findById(usuario.cliente);
+    } else if (nombreRol === 'barbero' || nombreRol === 'manicurista') {
+      console.log(`✂️ [${traceId}] Profesional detectado`);
 
-        if (datosRol) {
-          console.log(`✅ [${traceId}] Cliente obtenido por ID directo:`, datosRol._id);
-        } else {
-          console.error(`🚨 [${traceId}] Cliente no encontrado en BD`, usuario.cliente);
-        }
-
-      } else {
-
-        console.error(`🚨 [${traceId}] Usuario cliente SIN relación cliente en usuario`, usuario._id);
-      }
+      const peluqueroDoc = await Peluquero.findOne({ usuario: usuario._id });
+      datosRolFinal = peluqueroDoc && typeof peluqueroDoc.toObject === 'function'
+        ? peluqueroDoc.toObject()
+        : peluqueroDoc;
     }
 
-    // ================= PELUQUERO =================
-    else if (
-      usuario.rol?.nombre === 'barbero' ||
-      usuario.rol?.nombre === 'manicurista'
-    ) {
-
-      console.log(`✂️ [${traceId}] Usuario con rol PELUQUERO`);
-
-      datosRol = await Peluquero.findOne({ usuario: usuario._id });
-
-      if (!datosRol) {
-        console.error(`🚨 [${traceId}] Peluquero no encontrado`, usuario._id);
-      } else {
-        console.log(`✅ [${traceId}] Peluquero encontrado`, datosRol._id);
-      }
-    }
-
-    // ================= RESPUESTA =================
+    // 5. CONSTRUCCIÓN DE LA RESPUESTA (Objeto Plano Garantizado)
     const response = {
       usuario: {
         id: usuario._id,
+        _id: usuario._id,
         nombre: usuario.nombre,
         correo: usuario.correo,
-        rol: usuario.rol?.nombre,
+        rol: nombreRol,
         foto: usuario.foto,
-
         permisos: usuario.rol?.permisos?.map(p => p.nombre) || [],
 
-        // 🔥 GARANTÍA FINAL
-        cliente:
-          usuario.rol?.nombre === 'cliente'
-            ? (usuario.cliente ? usuario.cliente.toString() : null)
-            : undefined,
+        // 🔥 FIX FINAL: Forzamos estructura de objeto limpio
+        cliente: nombreRol === 'cliente' ? {
+          _id: datosRolFinal?._id || datosRolFinal,
+          usuario: usuario._id
+        } : undefined,
 
-        peluquero:
-          usuario.rol?.nombre === 'barbero' ||
-            usuario.rol?.nombre === 'manicurista'
-            ? datosRol
-            : undefined
+        peluquero: (nombreRol === 'barbero' || nombreRol === 'manicurista') ? {
+          _id: datosRolFinal?._id || datosRolFinal,
+          usuario: usuario._id
+        } : undefined
       },
       token,
       expiraEn: expDate
     };
 
-    console.log(`📤 [${traceId}] Response enviado`, {
-      usuarioId: response.usuario.id,
-      rol: response.usuario.rol,
-      cliente: response.usuario.cliente?._id || response.usuario.cliente || null,
-      peluquero: response.usuario.peluquero?._id || null
-    });
+    // Log limpio para Railway
+    console.log(`📤 [${traceId}] Response lista. ClienteID:`, response.usuario.cliente?._id);
 
     res.json(response);
 
