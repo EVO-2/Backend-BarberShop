@@ -1,2 +1,29 @@
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Entorno
 .env
-node_modules
+.env.*.local
+
+# Directorios de subida de archivos (local only - MinIO en producción)
+uploads/
+src/uploads/
+
+# Caché
+.cache/
+dist/
+coverage/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Visual Studio Code
+.vscode/
