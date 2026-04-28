@@ -14,6 +14,7 @@ const login = async (req, res) => {
     console.log(`🟢 [${traceId}] Inicio login`, { correo });
 
     // 1. Buscamos usuario y traemos sus relaciones
+    // Usamos lean() opcionalmente o manejamos el objeto para asegurar que sea plano
     const usuario = await Usuario.findOne({ correo })
       .select('+password')
       .populate('cliente')
@@ -55,61 +56,51 @@ const login = async (req, res) => {
     const { exp } = jwt.decode(token);
     const expDate = new Date(exp * 1000);
 
-    // 4. Lógica de limpieza de datos de Rol (Evitar Strings sucios)
+    // 4. Lógica de roles y datos extra
     const nombreRol = usuario.rol?.nombre?.toLowerCase();
-    let datosRolFinal = null;
+    let datosExtra = null;
 
     if (nombreRol === 'cliente') {
       console.log(`👤 [${traceId}] Cliente detectado`);
-
-      // Intentamos obtener el objeto plano del cliente
-      const clienteDoc = usuario.cliente;
-      datosRolFinal = clienteDoc && typeof clienteDoc.toObject === 'function'
-        ? clienteDoc.toObject()
-        : clienteDoc;
-
+      datosExtra = usuario.cliente;
     } else if (nombreRol === 'barbero' || nombreRol === 'manicurista') {
       console.log(`✂️ [${traceId}] Profesional detectado`);
-
-      const peluqueroDoc = await Peluquero.findOne({ usuario: usuario._id });
-      datosRolFinal = peluqueroDoc && typeof peluqueroDoc.toObject === 'function'
-        ? peluqueroDoc.toObject()
-        : peluqueroDoc;
+      datosExtra = await Peluquero.findOne({ usuario: usuario._id });
     }
 
-    // 5. CONSTRUCCIÓN DE LA RESPUESTA (Objeto Plano Garantizado)
-    const response = {
-      usuario: {
-        id: usuario._id,
-        _id: usuario._id,
-        nombre: usuario.nombre,
-        correo: usuario.correo,
-        rol: nombreRol,
-        foto: usuario.foto,
-        permisos: usuario.rol?.permisos?.map(p => p.nombre) || [],
+    // 5. 🔥 CONSTRUCCIÓN MANUAL Y FORZADA (Evita filtros de Mongoose)
+    const usuarioFinal = {
+      _id: usuario._id,
+      id: usuario._id,
+      nombre: usuario.nombre,
+      correo: usuario.correo,
+      rol: nombreRol || 'cliente',
+      foto: usuario.foto || '',
+      permisos: usuario.rol?.permisos?.map(p => p.nombre) || [],
 
-        // 🔥 FIX FINAL: Forzamos estructura de objeto limpio
-        cliente: nombreRol === 'cliente' ? {
-          _id: datosRolFinal?._id || datosRolFinal,
-          usuario: usuario._id
-        } : undefined,
+      // Mapeo ultra-robusto para el campo cliente
+      cliente: nombreRol === 'cliente'
+        ? (usuario.cliente?._id || usuario.cliente || datosExtra?._id || null)
+        : undefined,
 
-        peluquero: (nombreRol === 'barbero' || nombreRol === 'manicurista') ? {
-          _id: datosRolFinal?._id || datosRolFinal,
-          usuario: usuario._id
-        } : undefined
-      },
-      token,
-      expiraEn: expDate
+      // Mapeo para profesional
+      peluquero: (nombreRol === 'barbero' || nombreRol === 'manicurista')
+        ? (datosExtra?._id || datosExtra || null)
+        : undefined
     };
 
-    // Log limpio para Railway
-    console.log(`📤 [${traceId}] Response lista. ClienteID:`, response.usuario.cliente?._id);
+    // Log crítico para verificar en Railway antes del envío
+    console.log(`🚀 [${traceId}] ENVIANDO AL FRONT -> cliente:`, usuarioFinal.cliente);
 
-    res.json(response);
+    // 6. RESPUESTA FINAL
+    res.status(200).json({
+      usuario: usuarioFinal,
+      token,
+      expiraEn: expDate
+    });
 
   } catch (error) {
-    console.error(`💥 Error en login`, {
+    console.error(`💥 [${traceId}] Error en login`, {
       message: error.message,
       stack: error.stack
     });
