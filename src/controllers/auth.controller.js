@@ -37,7 +37,7 @@ const login = async (req, res) => {
         foto: usuario.foto
       },
       process.env.JWT_SECRET,
-      { expiresIn: '4h' }
+      { expiresIn: '3h' }
     );
 
     const { exp } = jwt.decode(token);
@@ -87,36 +87,64 @@ const login = async (req, res) => {
 };
 
 const registro = async (req, res) => {
+  const traceId = `REG-${Date.now()}`; // 🔥 ID único por request
+
   try {
+    console.log(`🟢 [${traceId}] Inicio registro`);
+    console.log(`📥 [${traceId}] Body recibido:`, {
+      nombre: req.body?.nombre,
+      correo: req.body?.correo
+    });
+
     const { nombre, correo, password } = req.body;
 
+    // 🔹 VALIDACIÓN CAMPOS
     if (!nombre || !correo || !password) {
+      console.warn(`⚠️ [${traceId}] Campos incompletos`);
       return res.status(400).json({
         mensaje: 'Nombre, correo y contraseña son obligatorios'
       });
     }
 
+    // 🔹 VALIDACIÓN CONTRASEÑA
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
     if (!passwordRegex.test(password)) {
+      console.warn(`⚠️ [${traceId}] Password no cumple política`);
       return res.status(400).json({
         mensaje:
           'La contraseña debe tener mínimo 8 caracteres, incluyendo mayúscula, minúscula, número y un carácter especial'
       });
     }
 
+    // 🔹 VALIDAR USUARIO EXISTENTE
     const usuarioExistente = await Usuario.findOne({ correo });
+
     if (usuarioExistente) {
+      console.warn(`⚠️ [${traceId}] Usuario ya existe`, {
+        usuarioId: usuarioExistente._id
+      });
       return res.status(400).json({ mensaje: 'El correo ya está registrado' });
     }
 
+    console.log(`✅ [${traceId}] Correo disponible`);
+
+    // 🔹 OBTENER ROL CLIENTE
     const rolNombre = 'cliente';
     const rolCliente = await Rol.findOne({ nombre: rolNombre.toLowerCase() });
+
     if (!rolCliente) {
+      console.error(`❌ [${traceId}] Rol cliente NO encontrado`);
       return res.status(500).json({ mensaje: 'No se encontró el rol cliente' });
     }
 
+    console.log(`✅ [${traceId}] Rol encontrado`, {
+      rolId: rolCliente._id,
+      rolNombre: rolCliente.nombre
+    });
+
+    // 🔹 CREAR USUARIO
     const nuevoUsuario = new Usuario({
       nombre,
       correo,
@@ -126,9 +154,48 @@ const registro = async (req, res) => {
 
     await nuevoUsuario.save();
 
-    // 🔥 CREAR Y CAPTURAR EL CLIENTE
-    const cliente = await Cliente.create({ usuario: nuevoUsuario._id });
+    console.log(`✅ [${traceId}] Usuario creado`, {
+      userId: nuevoUsuario._id
+    });
 
+    // 🔥 CREAR CLIENTE (con manejo de error)
+    let cliente;
+
+    try {
+      cliente = await Cliente.create({
+        usuario: nuevoUsuario._id
+      });
+
+      console.log(`✅ [${traceId}] Cliente creado:`, cliente._id);
+
+    } catch (error) {
+      console.error(`💥 [${traceId}] Error creando cliente:`, error.message);
+      throw new Error('Fallo al crear cliente');
+    }
+
+    // 🔥 VINCULAR CLIENTE AL USUARIO (FORZADO + VERIFICACIÓN)
+    const usuarioActualizado = await Usuario.findByIdAndUpdate(
+      nuevoUsuario._id,
+      { cliente: cliente._id },
+      { new: true }
+    );
+
+    console.log(`🔗 [${traceId}] Usuario actualizado:`, usuarioActualizado?.cliente);
+
+    // 🚨 VALIDACIÓN CRÍTICA
+    if (!usuarioActualizado || !usuarioActualizado.cliente) {
+      console.error(`🚨 [${traceId}] ERROR CRÍTICO: cliente NO se guardó en usuario`);
+      throw new Error('No se pudo vincular el cliente al usuario');
+    }
+
+    // 🔍 VERIFICACIÓN FINAL
+    const verificacion = await Usuario.findById(nuevoUsuario._id).populate('cliente');
+
+    console.log(`🧪 [${traceId}] Verificación post-guardado`, {
+      clienteEnUsuario: verificacion?.cliente?._id || null
+    });
+
+    // 🔹 GENERAR TOKEN
     const token = jwt.sign(
       {
         uid: nuevoUsuario._id,
@@ -142,21 +209,29 @@ const registro = async (req, res) => {
 
     const { exp } = jwt.decode(token);
 
-    // 🔥 RESPUESTA CORREGIDA (AHORA INCLUYE cliente)
+    console.log(`🔐 [${traceId}] Token generado`);
+
+    // 🔹 RESPUESTA FINAL
     res.status(201).json({
       usuario: {
         id: nuevoUsuario._id,
         nombre: nuevoUsuario.nombre,
         rol: rolCliente.nombre,
         foto: nuevoUsuario.foto,
-        cliente // ✅ clave para el frontend
+        cliente // ✅ clave para frontend
       },
       token,
       expiraEn: new Date(exp * 1000)
     });
 
+    console.log(`🟣 [${traceId}] Registro completado OK`);
+
   } catch (error) {
-    console.error('Error en registro:', error);
+    console.error(`💥 [${traceId}] Error en registro`, {
+      message: error.message,
+      stack: error.stack
+    });
+
     res.status(500).json({
       mensaje: 'Error al registrar usuario'
     });
