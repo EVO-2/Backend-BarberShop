@@ -125,7 +125,9 @@ const registro = async (req, res) => {
     });
 
     await nuevoUsuario.save();
-    await Cliente.create({ usuario: nuevoUsuario._id });
+
+    // 🔥 CREAR Y CAPTURAR EL CLIENTE
+    const cliente = await Cliente.create({ usuario: nuevoUsuario._id });
 
     const token = jwt.sign(
       {
@@ -140,12 +142,14 @@ const registro = async (req, res) => {
 
     const { exp } = jwt.decode(token);
 
+    // 🔥 RESPUESTA CORREGIDA (AHORA INCLUYE cliente)
     res.status(201).json({
       usuario: {
         id: nuevoUsuario._id,
         nombre: nuevoUsuario.nombre,
         rol: rolCliente.nombre,
-        foto: nuevoUsuario.foto
+        foto: nuevoUsuario.foto,
+        cliente // ✅ clave para el frontend
       },
       token,
       expiraEn: new Date(exp * 1000)
