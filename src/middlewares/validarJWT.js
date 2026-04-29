@@ -7,8 +7,10 @@ const Usuario = require('../models/Usuario.model');
 const validarJWT = async (req, res, next) => {
 
   const authHeader = req.header('Authorization') || req.header('authorization');
+  console.log(`[validarJWT] Path: ${req.originalUrl}, AuthHeader: ${authHeader}`);
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log(`[validarJWT] 401 - Header missing or bad format`);
     return res.status(401).json({
       mensaje: 'Token no proporcionado o formato incorrecto',
     });
@@ -55,6 +57,7 @@ const validarJWT = async (req, res, next) => {
     next();
 
   } catch (error) {
+    console.log(`[validarJWT] 401 - Token no válido. Error:`, error.message);
     return res.status(401).json({
       mensaje: 'Token no válido',
       error: error.message,

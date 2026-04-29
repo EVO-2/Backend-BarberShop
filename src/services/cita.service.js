@@ -94,33 +94,85 @@ const crearCita = async ({
   fecha,
   observacion
 }) => {
+
+  /**
+   * 🔥 NORMALIZADOR UNIVERSAL DE IDs
+   * Limpia cualquier formato:
+   * - ObjectId("...")
+   * - "new ObjectId('...')"
+   * - objetos poblados
+   * - strings simples
+   */
+  const toId = (data) => {
+    if (!data) return null;
+
+    // Caso objeto (populate o frontend)
+    if (typeof data === 'object') {
+      return (data._id || data.id)?.toString() || null;
+    }
+
+    // Caso string (incluye Railway bug)
+    if (typeof data === 'string') {
+      const match = data.match(/[0-9a-fA-F]{24}/);
+      return match ? match[0] : null;
+    }
+
+    return null;
+  };
+
+  // 🔥 NORMALIZACIÓN CRÍTICA (ANTES DE TODO)
+  cliente = toId(cliente);
+  peluquero = toId(peluquero);
+  sede = toId(sede);
+  puestoTrabajo = toId(puestoTrabajo);
+
+  // 🔒 VALIDACIÓN BASE (YA LIMPIOS)
   if (!cliente || !sede || !fecha) {
     throw { status: 400, message: 'cliente, sede y fecha son obligatorios' };
   }
 
-  // validar que cliente, peluquero, sede y puestoTrabajo existan
-  await validarReferencias({ cliente, peluquero, sede, puestoTrabajo });
+  // 🔍 VALIDAR REFERENCIAS (AHORA SÍ CORRECTAS)
+  await validarReferencias({
+    cliente,
+    peluquero,
+    sede,
+    puestoTrabajo
+  });
 
-  // calcular duración total de los servicios
+  // ⏱️ CALCULAR DURACIÓN
   const duracionMin = await calcularDuracionTotal(servicios);
   const fechaInicio = new Date(fecha);
-  const fechaFin = new Date(fechaInicio.getTime() + (duracionMin || 30) * 60 * 1000);
+  const fechaFin = new Date(
+    fechaInicio.getTime() + (duracionMin || 30) * 60 * 1000
+  );
 
-  // validar solapamiento de citas en sede/puesto/peluquero
-  const haySolape = await existeSolape({ sede, peluquero, puestoTrabajo, fechaInicio, fechaFin });
-  if (haySolape) throw { status: 400, message: 'Horario no disponible (solapado con otra cita)' };
+  // 🚫 VALIDAR SOLAPAMIENTO
+  const haySolape = await existeSolape({
+    sede,
+    peluquero,
+    puestoTrabajo,
+    fechaInicio,
+    fechaFin
+  });
 
-  // rango del día (para buscar citas del peluquero ese día)
+  if (haySolape) {
+    throw {
+      status: 400,
+      message: 'Horario no disponible (solapado con otra cita)'
+    };
+  }
+
+  // 📅 RANGO DEL DÍA
   const inicioDia = new Date(fechaInicio);
   inicioDia.setHours(0, 0, 0, 0);
+
   const finDia = new Date(fechaInicio);
   finDia.setHours(23, 59, 59, 999);
 
-  // fechaBase: día normalizado a las 00:00:00 (clave para agrupar)
   const fechaBase = new Date(fechaInicio);
   fechaBase.setHours(0, 0, 0, 0);
 
-  // obtener último turno del peluquero para ese día
+  // 🔢 TURNO CORRELATIVO
   const ultimoTurno = await Cita.findOne({
     peluquero: peluquero || null,
     fechaBase: { $gte: inicioDia, $lte: finDia }
@@ -128,10 +180,9 @@ const crearCita = async ({
     .sort({ turno: -1 })
     .lean();
 
-  // asignar turno correlativo al peluquero
   const turno = (ultimoTurno?.turno || 0) + 1;
 
-  // crear cita
+  // 🧾 CREAR CITA
   const nuevaCita = await Cita.create({
     cliente,
     peluquero: peluquero || null,
@@ -144,9 +195,10 @@ const crearCita = async ({
     fechaBase,
     observacion: observacion || null,
     turno,
-    estado: 'pendiente',
+    estado: 'pendiente'
   });
 
+  // 📤 RESPUESTA FINAL
   return Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
 };
 
@@ -154,7 +206,6 @@ const crearCita = async ({
 const obtenerCitas = async () => {
   return await Cita.find().populate(CITA_POPULATE).lean();
 };
-
 // ===================== obtenerCitasPaginadas =====================
 const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fecha, rol, usuarioId }) => {
   page = Math.max(1, Number(page) || 1);
@@ -348,7 +399,7 @@ const actualizarCita = async (id, data) => {
 
   let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio || citaBase.fecha);
   let fechaFin = citaBase.fechaFin;
-  
+
   // Recalcular siempre si cambian los servicios, la fecha o si falta fechaFin
   if (servicios || fecha || !fechaFin) {
     const serviciosFinales = servicios ?? citaBase.servicios;

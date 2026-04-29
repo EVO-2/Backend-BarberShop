@@ -40,16 +40,21 @@ const crearCita = async (req, res) => {
     if (datosCita.cliente) {
       clienteData = await Cliente.findById(datosCita.cliente)
         .populate('usuario', 'nombre correo telefono');
-    } else if (rol === 'cliente') {
+        
+      if (!clienteData) {
+        clienteData = await Cliente.findOne({ usuario: datosCita.cliente })
+          .populate('usuario', 'nombre correo telefono');
+      }
+    } 
+    
+    if (!clienteData && rol === 'cliente') {
       clienteData = await Cliente.findOne({ usuario: uid })
         .populate('usuario', 'nombre correo telefono');
-
-      if (clienteData) {
-        datosCita.cliente = clienteData._id;
-      }
     }
 
-    if (!clienteData) {
+    if (clienteData) {
+      datosCita.cliente = clienteData._id;
+    } else {
       return res.status(400).json({ mensaje: 'Cliente no válido' });
     }
 
