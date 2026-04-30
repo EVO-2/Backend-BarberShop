@@ -50,7 +50,7 @@ const corsOptions = {
     // Permitir herramientas como Postman o apps móviles sin origin
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     } else {
       console.warn('❌ CORS bloqueado para origen:', origin);
