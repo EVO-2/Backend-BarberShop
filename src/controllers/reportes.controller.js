@@ -3,6 +3,7 @@ const Pago = require('../models/Pago.model');
 const Producto = require('../models/Producto.model');
 const Usuario = require('../models/Usuario.model');
 const Equipo = require('../models/Equipo.model');
+const mongoose = require('mongoose');
 
 
 // =================== 📊 Reporte de Ingresos ===================
@@ -32,7 +33,7 @@ const obtenerReporteIngresos = async (req, res) => {
     };
 
     if (sede) {
-      match.sede = require('mongoose').Types.ObjectId(sede);
+      match.sede = new mongoose.Types.ObjectId(sede);
     }
 
     // =========================
@@ -200,7 +201,7 @@ const obtenerReporteIngresos = async (req, res) => {
 const obtenerReporteCitasPorBarbero = async (req, res) => {
   try {
 
-    const { fechaInicio, fechaFin } = req.query;
+    const { fechaInicio, fechaFin, sede } = req.query;
 
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({
@@ -214,13 +215,18 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
       $lte: new Date(new Date(`${fechaFin}T04:59:59.999Z`).getTime() + 24 * 60 * 60 * 1000)
     };
 
+    const match = {
+      estado: { $in: ['finalizada', 'pagada'] },
+      fecha: rangoFechas,
+    };
+    if (sede) {
+      match.sede = new mongoose.Types.ObjectId(sede);
+    }
+
     const resultado = await Cita.aggregate([
 
       {
-        $match: {
-          estado: { $in: ['finalizada', 'pagada'] },
-          fecha: rangoFechas,
-        },
+        $match: match,
       },
 
       // 🔹 traer peluquero
@@ -301,7 +307,7 @@ const obtenerReporteCitasPorBarbero = async (req, res) => {
 const obtenerReporteClientesFrecuentes = async (req, res) => {
   try {
 
-    const { fechaInicio, fechaFin } = req.query;
+    const { fechaInicio, fechaFin, sede } = req.query;
 
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({
@@ -315,13 +321,18 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
       $lte: new Date(new Date(`${fechaFin}T04:59:59.999Z`).getTime() + 24 * 60 * 60 * 1000)
     };
 
+    const match = {
+      estado: { $in: ['finalizada', 'pagada'] },
+      fecha: rangoFechas,
+    };
+    if (sede) {
+      match.sede = new mongoose.Types.ObjectId(sede);
+    }
+
     const resultado = await Cita.aggregate([
 
       {
-        $match: {
-          estado: { $in: ['finalizada', 'pagada'] },
-          fecha: rangoFechas,
-        },
+        $match: match,
       },
 
       // 🔹 traer cliente
@@ -402,7 +413,16 @@ const obtenerReporteClientesFrecuentes = async (req, res) => {
 // =================== 📦 Reporte de Inventario ===================
 const obtenerReporteInventario = async (req, res) => {
   try {
-    const resultado = await Equipo.aggregate([
+    const { sede } = req.query;
+    const pipeline = [];
+
+    if (sede) {
+      pipeline.push({
+        $match: { sede: new mongoose.Types.ObjectId(sede) }
+      });
+    }
+
+    pipeline.push(
       // 1️⃣ Agrupar por sede y tipo de equipo
       {
         $group: {
@@ -449,8 +469,10 @@ const obtenerReporteInventario = async (req, res) => {
         },
       },
 
-      { $sort: { sede: 1 } },
-    ]);
+      { $sort: { sede: 1 } }
+    );
+
+    const resultado = await Equipo.aggregate(pipeline);
 
     res.json({
       ok: true,
@@ -468,7 +490,16 @@ const obtenerReporteInventario = async (req, res) => {
 // =================== 📦 Reporte de Productos ===================
 const obtenerReporteProductos = async (req, res) => {
   try {
-    const resultado = await Producto.aggregate([
+    const { sede } = req.query;
+    const pipeline = [];
+
+    if (sede) {
+      pipeline.push({
+        $match: { sede: new mongoose.Types.ObjectId(sede) }
+      });
+    }
+
+    pipeline.push(
       // 1️⃣ Agrupar por sede y categoría, sumando cantidades reales
       {
         $group: {
@@ -526,8 +557,10 @@ const obtenerReporteProductos = async (req, res) => {
         },
       },
 
-      { $sort: { sede: 1 } },
-    ]);
+      { $sort: { sede: 1 } }
+    );
+
+    const resultado = await Producto.aggregate(pipeline);
 
     res.json({
       ok: true,
