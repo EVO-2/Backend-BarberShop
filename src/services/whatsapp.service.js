@@ -1,31 +1,22 @@
-const axios = require('axios');
-
 class WhatsAppService {
-    async enviarMensaje({ telefono, mensaje }) {
-        try {
-            if (!telefono) return;
+    /**
+     * Genera un enlace directo de WhatsApp Web/App para enviar un mensaje con un solo clic.
+     * Esto no requiere ninguna API ni pagos, funciona con la API nativa de enlaces de WhatsApp.
+     */
+    generarEnlaceWhatsApp(telefono, mensaje) {
+        if (!telefono) return null;
 
-            console.log(`📱 Enviando WhatsApp a ${telefono}...`);
-
-            if (!process.env.WHATSAPP_API_URL) {
-                console.warn('⚠️ No se ha definido WHATSAPP_API_URL en las variables de entorno. Omitiendo envío.');
-                return;
-            }
-
-            // 🔥 EJEMPLO (Meta WhatsApp API o proveedor)
-            await axios.post(process.env.WHATSAPP_API_URL, {
-                to: telefono,
-                message: mensaje
-            }, {
-                headers: {
-                    Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`
-                }
-            });
-
-            console.log(`📱 WhatsApp enviado a ${telefono}`);
-        } catch (error) {
-            console.error('❌ Error enviando WhatsApp:', error.message);
+        // Formatear el teléfono (quitar espacios, símbolos y asegurar el código de país, asumiendo +57 si no hay)
+        let numeroFormateado = telefono.replace(/\D/g, '');
+        if (numeroFormateado.length === 10 && !numeroFormateado.startsWith('57')) {
+            numeroFormateado = '57' + numeroFormateado; // Asumimos Colombia si envían 10 dígitos sin el +57
         }
+
+        // Codificar el mensaje para la URL
+        const mensajeCodificado = encodeURIComponent(mensaje);
+        const link = `https://wa.me/${numeroFormateado}?text=${mensajeCodificado}`;
+
+        return link;
     }
 }
 

@@ -4,6 +4,7 @@ const EmailService = require('./email.service');
 const generarTemplateRecordatorio = require('../templates/recordatorio.template');
 const generarTemplateCita = require('../templates/citaConfirmada.template');
 const enviarEmail = require('../helpers/enviarEmail');
+const pusher = require('../config/pusher');
 
 // 🔥 NUEVO (WHATSAPP)
 const WhatsAppService = require('./whatsapp.service');
@@ -36,7 +37,7 @@ class NotificationService {
 
   // ================= EVENTOS =================
 
-  // 📧 CONFIRMACIÓN DE CITA
+  // 📧 CONFIRMACIÓN DE CITA Y PUSHER REAL-TIME
   async handleCitaCreada(data) {
     const {
       nombre,
@@ -46,9 +47,35 @@ class NotificationService {
       hora,
       servicios,
       turno,
-      url
+      url,
+      peluqueroId // Es buena práctica pasar el ID del peluquero si quieres notificar a uno específico
     } = data;
 
+    // 1️⃣ NOTIFICAR AL BARBERO EN TIEMPO REAL (PUSHER)
+    if (pusher) {
+      try {
+        // Generar un link de WhatsApp automático para que el barbero hable con el cliente
+        let linkWhatsAppCliente = null;
+        if (telefono) {
+            const mensajeHola = `¡Hola ${nombre}! Confirmamos tu cita para el ${fecha} a las ${hora}. ¿Tienes alguna duda?`;
+            linkWhatsAppCliente = WhatsAppService.generarEnlaceWhatsApp(telefono, mensajeHola);
+        }
+
+        pusher.trigger('barberia-channel', 'nueva-cita', {
+          mensaje: `¡Nueva cita agendada por ${nombre}!`,
+          fecha,
+          hora,
+          servicios,
+          telefono,
+          linkWhatsAppCliente
+        });
+        console.log(`⚡ [Pusher] Evento 'nueva-cita' enviado en tiempo real.`);
+      } catch (pusherError) {
+        console.error('❌ Error enviando evento Pusher:', pusherError.message);
+      }
+    }
+
+    // 2️⃣ NOTIFICAR AL CLIENTE POR EMAIL
     if (correo) {
       try {
         console.log('📧 [NotificationService] Generando template MJML (Confirmación)...');
@@ -121,7 +148,7 @@ class NotificationService {
     // ================= WHATSAPP =================
     if (telefono) {
       try {
-        console.log(`📱 [NotificationService] Enviando WhatsApp a ${telefono}...`);
+        console.log(`📱 [NotificationService] Generando enlace de WhatsApp a ${telefono}...`);
 
         const mensaje = generarMensajeRecordatorio({
           nombre,
@@ -131,20 +158,15 @@ class NotificationService {
           url
         });
 
-        await WhatsAppService.enviarMensaje({
-          telefono,
-          mensaje
-        });
-
-        console.log(`📱 [NotificationService] WhatsApp enviado a ${telefono}`);
+        // Simplemente generamos la URL para no gastar en APIs, el frontend o el email pueden usarla
+        const link = WhatsAppService.generarEnlaceWhatsApp(telefono, mensaje);
+        console.log(`✅ [WhatsApp] Enlace directo de WhatsApp generado: ${link}`);
+        // NOTA: Si queremos mandar este link por correo al peluquero, se puede hacer acá.
       } catch (error) {
-        console.error('❌ Error enviando WhatsApp:', error.message);
+        console.error('❌ Error generando WhatsApp:', error.message);
       }
     }
   }
-
-  // ================= FUTURO =================
-  // - Push notifications
 }
 
 module.exports = new NotificationService();

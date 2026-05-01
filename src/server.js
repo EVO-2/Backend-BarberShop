@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const conectarDB = require('./config/db');
+const { iniciarCronReporteDiario } = require('./schedulers/reporteDiario.scheduler');
 
 const app = express();
 
@@ -24,6 +25,9 @@ const iniciarServidor = async () => {
     // iniciar servidor después de conectar la DB
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor escuchando en http://0.0.0.0:${PORT}`);
+      
+      // Iniciar tareas programadas (Cron)
+      iniciarCronReporteDiario();
     });
 
   } catch (error) {

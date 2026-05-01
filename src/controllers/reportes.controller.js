@@ -9,7 +9,6 @@ const mongoose = require('mongoose');
 // =================== 📊 Reporte de Ingresos ===================
 const obtenerReporteIngresos = async (req, res) => {
   try {
-
     const { fechaInicio, fechaFin, sede } = req.query;
 
     if (!fechaInicio || !fechaFin) {
@@ -25,10 +24,9 @@ const obtenerReporteIngresos = async (req, res) => {
       $lte: new Date(new Date(`${fechaFin}T04:59:59.999Z`).getTime() + 24 * 60 * 60 * 1000)
     };
 
-    // 🔎 Match dinámico
+    // 🔎 Match dinámico (incluimos finalizadas por si aún no tienen pago registrado, o pagadas)
     const match = {
-      estado: 'pagada',
-      pago: { $ne: null },
+      estado: { $in: ['finalizada', 'pagada'] },
       fecha: rangoFechas
     };
 
@@ -36,91 +34,15 @@ const obtenerReporteIngresos = async (req, res) => {
       match.sede = new mongoose.Types.ObjectId(sede);
     }
 
-    // =========================
-    // 🔥 AGGREGATION PIPELINE
-    // =========================
-    const resultado = await Cita.aggregate([
-
-      { $match: match },
-
-      // Traer pago
-      {
-        $lookup: {
-          from: 'pagos',
-          localField: 'pago',
-          foreignField: '_id',
-          as: 'pago'
-        }
-      },
-      { $unwind: '$pago' },
-
-      // Traer sede
-      {
-        $lookup: {
-          from: 'sedes',
-          localField: 'sede',
-          foreignField: '_id',
-          as: 'sede'
-        }
-      },
-      { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
-
-      // Traer cliente
-      {
-        $lookup: {
-          from: 'clientes',
-          localField: 'cliente',
-          foreignField: '_id',
-          as: 'cliente'
-        }
-      },
-      { $unwind: { path: '$cliente', preserveNullAndEmptyArrays: true } },
-
-      {
-        $lookup: {
-          from: 'usuarios',
-          localField: 'cliente.usuario',
-          foreignField: '_id',
-          as: 'clienteUsuario'
-        }
-      },
-      { $unwind: { path: '$clienteUsuario', preserveNullAndEmptyArrays: true } },
-
-      // Traer peluquero
-      {
-        $lookup: {
-          from: 'peluqueros',
-          localField: 'peluquero',
-          foreignField: '_id',
-          as: 'peluquero'
-        }
-      },
-      { $unwind: { path: '$peluquero', preserveNullAndEmptyArrays: true } },
-
-      {
-        $lookup: {
-          from: 'usuarios',
-          localField: 'peluquero.usuario',
-          foreignField: '_id',
-          as: 'peluqueroUsuario'
-        }
-      },
-      { $unwind: { path: '$peluqueroUsuario', preserveNullAndEmptyArrays: true } },
-
-      // Traer servicios
-      {
-        $lookup: {
-          from: 'servicios',
-          localField: 'servicios',
-          foreignField: '_id',
-          as: 'servicios'
-        }
-      },
-
-      // Ordenar por fecha
-      { $sort: { fecha: 1 } }
-
-    ]);
+    // Usar find y populate evita que $lookup elimine servicios duplicados en el mismo array
+    const citas = await Cita.find(match)
+      .populate('pago')
+      .populate('sede')
+      .populate({ path: 'cliente', populate: { path: 'usuario' } })
+      .populate({ path: 'peluquero', populate: { path: 'usuario' } })
+      .populate('servicios')
+      .sort({ fecha: 1 })
+      .lean();
 
     // =========================
     // 🔎 Procesamiento final
@@ -132,9 +54,12 @@ const obtenerReporteIngresos = async (req, res) => {
     const ingresosPorSede = {};
     const detalleCitas = [];
 
-    resultado.forEach((cita) => {
-
-      const montoPagado = cita.pago?.monto || 0;
+    citas.forEach((cita) => {
+      // Calcular la suma real de los servicios, respetando duplicados si un cliente agendó 2 veces el mismo
+      const sumaServicios = (cita.servicios || []).reduce((acc, s) => acc + (Number(s.precio) || 0), 0);
+      
+      // Priorizar el monto del pago, de lo contrario fallback a la suma de los servicios (el subtotal real)
+      const montoPagado = cita.pago?.monto || sumaServicios;
 
       ingresosTotales += montoPagado;
       totalServicios += cita.servicios?.length || 0;
@@ -151,15 +76,14 @@ const obtenerReporteIngresos = async (req, res) => {
         id: cita._id,
         fecha: cita.fecha,
         sede: sedeNombre,
-        cliente: cita.clienteUsuario?.nombre || 'N/D',
-        peluquero: cita.peluqueroUsuario?.nombre || 'N/D',
+        cliente: cita.cliente?.usuario?.nombre || 'N/D',
+        peluquero: cita.peluquero?.usuario?.nombre || 'N/D',
         servicios: (cita.servicios || []).map(s => ({
           nombre: s.nombre,
           precio: s.precio
         })),
         subtotal: montoPagado
       });
-
     });
 
     // =========================
@@ -186,13 +110,12 @@ const obtenerReporteIngresos = async (req, res) => {
     });
 
   } catch (error) {
-
+    console.error("Error en reporte de ingresos:", error);
     res.status(500).json({
       ok: false,
       mensaje: 'Error al generar el reporte de ingresos',
       error: error.message
     });
-
   }
 };
 
