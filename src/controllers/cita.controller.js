@@ -73,12 +73,14 @@ const crearCita = async (req, res) => {
     const fechaObj = new Date(cita.fecha);
 
     const fechaFormateada = fechaObj.toLocaleDateString('es-CO', {
+      timeZone: 'America/Bogota',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     });
 
     const horaFormateada = fechaObj.toLocaleTimeString('es-CO', {
+      timeZone: 'America/Bogota',
       hour: '2-digit',
       minute: '2-digit',
       hour12: true

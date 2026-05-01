@@ -26,8 +26,8 @@ const procesarRecordatorio = async (citaId, clienteId, turno) => {
       : 'Servicio no definido';
 
     const fechaCita = new Date(cita.fecha);
-    const fechaFormateada = fechaCita.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const horaFormateada = fechaCita.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const fechaFormateada = fechaCita.toLocaleDateString('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaFormateada = fechaCita.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true });
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:4200";
 
     const payload = {
@@ -59,9 +59,12 @@ const programarRecordatorio = async (cita) => {
   if (!cita.fecha || !cita.cliente) return;
 
   const fechaCita = new Date(cita.fecha);
-  // 🔥 MODO PRUEBA RÁPIDA: El recordatorio sonará 1 minuto después de crear la cita
+  
+  // MODO PRUEBA: Suena 1 minuto después de crear la cita
   const fechaRecordatorio = new Date(Date.now() + (1 * 60 * 1000)); 
-  // const fechaRecordatorio = new Date(fechaCita.getTime() - (80 * 60 * 1000)); // 80 min antes
+  
+  // MODO PRODUCCIÓN (Comentado temporalmente)
+  // const fechaRecordatorio = new Date(fechaCita.getTime() - (80 * 60 * 1000)); 
 
   // No programar si la hora ya pasó
   if (fechaRecordatorio < new Date()) {
