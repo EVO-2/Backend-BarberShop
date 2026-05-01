@@ -11,7 +11,8 @@ const {
   subirFotoPerfil,
   verificarPuesto,
   actualizarPerfil,
-  obtenerPerfil
+  obtenerPerfil,
+  cambiarPassword
 } = require('../controllers/usuario.controller');
 
 const validarCampos = require('../middlewares/validarCampos');
@@ -71,7 +72,10 @@ router.post(
     tieneRol('admin'),
     body('nombre').notEmpty().withMessage('El nombre es obligatorio'),
     body('correo').isEmail().withMessage('El correo no es válido').custom(emailExiste),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+    body('password')
+      .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/)
+      .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
     body('rol').notEmpty().withMessage('El rol es obligatorio'),
     validarCampos
   ],
@@ -150,6 +154,22 @@ router.get(
     validarCampos
   ],
   obtenerUsuarioPorId
+);
+
+// 🔑 Cambiar contraseña
+router.put(
+  '/:id/cambiar-password',
+  [
+    validarJWT,
+    param('id').isMongoId().withMessage('ID inválido'),
+    body('actual').notEmpty().withMessage('La contraseña actual es requerida'),
+    body('nueva')
+      .isLength({ min: 8 }).withMessage('La nueva contraseña debe tener al menos 8 caracteres')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/)
+      .withMessage('La nueva contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
+    validarCampos
+  ],
+  cambiarPassword
 );
 
 module.exports = router;

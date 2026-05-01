@@ -28,7 +28,10 @@ router.post(
   [
     check('nombre', 'El nombre es obligatorio').notEmpty(),
     check('correo', 'El correo es obligatorio').isEmail(),
-    check('password', 'La contraseña debe tener al menos 6 caracteres').isLength({ min: 6 }),
+    check('password')
+      .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/)
+      .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
     validarCampos
   ],
   registro

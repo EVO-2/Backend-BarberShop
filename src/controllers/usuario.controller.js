@@ -570,6 +570,40 @@ const actualizarPerfil = async (req, res) => {
   }
 };
 
+// ==========================
+// 🔑 Cambiar contraseña
+// ==========================
+const cambiarPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { actual, nueva } = req.body;
+
+    if (!actual || !nueva) {
+      return res.status(400).json({ mensaje: 'Debe proveer la contraseña actual y la nueva' });
+    }
+
+    const usuario = await Usuario.findById(id);
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    // Validar contraseña actual
+    const passwordValida = await usuario.compararPassword(actual);
+    if (!passwordValida) {
+      return res.status(400).json({ mensaje: 'La contraseña actual es incorrecta' });
+    }
+
+    // Guardar nueva contraseña (se hashea automáticamente en el modelo)
+    usuario.password = nueva;
+    await usuario.save();
+
+    res.status(200).json({ mensaje: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    console.error('❌ Error al cambiar contraseña:', error);
+    res.status(500).json({ mensaje: 'Error al cambiar contraseña', error: error.message });
+  }
+};
+
 module.exports = {
   listarUsuarios,
   obtenerUsuarioPorId,
@@ -580,5 +614,6 @@ module.exports = {
   subirFotoPerfil,
   verificarPuesto,
   actualizarPerfil,
-  obtenerPerfil
+  obtenerPerfil,
+  cambiarPassword
 };
