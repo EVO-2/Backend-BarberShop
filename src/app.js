@@ -75,6 +75,17 @@ app.get('/', (req, res) => {
   res.send('✅ API Barbería JEVO en funcionamiento');
 });
 
+// 🔥 RUTA DE PRUEBA RÁPIDA PARA REPORTE DIARIO
+app.get('/debug/reporte-diario', async (req, res) => {
+  try {
+    const { enviarReporteDiario } = require('./schedulers/reporteDiario.scheduler');
+    await enviarReporteDiario();
+    res.json({ mensaje: 'Reporte diario ejecutado y enviado al correo (Revisa tu bandeja de entrada)' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // =================== Rutas API ===================
 app.use('/api/auth', authRoutes);
 app.use('/api/roles', rolRoutes);
