@@ -719,6 +719,40 @@ const pagarCita = async (id, monto, metodo) => {
   }
 };
 
+// ===================== reportarPago =====================
+const reportarPago = async (id, metodo, observaciones) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const cita = await Cita.findById(id).session(session);
+    if (!cita) throw { status: 404, message: 'Cita no encontrada' };
+    if (!cita.pago) throw { status: 400, message: 'La cita no tiene un pago asociado' };
+
+    const pago = await Pago.findById(cita.pago).session(session);
+    if (!pago) throw { status: 400, message: 'No existe un pago asociado a esta cita' };
+    if (pago.estado === EstadosPago.PAGADO) throw { status: 400, message: 'Este pago ya fue confirmado' };
+
+    if (!metodo || !Object.values(MetodosPago).includes(metodo)) throw { status: 400, message: 'Método de pago inválido' };
+
+    pago.metodo = metodo;
+    pago.observaciones = observaciones ? `[Reporte Cliente]: ${observaciones}` : '[Reporte Cliente]';
+    pago.estado = EstadosPago.REPORTADO;
+
+    await pago.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return await Cita.findById(id).populate(CITA_POPULATE);
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
 // ===================== export =====================
 module.exports = {
   crearCita,
@@ -735,5 +769,6 @@ module.exports = {
   obtenerCitasPorFechaYHora,
   repetirCita,
   obtenerCitasPorRango,
-  pagarCita
+  pagarCita,
+  reportarPago
 };

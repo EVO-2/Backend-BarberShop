@@ -419,6 +419,31 @@ const pagarCita = async (req, res) => {
   }
 };
 
+// Reportar pago (cliente)
+const reportarPago = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { metodo, observaciones } = req.body;
+
+    if (!metodo || !Object.values(MetodosPago).includes(metodo)) {
+      return res.status(400).json({ mensaje: Mensajes.ERROR_METODO_INVALIDO || 'Método de pago no válido' });
+    }
+
+    const cita = await CitaService.reportarPago(id, metodo, observaciones);
+
+    return res.json({
+      mensaje: 'Pago reportado correctamente, en espera de confirmación',
+      cita
+    });
+
+  } catch (error) {
+    console.error('Error en reportarPago controller:', error);
+    return res.status(error.status || 500).json({
+      mensaje: error.message || 'Error al reportar el pago'
+    });
+  }
+};
+
 module.exports = {
   crearCita,
   obtenerCitas,
@@ -436,4 +461,5 @@ module.exports = {
   obtenerCitasPorRango,
   repetirCita,
   pagarCita,
+  reportarPago,
 };

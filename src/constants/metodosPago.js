@@ -1,5 +1,7 @@
 module.exports = Object.freeze({
   EFECTIVO: 'efectivo',
   TARJETA: 'tarjeta',
-  TRANSFERENCIA: 'transferencia'
+  TRANSFERENCIA: 'transferencia',
+  NEQUI: 'nequi',
+  DAVIPLATA: 'daviplata'
 });

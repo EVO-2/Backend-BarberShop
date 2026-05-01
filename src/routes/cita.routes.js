@@ -117,8 +117,16 @@ router.post(
 router.put(
   '/:id/pagar',
   validarJWT,
-  tieneRol(ROLES.ADMIN),
+  tieneRol(ROLES.ADMIN, ROLES.BARBERO, ROLES.MANICURISTA),
   citaController.pagarCita
+);
+
+// Cliente: reportar pago
+router.put(
+  '/:id/reportar-pago',
+  validarJWT,
+  tieneRol(ROLES.CLIENTE),
+  citaController.reportarPago
 );
 
 // 🔹 Obtener citas en un rango de fechas (Admin, Cliente, profesional)
