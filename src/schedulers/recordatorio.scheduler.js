@@ -59,7 +59,7 @@ const programarRecordatorio = async (cita) => {
   if (!cita.fecha || !cita.cliente) return;
 
   const fechaCita = new Date(cita.fecha);
-  // 🔥 MODO PRUEBA RÁPIDA: El recordatorio sonará 1 minuto después de crear la cita (sin importar la fecha de la cita)
+  // 🔥 MODO PRUEBA RÁPIDA: El recordatorio sonará 1 minuto después de crear la cita
   const fechaRecordatorio = new Date(Date.now() + (1 * 60 * 1000)); 
   // const fechaRecordatorio = new Date(fechaCita.getTime() - (80 * 60 * 1000)); // 80 min antes
 
