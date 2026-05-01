@@ -2,7 +2,6 @@ const CitaService = require('../services/cita.service');
 const Servicio = require('../models/Servicio.model');
 const Cita = require('../models/Cita.model');
 const Cliente = require('../models/Cliente.model');
-const { notificarNuevaCita } = require('../services/notificacion.service');
 const NotificationService = require('../services/notification.service');
 const { programarRecordatorio } = require('../schedulers/recordatorio.scheduler');
 const { pagarCita: pagarCitaService } = require('../services/cita.service');

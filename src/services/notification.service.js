@@ -1,5 +1,3 @@
-const EmailService = require('./email.service');
-
 // 🔥 IMPORTS
 const generarTemplateRecordatorio = require('../templates/recordatorio.template');
 const generarTemplateCita = require('../templates/citaConfirmada.template');
@@ -11,10 +9,6 @@ const WhatsAppService = require('./whatsapp.service');
 const generarMensajeRecordatorio = require('../templates/whatsappRecordatorio.template');
 
 class NotificationService {
-  constructor() {
-    this.emailService = new EmailService();
-  }
-
   // 🔥 Método principal
   async notify(event, payload) {
     try {
@@ -117,6 +111,40 @@ class NotificationService {
       url
     } = data;
 
+    // ================= WHATSAPP Y PUSHER (TIEMPO REAL) =================
+    // Lo ejecutamos primero para que no sea bloqueado por demoras o errores del correo
+    if (telefono) {
+      try {
+        console.log(`📱 [NotificationService] Generando enlace de WhatsApp a ${telefono}...`);
+
+        const mensaje = generarMensajeRecordatorio({
+          nombre,
+          fecha,
+          hora,
+          servicio: servicios,
+          url
+        });
+
+        // Simplemente generamos la URL para no gastar en APIs
+        const link = WhatsAppService.generarEnlaceWhatsApp(telefono, mensaje);
+        console.log(`✅ [WhatsApp] Enlace directo de WhatsApp generado: ${link}`);
+        
+        // NOTIFICAR AL BARBERO EN TIEMPO REAL (PUSHER) CON EL ENLACE
+        if (pusher) {
+          pusher.trigger('barberia-channel', 'recordatorio-cita', {
+            mensaje: `⏰ Recordatorio de cita inminente para ${nombre}.`,
+            fecha,
+            hora,
+            telefono,
+            linkWhatsAppCliente: link
+          });
+          console.log(`⚡ [Pusher] Evento 'recordatorio-cita' enviado al barbero con el enlace de WhatsApp.`);
+        }
+      } catch (error) {
+        console.error('❌ Error generando WhatsApp:', error.message);
+      }
+    }
+
     // ================= EMAIL =================
     if (correo) {
       try {
@@ -133,37 +161,19 @@ class NotificationService {
 
         console.log('📧 [NotificationService] Enviando email de recordatorio...');
 
-        await enviarEmail({
+        // NO usamos await aquí para no bloquear la ejecución si hay timeout
+        enviarEmail({
           to: correo,
           subject: 'Recordatorio de tu cita ⏰',
           html
+        }).then(() => {
+          console.log(`📧 [NotificationService] Recordatorio enviado a ${correo}`);
+        }).catch((error) => {
+          console.error('❌ Error asíncrono enviando recordatorio (email):', error.message);
         });
 
-        console.log(`📧 [NotificationService] Recordatorio enviado a ${correo}`);
       } catch (error) {
-        console.error('❌ Error enviando recordatorio (email):', error.message);
-      }
-    }
-
-    // ================= WHATSAPP =================
-    if (telefono) {
-      try {
-        console.log(`📱 [NotificationService] Generando enlace de WhatsApp a ${telefono}...`);
-
-        const mensaje = generarMensajeRecordatorio({
-          nombre,
-          fecha,
-          hora,
-          servicio: servicios,
-          url
-        });
-
-        // Simplemente generamos la URL para no gastar en APIs, el frontend o el email pueden usarla
-        const link = WhatsAppService.generarEnlaceWhatsApp(telefono, mensaje);
-        console.log(`✅ [WhatsApp] Enlace directo de WhatsApp generado: ${link}`);
-        // NOTA: Si queremos mandar este link por correo al peluquero, se puede hacer acá.
-      } catch (error) {
-        console.error('❌ Error generando WhatsApp:', error.message);
+        console.error('❌ Error sincrono al preparar email:', error.message);
       }
     }
   }

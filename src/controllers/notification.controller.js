@@ -1,7 +1,7 @@
 // src/controllers/notification.controller.js
 const NotificationService = require("../services/notification.service");
 const WhatsAppService = require("../services/whatsapp.service");
-const EmailService = require("../services/email.service");
+const enviarEmail = require("../helpers/enviarEmail");
 const generarTemplateRecordatorio = require("../templates/recordatorio.template");
 const generarTemplateCita = require("../templates/citaConfirmada.template");
 
@@ -41,9 +41,8 @@ const sendNotification = async (req, res) => {
         html = `<p>${JSON.stringify(email.data)}</p>`;
       }
 
-      const emailService = new EmailService();
       tasks.push(
-        emailService.sendEmail({
+        enviarEmail({
           to: email.to,
           subject: email.data?.subject || "Notificación de BarberShop",
           html
