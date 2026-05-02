@@ -61,7 +61,8 @@ class NotificationService {
           hora,
           servicios,
           telefono,
-          linkWhatsAppCliente
+          linkWhatsAppCliente,
+          peluqueroId
         });
         console.log(`⚡ [Pusher] Evento 'nueva-cita' enviado en tiempo real.`);
       } catch (pusherError) {
@@ -108,7 +109,8 @@ class NotificationService {
       hora,
       servicios,
       turno,
-      url
+      url,
+      peluqueroId
     } = data;
 
     // ================= WHATSAPP Y PUSHER (TIEMPO REAL) =================
@@ -136,7 +138,8 @@ class NotificationService {
             fecha,
             hora,
             telefono,
-            linkWhatsAppCliente: link
+            linkWhatsAppCliente: link,
+            peluqueroId
           });
           console.log(`⚡ [Pusher] Evento 'recordatorio-cita' enviado al barbero con el enlace de WhatsApp.`);
         }

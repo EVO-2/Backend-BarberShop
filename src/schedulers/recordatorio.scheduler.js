@@ -38,7 +38,8 @@ const procesarRecordatorio = async (citaId, clienteId, turno) => {
       hora: horaFormateada,
       servicios: servicioNombre,
       turno: turno,
-      url: `${frontendUrl}/mis-citas/${cita._id}`
+      url: `${frontendUrl}/mis-citas/${cita._id}`,
+      peluqueroId: cita.peluquero ? cita.peluquero.toString() : null
     };
     
     await NotificationService.notify('CITA_RECORDATORIO', payload);
@@ -60,11 +61,8 @@ const programarRecordatorio = async (cita) => {
 
   const fechaCita = new Date(cita.fecha);
   
-  // MODO PRUEBA: Suena 1 minuto después de crear la cita
-  const fechaRecordatorio = new Date(Date.now() + (1 * 60 * 1000)); 
-  
-  // MODO PRODUCCIÓN (Comentado temporalmente)
-  // const fechaRecordatorio = new Date(fechaCita.getTime() - (80 * 60 * 1000)); 
+  // MODO PRODUCCIÓN
+  const fechaRecordatorio = new Date(fechaCita.getTime() - (80 * 60 * 1000)); 
 
   // No programar si la hora ya pasó
   if (fechaRecordatorio < new Date()) {
