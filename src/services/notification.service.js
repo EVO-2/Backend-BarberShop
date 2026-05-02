@@ -21,6 +21,10 @@ class NotificationService {
           await this.handleRecordatorio(payload);
           break;
 
+        case 'PAGO_REPORTADO':
+          await this.handlePagoReportado(payload);
+          break;
+
         default:
           console.warn(`⚠️ Evento no manejado: ${event}`);
       }
@@ -177,6 +181,25 @@ class NotificationService {
 
       } catch (error) {
         console.error('❌ Error sincrono al preparar email:', error.message);
+      }
+    }
+  }
+
+  // 💰 REPORTE DE PAGO
+  async handlePagoReportado(data) {
+    const { nombreCliente, fecha, hora, peluqueroId, metodo, observaciones } = data;
+    if (pusher) {
+      try {
+        pusher.trigger('barberia-channel', 'pago-reportado', {
+          mensaje: `${nombreCliente} ha reportado un pago por ${metodo}.`,
+          fecha,
+          hora,
+          peluqueroId,
+          observaciones
+        });
+        console.log(`⚡ [Pusher] Evento 'pago-reportado' enviado en tiempo real.`);
+      } catch (error) {
+        console.error('❌ Error enviando evento Pusher:', error.message);
       }
     }
   }

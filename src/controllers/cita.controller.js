@@ -432,6 +432,23 @@ const reportarPago = async (req, res) => {
 
     const cita = await CitaService.reportarPago(id, metodo, observaciones);
 
+    // Notificar al barbero
+    try {
+      const nombreCliente = cita.cliente?.usuario?.nombre || 'Un cliente';
+      const fechaCita = cita.fechaInicio || cita.fecha;
+      const payload = {
+        nombreCliente,
+        fecha: new Date(fechaCita).toLocaleDateString('es-CO'),
+        hora: new Date(fechaCita).toLocaleTimeString('es-CO'),
+        peluqueroId: cita.peluquero?._id || cita.peluquero,
+        metodo,
+        observaciones
+      };
+      NotificationService.notify('PAGO_REPORTADO', payload).catch(e => console.log('Error notificando PAGO_REPORTADO:', e.message));
+    } catch (notifyErr) {
+      console.log('Error preparando notificacion PAGO_REPORTADO:', notifyErr.message);
+    }
+
     return res.json({
       mensaje: 'Pago reportado correctamente, en espera de confirmación',
       cita
