@@ -22,7 +22,7 @@ const CITA_POPULATE = [
   { path: 'servicios', select: 'nombre precio duracion estado' },
   { path: 'sede', select: 'nombre direccion' },
   { path: 'puestoTrabajo', select: 'nombre' },
-  { path: 'pago', select: 'monto metodo estado' },
+  { path: 'pago', select: 'monto metodo estado observaciones' },
 ];
 
 const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'en_proceso'];
@@ -248,6 +248,8 @@ const obtenerCitasPaginadas = async ({ page = 1, limit = 10, filtroGeneral, fech
     { $lookup: { from: 'sedes', localField: 'sede', foreignField: '_id', as: 'sede' } },
     { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'servicios', localField: 'servicios', foreignField: '_id', as: 'servicios' } },
+    { $lookup: { from: 'pagos', localField: 'pago', foreignField: '_id', as: 'pago' } },
+    { $unwind: { path: '$pago', preserveNullAndEmptyArrays: true } },
   ];
 
   // ----------- Filtro general -----------
@@ -333,6 +335,8 @@ const obtenerMisCitas = async ({ uid, rol, fecha, filtroGeneral, page = 1, limit
     { $lookup: { from: 'sedes', localField: 'sede', foreignField: '_id', as: 'sede' } },
     { $unwind: { path: '$sede', preserveNullAndEmptyArrays: true } },
     { $lookup: { from: 'servicios', localField: 'servicios', foreignField: '_id', as: 'servicios' } },
+    { $lookup: { from: 'pagos', localField: 'pago', foreignField: '_id', as: 'pago' } },
+    { $unwind: { path: '$pago', preserveNullAndEmptyArrays: true } },
     { $group: { _id: "$_id", doc: { $first: "$$ROOT" } } },
     { $replaceRoot: { newRoot: "$doc" } },
   ];
