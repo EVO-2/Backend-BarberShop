@@ -7,16 +7,17 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // false para 587
-    requireTLS: true,
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
     tls: {
         rejectUnauthorized: false
-    }
+    },
+    // Fuerza a Node.js a usar IPv4 para evadir bugs de timeout con IPv6
+    family: 4
 });
 
 const enviarEmail = async ({ to, subject, html }) => {
