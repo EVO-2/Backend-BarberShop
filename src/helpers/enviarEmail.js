@@ -37,7 +37,7 @@ const enviarEmail = async ({ to, subject, html }) => {
         }] : [];
 
         const info = await transporter.sendMail({
-            from: `"BarberShop" <${process.env.EMAIL_USER}>`,
+            from: `"Jevo Style" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             html,
@@ -61,7 +61,7 @@ const enviarEmail = async ({ to, subject, html }) => {
             const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
             
             const { data, error } = await resend.emails.send({
-                from: `"BarberShop" <${fromEmail}>`,
+                from: `"Jevo Style" <${fromEmail}>`,
                 to,
                 subject,
                 html,
