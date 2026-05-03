@@ -187,7 +187,7 @@ class NotificationService {
 
   // 💰 REPORTE DE PAGO
   async handlePagoReportado(data) {
-    const { nombreCliente, fecha, hora, peluqueroId, metodo, observaciones } = data;
+    const { nombreCliente, fecha, hora, peluqueroId, metodo, observaciones, urlComprobante } = data;
     if (pusher) {
       try {
         pusher.trigger('barberia-channel', 'pago-reportado', {
@@ -195,7 +195,9 @@ class NotificationService {
           fecha,
           hora,
           peluqueroId,
-          observaciones
+          metodo,
+          observaciones,
+          urlComprobante
         });
         console.log(`⚡ [Pusher] Evento 'pago-reportado' enviado en tiempo real.`);
       } catch (error) {
