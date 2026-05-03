@@ -5,6 +5,10 @@ const fs = require('fs');
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
+if (!resend) {
+    console.warn('⚠️ [Email] RESEND_API_KEY no configurada. Se usará Nodemailer (Gmail) como único método.');
+}
+
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
