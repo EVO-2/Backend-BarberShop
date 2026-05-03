@@ -37,7 +37,7 @@ const enviarEmail = async ({ to, subject, html }) => {
         }] : [];
 
         const info = await transporter.sendMail({
-            from: `"Jevo Style" <${process.env.EMAIL_USER}>`,
+            from: `"Cristian BarberShop" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             html,
@@ -52,16 +52,16 @@ const enviarEmail = async ({ to, subject, html }) => {
         // 🚀 PROVEEDOR 1: RESEND (Tecnología moderna)
         if (resend) {
             console.log(`🚀 [Email] Intentando enviar vía Resend API a ${to}`);
-            
+
             const attachments = logoExists ? [{
                 filename: 'logo.png',
                 content: fs.readFileSync(logoPath)
             }] : [];
 
             const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-            
+
             const { data, error } = await resend.emails.send({
-                from: `"Jevo Style" <${fromEmail}>`,
+                from: `"Cristian BarberShop" <${fromEmail}>`,
                 to,
                 subject,
                 html,
@@ -75,8 +75,8 @@ const enviarEmail = async ({ to, subject, html }) => {
 
             console.log(`✅ Email enviado exitosamente vía Resend: ${data.id}`);
             return data;
-        } 
-        
+        }
+
         // Si no hay Resend API Key, usamos Nodemailer directamente
         return await enviarConNodemailer();
 
