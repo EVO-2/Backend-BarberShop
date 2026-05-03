@@ -425,12 +425,17 @@ const reportarPago = async (req, res) => {
   try {
     const { id } = req.params;
     const { metodo, observaciones } = req.body;
+    let urlComprobante = null;
+
+    if (req.file) {
+      urlComprobante = req.file.location;
+    }
 
     if (!metodo || !Object.values(MetodosPago).includes(metodo)) {
       return res.status(400).json({ mensaje: Mensajes.ERROR_METODO_INVALIDO || 'Método de pago no válido' });
     }
 
-    const cita = await CitaService.reportarPago(id, metodo, observaciones);
+    const cita = await CitaService.reportarPago(id, metodo, observaciones, urlComprobante);
 
     // Notificar al barbero
     try {
@@ -442,7 +447,8 @@ const reportarPago = async (req, res) => {
         hora: new Date(fechaCita).toLocaleTimeString('es-CO'),
         peluqueroId: cita.peluquero?._id || cita.peluquero,
         metodo,
-        observaciones
+        observaciones,
+        urlComprobante
       };
       NotificationService.notify('PAGO_REPORTADO', payload).catch(e => console.log('Error notificando PAGO_REPORTADO:', e.message));
     } catch (notifyErr) {

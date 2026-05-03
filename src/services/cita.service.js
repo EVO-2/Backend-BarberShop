@@ -22,7 +22,7 @@ const CITA_POPULATE = [
   { path: 'servicios', select: 'nombre precio duracion estado' },
   { path: 'sede', select: 'nombre direccion' },
   { path: 'puestoTrabajo', select: 'nombre' },
-  { path: 'pago', select: 'monto metodo estado observaciones' },
+  { path: 'pago', select: 'monto metodo estado observaciones urlComprobante' },
 ];
 
 const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'en_proceso'];
@@ -724,7 +724,7 @@ const pagarCita = async (id, monto, metodo) => {
 };
 
 // ===================== reportarPago =====================
-const reportarPago = async (id, metodo, observaciones) => {
+const reportarPago = async (id, metodo, observaciones, urlComprobante = null) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -742,6 +742,9 @@ const reportarPago = async (id, metodo, observaciones) => {
     pago.metodo = metodo;
     pago.observaciones = observaciones ? `[Reporte Cliente]: ${observaciones}` : '[Reporte Cliente]';
     pago.estado = EstadosPago.REPORTADO;
+    if (urlComprobante) {
+      pago.urlComprobante = urlComprobante;
+    }
 
     await pago.save({ session });
 

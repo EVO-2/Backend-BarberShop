@@ -1,5 +1,5 @@
 const generarMensajeRecordatorio = (data) => {
-    return `💈 Barbería JEVO
+    return `💈 Cristian BarberShop
 
 Hola ${data.nombre} 👋
 

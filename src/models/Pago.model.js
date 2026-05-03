@@ -26,6 +26,10 @@ const PagoSchema = new Schema({
   },
   observaciones: {
     type: String
+  },
+  urlComprobante: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true,

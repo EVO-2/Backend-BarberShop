@@ -34,7 +34,7 @@ const generarTemplateCita = (data) => {
       <mj-section background-color="#032e4d" padding="20px">
         <mj-column>
           <mj-text align="center" color="#ffffff" font-size="22px" font-weight="700">
-            💈 BarberShop
+            💈 Cristian BarberShop
           </mj-text>
         </mj-column>
       </mj-section>

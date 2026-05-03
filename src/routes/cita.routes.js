@@ -121,11 +121,15 @@ router.put(
   citaController.pagarCita
 );
 
+const { createUploadMiddleware } = require('../middlewares/upload');
+const uploadComprobante = createUploadMiddleware('comprobantes');
+
 // Cliente: reportar pago
 router.put(
   '/:id/reportar-pago',
   validarJWT,
   tieneRol(ROLES.CLIENTE),
+  uploadComprobante.single('comprobante'),
   citaController.reportarPago
 );
 
