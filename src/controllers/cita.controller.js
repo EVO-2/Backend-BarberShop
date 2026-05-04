@@ -6,6 +6,7 @@ const NotificationService = require('../services/notification.service');
 const { programarRecordatorio } = require('../schedulers/recordatorio.scheduler');
 const { pagarCita: pagarCitaService } = require('../services/cita.service');
 const { MetodosPago, Mensajes } = require('../constants');
+const HistorialService = require('../services/historial.service');
 
 
 
@@ -117,6 +118,17 @@ const crearCita = async (req, res) => {
           console.error('Error programando recordatorio:', err.message);
         });
     }
+
+    // ================= AUDITORÍA =================
+    HistorialService.registrarAccion({
+      usuario: uid,
+      accion: 'CREAR',
+      modulo: 'CITAS',
+      descripcion: `Creó una nueva cita para el cliente ${clienteData?.usuario?.nombre || 'Desconocido'}`,
+      entidadId: cita._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     // ================= RESPONSE =================
     return res.status(201).json(cita);
@@ -231,6 +243,17 @@ const actualizarCita = async (req, res) => {
     const data = req.body;
     const citaActualizada = await CitaService.actualizarCita(id, data);
     if (!citaActualizada) return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    
+    HistorialService.registrarAccion({
+      usuario: req.uid,
+      accion: 'ACTUALIZAR',
+      modulo: 'CITAS',
+      descripcion: `Actualizó los detalles de la cita`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     return res.json(citaActualizada);
   } catch (error) {
     return res.status(error.status || 500).json({ mensaje: error.message || 'Error al actualizar la cita' });
@@ -317,6 +340,17 @@ const cancelarCita = async (req, res) => {
     const { id } = req.params;
     const cita = await CitaService.cancelarCita(id);
     if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
+    
+    HistorialService.registrarAccion({
+      usuario: req.uid,
+      accion: 'ELIMINAR',
+      modulo: 'CITAS',
+      descripcion: `Canceló la cita`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     return res.json({ mensaje: 'Cita cancelada exitosamente', cita });
   } catch (error) {
     return res.status(error.status || 500).json({ mensaje: error.message || 'Error al cancelar la cita' });

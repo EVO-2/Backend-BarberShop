@@ -27,6 +27,7 @@ const categoriaRoutes = require('./routes/categoria.routes');
 
 // 🔥 NUEVA RUTA (PERMISOS)
 const permisosRoutes = require('./routes/permisos.routes');
+const historialRoutes = require('./routes/historial.routes');
 
 // =================== Middlewares ===================
 
@@ -106,6 +107,7 @@ app.use('/api/productos', productoRoutes);
 app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/permisos', permisosRoutes);
+app.use('/api/historial', historialRoutes);
 
 // =================== Manejo de errores 404 ===================
 app.use((req, res) => {

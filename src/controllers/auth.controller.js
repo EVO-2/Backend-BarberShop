@@ -4,6 +4,7 @@ const Cliente = require('../models/Cliente.model');
 const Peluquero = require('../models/Peluquero.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const HistorialService = require('../services/historial.service');
 
 const login = async (req, res) => {
   try {
@@ -29,8 +30,27 @@ const login = async (req, res) => {
     // 2. Validar contraseña
     const validPassword = await bcrypt.compare(password, usuario.password);
     if (!validPassword) {
+      HistorialService.registrarAccion({
+        usuario: usuario._id,
+        accion: 'INTENTO_FALLIDO',
+        modulo: 'AUTENTICACION',
+        descripcion: 'Contraseña incorrecta al iniciar sesión',
+        ip: req.ip || req.connection.remoteAddress,
+        dispositivo: req.headers['user-agent'],
+        exito: false
+      });
       return res.status(400).json({ mensaje: 'Contraseña incorrecta' });
     }
+
+    HistorialService.registrarAccion({
+      usuario: usuario._id,
+      accion: 'LOGIN',
+      modulo: 'AUTENTICACION',
+      descripcion: 'Inicio de sesión exitoso',
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent'],
+      exito: true
+    });
 
     // 3. Token
     const token = jwt.sign(
