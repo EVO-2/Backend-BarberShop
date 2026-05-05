@@ -760,6 +760,32 @@ const reportarPago = async (id, metodo, observaciones, urlComprobante = null) =>
   }
 };
 
+// ===================== calificarCita =====================
+const calificarCita = async (id, calificacion, comentario_calificacion) => {
+  const cita = await Cita.findById(id);
+  if (!cita) throw { status: 404, message: 'Cita no encontrada' };
+  
+  if (!['finalizada', 'pagada'].includes(cita.estado)) {
+    throw { status: 400, message: 'Solo se pueden calificar citas finalizadas o pagadas' };
+  }
+
+  if (cita.calificacion) {
+    throw { status: 400, message: 'Esta cita ya fue calificada' };
+  }
+
+  if (calificacion < 1 || calificacion > 5) {
+    throw { status: 400, message: 'La calificación debe estar entre 1 y 5' };
+  }
+
+  cita.calificacion = calificacion;
+  if (comentario_calificacion) {
+    cita.comentario_calificacion = comentario_calificacion;
+  }
+
+  await cita.save();
+  return await Cita.findById(id).populate(CITA_POPULATE);
+};
+
 // ===================== export =====================
 module.exports = {
   crearCita,
@@ -777,5 +803,6 @@ module.exports = {
   repetirCita,
   obtenerCitasPorRango,
   pagarCita,
-  reportarPago
+  reportarPago,
+  calificarCita
 };

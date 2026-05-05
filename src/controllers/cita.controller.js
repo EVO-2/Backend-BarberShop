@@ -502,6 +502,26 @@ const reportarPago = async (req, res) => {
   }
 };
 
+// ===================== Calificar Cita =====================
+const calificarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { calificacion, comentario_calificacion } = req.body;
+
+    const citaActualizada = await CitaService.calificarCita(id, calificacion, comentario_calificacion);
+
+    return res.json({
+      mensaje: '¡Gracias por tu calificación!',
+      cita: citaActualizada
+    });
+  } catch (error) {
+    console.error('Error en calificarCita controller:', error);
+    return res.status(error.status || 500).json({
+      mensaje: error.message || 'Error al calificar la cita'
+    });
+  }
+};
+
 module.exports = {
   crearCita,
   obtenerCitas,
@@ -520,4 +540,5 @@ module.exports = {
   repetirCita,
   pagarCita,
   reportarPago,
+  calificarCita
 };

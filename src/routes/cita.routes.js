@@ -1,4 +1,5 @@
 // rutas/cita.routes.js
+// force nodemon restart
 const express = require('express');
 const router = express.Router();
 const { validarJWT } = require('../middlewares/validarJWT');
@@ -131,6 +132,14 @@ router.put(
   tieneRol(ROLES.CLIENTE),
   uploadComprobante.single('comprobante'),
   citaController.reportarPago
+);
+
+// Cliente: calificar cita
+router.post(
+  '/:id/calificar',
+  validarJWT,
+  tieneRol(ROLES.CLIENTE),
+  citaController.calificarCita
 );
 
 // 🔹 Obtener citas en un rango de fechas (Admin, Cliente, profesional)
