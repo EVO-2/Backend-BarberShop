@@ -12,8 +12,9 @@ const tenantPlugin = function (schema, options) {
   const applyTenantFilter = function (next) {
     const empresaId = getTenantId();
     const modelName = this.model?.modelName || this.mongooseCollection?.modelName || 'Desconocido';
+    const options = this.getOptions ? this.getOptions() : {};
     
-    if (modelName !== 'Empresa' && modelName !== 'Rol') {
+    if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso' && !options.bypassTenant) {
       if (empresaId) {
         this.where({ empresaId });
       } else {

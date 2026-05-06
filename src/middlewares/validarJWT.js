@@ -25,6 +25,7 @@ const validarJWT = async (req, res, next) => {
 
     // 🔥 POPULATE PRO (ROL + PERMISOS CON NOMBRE Y MODULO)
     const usuario = await Usuario.findById(uid)
+      .setOptions({ bypassTenant: true })
       .populate({
         path: 'rol',
         select: 'nombre permisos',
