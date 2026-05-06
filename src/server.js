@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const { tenantPlugin } = require('./plugins/tenant');
 mongoose.plugin(tenantPlugin);
 const { iniciarCronReporteDiario } = require('./schedulers/reporteDiario.scheduler');
+const { initSubscriptionCron } = require('./schedulers/subscription.scheduler');
 
 const app = express();
 
@@ -31,6 +32,7 @@ const iniciarServidor = async () => {
       
       // Iniciar tareas programadas (Cron)
       iniciarCronReporteDiario();
+      initSubscriptionCron();
     });
 
   } catch (error) {

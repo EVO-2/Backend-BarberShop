@@ -55,10 +55,12 @@ const validarJWT = async (req, res, next) => {
     // ✅ PERMISOS (AHORA SÍ 100% FUNCIONAL)
     req.permisos = (usuario.rol?.permisos || []).map(p => p.nombre);
 
-    // ✅ ENVOLVER NEXT() EN EL CONTEXTO DEL TENANT
+    // ✅ ENVOLVER NEXT() EN EL CONTEXTO DEL TENANT Y VALIDAR SUSCRIPCIÓN
+    const { validarSuscripcion } = require('./validarSuscripcion');
+    
     if (usuario.empresaId) {
       return tenantStorage.run(usuario.empresaId, () => {
-        return next();
+        return validarSuscripcion(req, res, next);
       });
     } else {
       return next(); // SuperAdmins o usuarios sin empresa aún

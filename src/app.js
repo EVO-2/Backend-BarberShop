@@ -25,6 +25,7 @@ const productoRoutes = require('./routes/producto.routes');
 const proveedorRoutes = require('./routes/proveedor.routes');
 const categoriaRoutes = require('./routes/categoria.routes');
 const suscripcionesRoutes = require('./routes/suscripciones.routes');
+const onboardingRoutes = require('./routes/onboarding.routes');
 
 // 🔥 NUEVA RUTA (PERMISOS)
 const permisosRoutes = require('./routes/permisos.routes');
@@ -110,6 +111,7 @@ app.use('/api/categorias', categoriaRoutes);
 app.use('/api/permisos', permisosRoutes);
 app.use('/api/historial', historialRoutes);
 app.use('/api/suscripciones', suscripcionesRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 // =================== Manejo de errores 404 ===================
 app.use((req, res) => {

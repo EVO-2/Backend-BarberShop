@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 
 const PermisoSchema = new mongoose.Schema(
     {
-  empresaId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Empresa',
-    default: null
-  },
+        empresaId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Empresa',
+            default: null
+        },
         nombre: {
             type: String,
             required: true,
@@ -21,8 +21,8 @@ const PermisoSchema = new mongoose.Schema(
         },
         clave: {
             type: String,
-            required: true,
-            unique: true
+            required: true
+            // quitamos el unique global de clave
         },
         tipo: {
             type: String,
@@ -37,6 +37,8 @@ const PermisoSchema = new mongoose.Schema(
     { timestamps: true, versionKey: false }
 );
 
-PermisoSchema.index({ nombre: 1, modulo: 1 }, { unique: true });
+// Índice compuesto para que los nombres y claves de permisos sean únicos solo por empresa
+PermisoSchema.index({ empresaId: 1, clave: 1 }, { unique: true });
+PermisoSchema.index({ empresaId: 1, nombre: 1, modulo: 1 }, { unique: true });
 
 module.exports = mongoose.models.Permiso || mongoose.model('Permiso', PermisoSchema);
