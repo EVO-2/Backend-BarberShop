@@ -69,6 +69,8 @@ const obtenerResumenDashboard = async (req, res) => {
            🚀 CONSULTAS
         ===================================================== */
 
+
+
         const [
             citasHoy,
             ultimasCitas,

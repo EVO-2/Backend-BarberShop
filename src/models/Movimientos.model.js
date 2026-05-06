@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const movimientoSchema = new mongoose.Schema({
+  empresaId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   producto: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Producto',

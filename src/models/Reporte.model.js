@@ -1,6 +1,11 @@
 const { Schema, model } = require('mongoose');
 
 const ReporteSchema = new Schema({
+  empresaId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   titulo: {
     type: String,
     required: true

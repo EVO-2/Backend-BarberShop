@@ -5,6 +5,7 @@ const Peluquero = require('../models/Peluquero.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const HistorialService = require('../services/historial.service');
+const Empresa = require('../models/Empresa.model');
 
 const login = async (req, res) => {
   try {
@@ -170,12 +171,16 @@ const registro = async (req, res) => {
       return res.status(500).json({ mensaje: 'No se encontró el rol cliente' });
     }
 
+    // 🔹 OBTENER EMPRESA POR DEFECTO
+    const empresaPrincipal = await Empresa.findOne({ nombre: 'BARBERSHOP PRINCIPAL' });
+
     // 🔹 CREAR USUARIO
     const nuevoUsuario = new Usuario({
       nombre,
       correo,
       password,
-      rol: rolCliente._id
+      rol: rolCliente._id,
+      empresaId: empresaPrincipal ? empresaPrincipal._id : null
     });
 
     await nuevoUsuario.save();
@@ -185,7 +190,8 @@ const registro = async (req, res) => {
 
     try {
       cliente = await Cliente.create({
-        usuario: nuevoUsuario._id
+        usuario: nuevoUsuario._id,
+        empresaId: empresaPrincipal ? empresaPrincipal._id : null
       });
     } catch (error) {
       console.error(`Error creando cliente:`, error);

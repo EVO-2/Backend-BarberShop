@@ -3,6 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const conectarDB = require('./config/db');
+const mongoose = require('mongoose');
+const { tenantPlugin } = require('./plugins/tenant');
+mongoose.plugin(tenantPlugin);
 const { iniciarCronReporteDiario } = require('./schedulers/reporteDiario.scheduler');
 
 const app = express();

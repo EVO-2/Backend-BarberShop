@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Usuario = require('../models/Usuario.model');
+const { tenantStorage } = require('../plugins/tenant');
 
 // ===============================
 // 🔐 VALIDAR JWT
@@ -54,7 +55,14 @@ const validarJWT = async (req, res, next) => {
     // ✅ PERMISOS (AHORA SÍ 100% FUNCIONAL)
     req.permisos = (usuario.rol?.permisos || []).map(p => p.nombre);
 
-    next();
+    // ✅ ENVOLVER NEXT() EN EL CONTEXTO DEL TENANT
+    if (usuario.empresaId) {
+      return tenantStorage.run(usuario.empresaId, () => {
+        return next();
+      });
+    } else {
+      return next(); // SuperAdmins o usuarios sin empresa aún
+    }
 
   } catch (error) {
     console.log(`[validarJWT] 401 - Token no válido. Error:`, error.message);

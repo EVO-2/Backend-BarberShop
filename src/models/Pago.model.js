@@ -2,6 +2,11 @@ const { Schema, model } = require('mongoose');
 const { MetodosPago, EstadosPago } = require('../constants');
 
 const PagoSchema = new Schema({
+  empresaId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   cita: {
     type: Schema.Types.ObjectId,
     ref: 'Cita',

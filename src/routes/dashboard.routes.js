@@ -3,6 +3,8 @@ const { obtenerResumenDashboard } = require('../controllers/dashboard.controller
 
 const router = Router();
 
-router.get('/resumen', obtenerResumenDashboard);
+const { validarJWT } = require('../middlewares/validarJWT');
+
+router.get('/resumen', validarJWT, obtenerResumenDashboard);
 
 module.exports = router;

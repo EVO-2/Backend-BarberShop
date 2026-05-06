@@ -2,16 +2,18 @@ const express = require('express');
 const router = express.Router();
 const rolController = require('../controllers/rol.controller');
 const Rol = require('../models/Rol.model');
+const { validarJWT } = require('../middlewares/validarJWT');
+const { tieneRol } = require('../middlewares/validarRol');
 
 // ===============================
-// 📌 CREAR ROL
+// 📌 CREAR ROL (Solo SuperAdmin)
 // ===============================
-router.post('/', rolController.crearRol);
+router.post('/', validarJWT, tieneRol('superadmin'), rolController.crearRol);
 
 // ===============================
 // 📌 LISTAR ROLES (solo activos)
 // ===============================
-router.get('/', async (req, res) => {
+router.get('/', validarJWT, async (req, res) => {
   try {
     const roles = await Rol.find({ estado: true })
       .populate('permisos', 'nombre modulo');
@@ -33,7 +35,7 @@ router.get('/', async (req, res) => {
 // ===============================
 // 📌 OBTENER ROL POR ID
 // ===============================
-router.get('/:id', (req, res, next) => {
+router.get('/:id', validarJWT, (req, res, next) => {
   const { id } = req.params;
 
   if (!id || id.trim() === '') {
@@ -47,9 +49,9 @@ router.get('/:id', (req, res, next) => {
 });
 
 // ===============================
-// 📌 ACTUALIZAR ROL
+// 📌 ACTUALIZAR ROL (Solo SuperAdmin)
 // ===============================
-router.put('/:id', (req, res, next) => {
+router.put('/:id', validarJWT, tieneRol('superadmin'), (req, res, next) => {
   const { id } = req.params;
 
   if (!id || id.trim() === '') {
@@ -63,9 +65,9 @@ router.put('/:id', (req, res, next) => {
 });
 
 // ===============================
-// 📌 ELIMINAR ROL (SOFT DELETE)
+// 📌 ELIMINAR ROL (SOFT DELETE) (Solo SuperAdmin)
 // ===============================
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', validarJWT, tieneRol('superadmin'), (req, res, next) => {
   const { id } = req.params;
 
   if (!id || id.trim() === '') {

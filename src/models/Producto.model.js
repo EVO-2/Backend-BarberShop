@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const productoSchema = new mongoose.Schema({
+  empresaId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   nombre: {
     type: String,
     required: true,

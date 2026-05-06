@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const NotificacionSchema = new mongoose.Schema({
+  empresaId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
     tipo: String,
     destinatario: String,
     canal: String, // email, sms, whatsapp

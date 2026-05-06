@@ -1,6 +1,11 @@
 const { Schema, model } = require('mongoose');
 
 const CitaSchema = new Schema({
+  empresaId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   cliente: { type: Schema.Types.ObjectId, ref: 'Cliente', required: true },
   peluquero: { type: Schema.Types.ObjectId, ref: 'Peluquero', required: true },
 

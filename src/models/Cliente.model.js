@@ -1,6 +1,11 @@
 const { Schema, model } = require('mongoose');
 
 const ClienteSchema = new Schema({
+  empresaId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   usuario: {
     type: Schema.Types.ObjectId,
     ref: 'Usuario',

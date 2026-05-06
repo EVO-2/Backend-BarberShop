@@ -2,6 +2,11 @@
 const mongoose = require('mongoose');
 
 const equipoSchema = new mongoose.Schema({
+  empresaId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
   nombre: { type: String, required: true, trim: true, index: true },
   tipo: { type: String, required: true, trim: true },
   descripcion: { type: String, default: '' },

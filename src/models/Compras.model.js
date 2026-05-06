@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const compraSchema = new mongoose.Schema({
+  empresaId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Empresa',
+    default: null
+  },
     proveedor: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Proveedor',
