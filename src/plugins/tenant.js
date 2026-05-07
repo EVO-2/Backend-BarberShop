@@ -46,6 +46,34 @@ const tenantPlugin = function (schema, options) {
     }
     next();
   });
+
+  // 🔹 Inyectar automáticamente empresaId al crear nuevos documentos
+  schema.pre('save', function (next) {
+    const empresaId = getTenantId();
+    const modelName = this.constructor.modelName || 'Desconocido';
+    
+    if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso') {
+      if (empresaId && !this.empresaId) {
+        this.empresaId = empresaId;
+      }
+    }
+    next();
+  });
+
+  schema.pre('insertMany', function (next, docs) {
+    const empresaId = getTenantId();
+    if (empresaId && Array.isArray(docs)) {
+      docs.forEach(doc => {
+        const modelName = doc.constructor.modelName || 'Desconocido';
+        if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso') {
+          if (!doc.empresaId) {
+            doc.empresaId = empresaId;
+          }
+        }
+      });
+    }
+    next();
+  });
 };
 
 module.exports = {

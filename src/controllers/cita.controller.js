@@ -62,12 +62,7 @@ const crearCita = async (req, res) => {
     const cita = await CitaService.crearCita(datosCita);
 
     // ================= PREPARAR DATOS =================
-    const citaPop = await Cita.findById(cita._id).populate({
-      path: 'servicios',
-      select: 'nombre'
-    });
-
-    const servicios = citaPop.servicios?.map(s => s.nombre).join(', ') || 'Servicio no definido';
+    const servicios = cita.servicios?.map(s => s.nombre).join(', ') || 'Servicio no definido';
 
     const user = clienteData?.usuario;
 
@@ -134,8 +129,10 @@ const crearCita = async (req, res) => {
     return res.status(201).json(cita);
 
   } catch (error) {
+    console.error('❌ Error crítico en crearCita:', error);
     return res.status(error.status || 500).json({
-      mensaje: error.message || 'Error interno del servidor'
+      mensaje: error.message || 'Error interno del servidor',
+      stack: error.stack
     });
   }
 };
@@ -446,10 +443,11 @@ const pagarCita = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en pagarCita controller:', error);
+    console.error('❌ Error en pagarCita controller:', error);
 
     return res.status(error.status || 500).json({
-      mensaje: error.message || 'Error al pagar la cita'
+      mensaje: error.message || 'Error al pagar la cita',
+      stack: error.stack
     });
   }
 };
@@ -495,9 +493,10 @@ const reportarPago = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en reportarPago controller:', error);
+    console.error('❌ Error en reportarPago controller:', error);
     return res.status(error.status || 500).json({
-      mensaje: error.message || 'Error al reportar el pago'
+      mensaje: error.message || 'Error al reportar el pago',
+      stack: error.stack
     });
   }
 };

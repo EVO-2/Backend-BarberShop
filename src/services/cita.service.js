@@ -82,6 +82,8 @@ async function validarReferencias({ cliente, peluquero, sede, puestoTrabajo }) {
   if (puestoTrabajo && puesto.sede?.toString() !== sede.toString()) {
     throw { status: 400, message: 'El puesto de trabajo no pertenece a la sede seleccionada' };
   }
+
+  return { cli, sed, pel, puesto };
 }
 
 // ===================== servicios =====================
@@ -132,7 +134,7 @@ const crearCita = async ({
   }
 
   // 🔍 VALIDAR REFERENCIAS (AHORA SÍ CORRECTAS)
-  await validarReferencias({
+  const { sed } = await validarReferencias({
     cliente,
     peluquero,
     sede,
@@ -178,12 +180,14 @@ const crearCita = async ({
     fechaBase: { $gte: inicioDia, $lte: finDia }
   })
     .sort({ turno: -1 })
+    .setOptions({ bypassTenant: true })
     .lean();
 
   const turno = (ultimoTurno?.turno || 0) + 1;
 
   // 🧾 CREAR CITA
   const nuevaCita = await Cita.create({
+    empresaId: sed.empresaId,
     cliente,
     peluquero: peluquero || null,
     servicios,
@@ -199,7 +203,8 @@ const crearCita = async ({
   });
 
   // 📤 RESPUESTA FINAL
-  return Cita.findById(nuevaCita._id).populate(CITA_POPULATE);
+  await nuevaCita.populate(CITA_POPULATE);
+  return nuevaCita;
 };
 
 
@@ -451,8 +456,8 @@ const actualizarCita = async (id, data) => {
     updateData.turno = (ultimoTurno?.turno || 0) + 1;
   }
 
-  await Cita.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
-  return await Cita.findById(id).populate(CITA_POPULATE);
+  const citaActualizada = await Cita.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+  return citaActualizada.populate(CITA_POPULATE);
 };
 
 const calcularDuracionReal = (inicioServicio, finServicio) => {
@@ -488,7 +493,7 @@ const iniciarCita = async (id, hora) => {
 
   await cita.save();
 
-  return Cita.findById(id).populate(CITA_POPULATE);
+  return cita.populate(CITA_POPULATE);
 };
 
 const finalizarCita = async (id, hora) => {
@@ -571,7 +576,7 @@ const finalizarCita = async (id, hora) => {
     await session.commitTransaction();
     session.endSession();
 
-    return await Cita.findById(id).populate(CITA_POPULATE);
+    return await cita.populate(CITA_POPULATE);
 
   } catch (error) {
     await session.abortTransaction();
@@ -588,7 +593,7 @@ const cancelarCita = async (id) => {
   }
   cita.estado = 'cancelada';
   await cita.save();
-  return Cita.findById(id).populate(CITA_POPULATE);
+  return cita.populate(CITA_POPULATE);
 };
 
 const getCitasPorSedeYFecha = async ({ sedeId, fecha }) => {
@@ -714,7 +719,7 @@ const pagarCita = async (id, monto, metodo) => {
     await session.commitTransaction();
     session.endSession();
 
-    return await Cita.findById(id).populate(CITA_POPULATE);
+    return await cita.populate(CITA_POPULATE);
 
   } catch (error) {
     await session.abortTransaction();
@@ -751,7 +756,7 @@ const reportarPago = async (id, metodo, observaciones, urlComprobante = null) =>
     await session.commitTransaction();
     session.endSession();
 
-    return await Cita.findById(id).populate(CITA_POPULATE);
+    return await cita.populate(CITA_POPULATE);
 
   } catch (error) {
     await session.abortTransaction();
