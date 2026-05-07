@@ -699,7 +699,7 @@ const pagarCita = async (id, monto, metodo) => {
     if (cita.estado !== 'finalizada') throw { status: 400, message: 'Solo se pueden pagar citas finalizadas' };
     if (!cita.pago) throw { status: 400, message: 'La cita no tiene un pago asociado' };
 
-    const pago = await Pago.findById(cita.pago).session(session);
+    const pago = await Pago.findById(cita.pago).session(session).setOptions({ bypassTenant: true });
     if (!pago) throw { status: 400, message: 'No existe un pago asociado a esta cita' };
     if (pago.estado === EstadosPago.PAGADO) throw { status: 400, message: 'Este pago ya fue pagado' };
 
@@ -738,7 +738,7 @@ const reportarPago = async (id, metodo, observaciones, urlComprobante = null) =>
     if (!cita) throw { status: 404, message: 'Cita no encontrada' };
     if (!cita.pago) throw { status: 400, message: 'La cita no tiene un pago asociado' };
 
-    const pago = await Pago.findById(cita.pago).session(session);
+    const pago = await Pago.findById(cita.pago).session(session).setOptions({ bypassTenant: true });
     if (!pago) throw { status: 400, message: 'No existe un pago asociado a esta cita' };
     if (pago.estado === EstadosPago.PAGADO) throw { status: 400, message: 'Este pago ya fue confirmado' };
 
