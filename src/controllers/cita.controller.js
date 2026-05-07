@@ -461,6 +461,13 @@ const reportarPago = async (req, res) => {
 
     if (req.file) {
       urlComprobante = req.file.location;
+      if (!urlComprobante) {
+        const { BUCKET_NAME } = require('../config/minio');
+        const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+        const port = process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? `:${process.env.MINIO_PORT}` : '';
+        const minioPublicUrl = process.env.MINIO_PUBLIC_URL || `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpoint}${port}`;
+        urlComprobante = `${minioPublicUrl}/${BUCKET_NAME}/${req.file.key}`;
+      }
     }
 
     if (!metodo || !Object.values(MetodosPago).includes(metodo)) {
