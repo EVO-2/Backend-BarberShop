@@ -25,6 +25,10 @@ class NotificationService {
           await this.handlePagoReportado(payload);
           break;
 
+        case 'PAGO_CONFIRMADO':
+          await this.handlePagoConfirmado(payload);
+          break;
+
         default:
           console.warn(`⚠️ Evento no manejado: ${event}`);
       }
@@ -200,6 +204,23 @@ class NotificationService {
           urlComprobante
         });
         console.log(`⚡ [Pusher] Evento 'pago-reportado' enviado en tiempo real.`);
+      } catch (error) {
+        console.error('❌ Error enviando evento Pusher:', error.message);
+      }
+    }
+  }
+
+  // 💰 CONFIRMACIÓN DE PAGO (HACIA EL CLIENTE)
+  async handlePagoConfirmado(data) {
+    const { clienteId, mensaje, citaId } = data;
+    if (pusher) {
+      try {
+        pusher.trigger('barberia-channel', 'pago-confirmado', {
+          mensaje,
+          clienteId,
+          citaId
+        });
+        console.log(`⚡ [Pusher] Evento 'pago-confirmado' enviado en tiempo real.`);
       } catch (error) {
         console.error('❌ Error enviando evento Pusher:', error.message);
       }

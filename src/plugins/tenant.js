@@ -7,13 +7,13 @@ const getTenantId = () => tenantStorage.getStore();
 
 // Plugin global de Mongoose
 const tenantPlugin = function (schema, options) {
-  
+
   // Función para inyectar automáticamente el filtro por empresa
   const applyTenantFilter = function (next) {
     const empresaId = getTenantId();
     const modelName = this.model?.modelName || this.mongooseCollection?.modelName || 'Desconocido';
     const options = this.getOptions ? this.getOptions() : {};
-    
+
     if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso' && !options.bypassTenant) {
       if (empresaId) {
         this.where({ empresaId });
@@ -32,11 +32,11 @@ const tenantPlugin = function (schema, options) {
   schema.pre('deleteOne', applyTenantFilter);
   schema.pre('deleteMany', applyTenantFilter);
   schema.pre('distinct', applyTenantFilter);
-  
+
   schema.pre('aggregate', function (next) {
     const empresaId = getTenantId();
     const modelName = this._model?.modelName || 'Desconocido';
-    
+
     if (modelName !== 'Empresa') {
       if (empresaId) {
         this.pipeline().unshift({ $match: { empresaId } });
@@ -51,7 +51,7 @@ const tenantPlugin = function (schema, options) {
   schema.pre('save', function (next) {
     const empresaId = getTenantId();
     const modelName = this.constructor.modelName || 'Desconocido';
-    
+
     if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso') {
       if (empresaId && !this.empresaId) {
         this.empresaId = empresaId;

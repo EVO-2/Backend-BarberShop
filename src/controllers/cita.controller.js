@@ -437,6 +437,18 @@ const pagarCita = async (req, res) => {
 
     const cita = await pagarCitaService(id, monto, metodo);
 
+    // Notificar al cliente
+    try {
+      const clienteId = cita.cliente?._id || cita.cliente;
+      NotificationService.notify('PAGO_CONFIRMADO', {
+        clienteId,
+        citaId: cita._id,
+        mensaje: `Tu pago de $${monto} por la cita ha sido confirmado exitosamente.`
+      });
+    } catch (notifyErr) {
+      console.log('Error notificando PAGO_CONFIRMADO:', notifyErr.message);
+    }
+
     return res.json({
       mensaje: Mensajes.EXITO_PAGO_REGISTRADO || 'Pago registrado correctamente',
       cita

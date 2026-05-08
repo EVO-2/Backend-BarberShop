@@ -588,8 +588,8 @@ const finalizarCita = async (id, hora) => {
 const cancelarCita = async (id) => {
   const cita = await Cita.findById(id);
   if (!cita) throw { status: 404, message: 'Cita no encontrada' };
-  if (['en_proceso', 'finalizada', 'cancelada'].includes(cita.estado)) {
-    throw { status: 400, message: 'Solo se pueden cancelar citas pendientes o confirmadas' };
+  if (['en_proceso', 'finalizada', 'pagada', 'cancelada'].includes(cita.estado) || cita.calificacion) {
+    throw { status: 400, message: 'No se puede cancelar una cita que ya fue finalizada, pagada o calificada' };
   }
   cita.estado = 'cancelada';
   await cita.save();
