@@ -408,6 +408,7 @@ const obtenerPerfil = async (req, res) => {
 
     const usuario = await Usuario.findById(req.uid)
       .populate('rol')
+      .populate('empresaId')
       .populate({
         path: 'cliente',
         populate: { path: 'usuario' }
@@ -426,6 +427,7 @@ const obtenerPerfil = async (req, res) => {
     }
 
     const rolNombre = usuario.rol?.nombre?.toLowerCase();
+    const empresaLogo = usuario.empresaId?.logo || 'assets/sede.png';
 
     if (rolNombre === 'cliente' && usuario.cliente) {
       return res.json({
@@ -436,7 +438,8 @@ const obtenerPerfil = async (req, res) => {
           nombre: usuario.nombre,
           correo: usuario.correo,
           rol: usuario.rol.nombre,
-          foto: usuario.foto
+          foto: usuario.foto,
+          empresaLogo
         }
       });
     }
@@ -450,7 +453,8 @@ const obtenerPerfil = async (req, res) => {
           nombre: usuario.nombre,
           correo: usuario.correo,
           rol: usuario.rol.nombre,
-          foto: usuario.foto
+          foto: usuario.foto,
+          empresaLogo
         }
       });
     }
@@ -462,7 +466,8 @@ const obtenerPerfil = async (req, res) => {
         nombre: usuario.nombre,
         correo: usuario.correo,
         rol: usuario.rol.nombre,
-        foto: usuario.foto
+        foto: usuario.foto,
+        empresaLogo
       }
     });
 
