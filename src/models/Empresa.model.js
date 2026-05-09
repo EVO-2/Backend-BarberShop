@@ -29,6 +29,10 @@ const EmpresaSchema = new Schema({
     type: Boolean,
     default: true
   },
+  logo: {
+    type: String,
+    default: 'assets/sede.png'
+  },
   // ==========================================
   // 🏢 SaaS & Facturación (Suscripciones)
   // ==========================================

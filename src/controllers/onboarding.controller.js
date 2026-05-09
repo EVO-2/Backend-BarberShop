@@ -87,6 +87,19 @@ const registrarEmpresa = async (req, res) => {
         }
 
 
+        let logoUrl = 'assets/sede.png';
+
+        if (req.file) {
+            logoUrl = req.file.location;
+            if (!logoUrl) {
+                const { BUCKET_NAME } = require('../config/minio');
+                const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+                const port = process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? `:${process.env.MINIO_PORT}` : '';
+                const minioPublicUrl = process.env.MINIO_PUBLIC_URL || `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpoint}${port}`;
+                logoUrl = `${minioPublicUrl}/${BUCKET_NAME}/${req.file.key}`;
+            }
+        }
+
         /* =====================================================
            CREAR EMPRESA
         ===================================================== */
@@ -99,6 +112,8 @@ const registrarEmpresa = async (req, res) => {
             telefono: empresa.telefono || '',
 
             direccion: empresa.direccion || '',
+
+            logo: logoUrl,
 
             plan: planSeleccionado
                 ? planSeleccionado.nombre

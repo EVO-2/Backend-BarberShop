@@ -15,6 +15,7 @@ const login = async (req, res) => {
     const usuario = await Usuario.findOne({ correo })
       .select('+password')
       .populate('cliente')
+      .populate('empresaId')
       .populate({
         path: 'rol',
         select: 'nombre',
@@ -115,7 +116,9 @@ const login = async (req, res) => {
 
       peluquero: (nombreRol === 'barbero' || nombreRol === 'manicurista')
         ? toId(datosExtra)
-        : undefined
+        : undefined,
+        
+      empresaLogo: usuario.empresaId?.logo || 'assets/sede.png'
     };
 
     // 6. RESPUESTA
@@ -231,7 +234,8 @@ const registro = async (req, res) => {
         nombre: nuevoUsuario.nombre,
         rol: rolCliente.nombre,
         foto: nuevoUsuario.foto,
-        cliente // ✅ clave para frontend
+        cliente, // ✅ clave para frontend
+        empresaLogo: empresaPrincipal ? empresaPrincipal.logo : 'assets/sede.png'
       },
       token,
       expiraEn: new Date(exp * 1000)
