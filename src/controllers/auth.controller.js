@@ -13,9 +13,10 @@ const login = async (req, res) => {
 
     // 1. Buscamos usuario con relaciones
     const usuario = await Usuario.findOne({ correo })
+      .setOptions({ bypassTenant: true })
       .select('+password')
-      .populate('cliente')
-      .populate('empresaId')
+      .populate({ path: 'cliente', options: { bypassTenant: true } })
+      .populate({ path: 'empresaId', options: { bypassTenant: true } })
       .populate({
         path: 'rol',
         select: 'nombre',
@@ -76,7 +77,7 @@ const login = async (req, res) => {
     if (nombreRol === 'cliente') {
       datosExtra = usuario.cliente;
     } else if (nombreRol === 'barbero' || nombreRol === 'manicurista') {
-      datosExtra = await Peluquero.findOne({ usuario: usuario._id });
+      datosExtra = await Peluquero.findOne({ usuario: usuario._id }).setOptions({ bypassTenant: true });
     }
 
     /**
@@ -160,7 +161,7 @@ const registro = async (req, res) => {
     }
 
     // 🔹 VALIDAR USUARIO EXISTENTE
-    const usuarioExistente = await Usuario.findOne({ correo });
+    const usuarioExistente = await Usuario.findOne({ correo }).setOptions({ bypassTenant: true });
 
     if (usuarioExistente) {
       return res.status(400).json({ mensaje: 'El correo ya está registrado' });
@@ -267,7 +268,7 @@ const verificarCorreoExistente = async (req, res) => {
   const { correo } = req.body;
 
   try {
-    const existe = await Usuario.findOne({ correo });
+    const existe = await Usuario.findOne({ correo }).setOptions({ bypassTenant: true });
     res.json({ existe: !!existe });
   } catch (error) {
     console.error('Error al verificar correo:', error);
@@ -281,7 +282,7 @@ const verificarLogo = async (req, res) => {
   const { correo } = req.body;
 
   try {
-    const usuario = await Usuario.findOne({ correo }).populate('empresaId');
+    const usuario = await Usuario.findOne({ correo }).setOptions({ bypassTenant: true }).populate({ path: 'empresaId', options: { bypassTenant: true } });
     if (usuario && usuario.empresaId && usuario.empresaId.logo) {
       return res.json({ logo: usuario.empresaId.logo });
     }
