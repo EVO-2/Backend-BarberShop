@@ -139,7 +139,7 @@ const login = async (req, res) => {
 
 const registro = async (req, res) => {
   try {
-    const { nombre, correo, password } = req.body;
+    const { nombre, correo, password, empresaId } = req.body;
 
     // 🔹 VALIDACIÓN CAMPOS
     if (!nombre || !correo || !password) {
@@ -174,8 +174,21 @@ const registro = async (req, res) => {
       return res.status(500).json({ mensaje: 'No se encontró el rol cliente' });
     }
 
-    // 🔹 OBTENER EMPRESA POR DEFECTO
-    const empresaPrincipal = await Empresa.findOne({ nombre: 'BARBERSHOP PRINCIPAL' });
+    // 🔹 RESOLVER EMPRESA MULTI-TENANT
+    let empresaAsignar = null;
+
+    if (empresaId) {
+      empresaAsignar = await Empresa.findById(empresaId);
+    }
+
+    // 🔹 FALLBACK: Si no viene empresaId, asume la primera empresa activa (Ideal para la transición SaaS)
+    if (!empresaAsignar) {
+      empresaAsignar = await Empresa.findOne({ estado: true }).sort({ createdAt: 1 });
+    }
+
+    if (!empresaAsignar) {
+      return res.status(400).json({ mensaje: 'No hay empresas registradas en la plataforma para asociar al usuario.' });
+    }
 
     // 🔹 CREAR USUARIO
     const nuevoUsuario = new Usuario({
@@ -183,7 +196,7 @@ const registro = async (req, res) => {
       correo,
       password,
       rol: rolCliente._id,
-      empresaId: empresaPrincipal ? empresaPrincipal._id : null
+      empresaId: empresaAsignar._id
     });
 
     await nuevoUsuario.save();
@@ -194,7 +207,7 @@ const registro = async (req, res) => {
     try {
       cliente = await Cliente.create({
         usuario: nuevoUsuario._id,
-        empresaId: empresaPrincipal ? empresaPrincipal._id : null
+        empresaId: empresaAsignar._id
       });
     } catch (error) {
       console.error(`Error creando cliente:`, error);
@@ -235,7 +248,7 @@ const registro = async (req, res) => {
         rol: rolCliente.nombre,
         foto: nuevoUsuario.foto,
         cliente, // ✅ clave para frontend
-        empresaLogo: empresaPrincipal ? empresaPrincipal.logo : 'assets/sede.png'
+        empresaLogo: empresaAsignar.logo || 'assets/sede.png'
       },
       token,
       expiraEn: new Date(exp * 1000)
@@ -264,8 +277,24 @@ const verificarCorreoExistente = async (req, res) => {
   }
 };
 
+const verificarLogo = async (req, res) => {
+  const { correo } = req.body;
+
+  try {
+    const usuario = await Usuario.findOne({ correo }).populate('empresaId');
+    if (usuario && usuario.empresaId && usuario.empresaId.logo) {
+      return res.json({ logo: usuario.empresaId.logo });
+    }
+    return res.json({ logo: 'assets/sede.png' });
+  } catch (error) {
+    console.error('Error al verificar logo:', error);
+    res.status(500).json({ logo: 'assets/sede.png' });
+  }
+};
+
 module.exports = {
   login,
   registro,
-  verificarCorreoExistente
+  verificarCorreoExistente,
+  verificarLogo
 };

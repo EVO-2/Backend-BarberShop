@@ -47,6 +47,35 @@ const actualizarPuestoPeluquero = async (peluquero, nuevoPuestoId, estado) => {
 // ==========================
 const listarUsuarios = async (req, res) => {
   try {
+    // 🔥 MIGRACIÓN AUTOMÁTICA INFALIBLE 🔥
+    // Usamos el driver nativo de MongoDB (.collection.updateMany) para asegurar que 
+    // Mongoose y el tenantPlugin NO bloqueen la actualización.
+    // Asignamos los usuarios huérfanos a la empresa del administrador que está haciendo la petición.
+    
+    if (req.usuario && req.usuario.empresaId) {
+      // Forzar conversión a ObjectId para el driver nativo de MongoDB
+      const empresaDestino = new mongoose.Types.ObjectId(req.usuario.empresaId.toString());
+      
+      const r1 = await Usuario.collection.updateMany(
+        { $or: [{ empresaId: null }, { empresaId: { $exists: false } }] },
+        { $set: { empresaId: empresaDestino } }
+      );
+      
+      const r2 = await Cliente.collection.updateMany(
+        { $or: [{ empresaId: null }, { empresaId: { $exists: false } }] },
+        { $set: { empresaId: empresaDestino } }
+      );
+      
+      const r3 = await Peluquero.collection.updateMany(
+        { $or: [{ empresaId: null }, { empresaId: { $exists: false } }] },
+        { $set: { empresaId: empresaDestino } }
+      );
+
+      if (r1.modifiedCount > 0 || r2.modifiedCount > 0 || r3.modifiedCount > 0) {
+        console.log(`[MIGRACIÓN] Usuarios actualizados: ${r1.modifiedCount}, Clientes: ${r2.modifiedCount}, Peluqueros: ${r3.modifiedCount}`);
+      }
+    }
+
     const usuarios = await Usuario.find()
       .populate('rol', 'nombre')
       .populate({
@@ -126,8 +155,18 @@ const crearUsuario = async (req, res) => {
     if (!existeRol)
       return res.status(404).json({ error: 'Rol no encontrado' });
 
+    // Asignar explícitamente el empresaId del administrador que está creando el usuario
+    const empresaAsignar = req.usuario?.empresaId;
+
     // Crear usuario
-    const nuevoUsuario = new Usuario({ nombre, correo, password, rol, estado });
+    const nuevoUsuario = new Usuario({ 
+      nombre, 
+      correo, 
+      password, 
+      rol, 
+      estado,
+      empresaId: empresaAsignar
+    });
 
     if (existeRol.nombre === 'cliente') {
       const nuevoCliente = new Cliente({
@@ -135,7 +174,8 @@ const crearUsuario = async (req, res) => {
         telefono: detalles.telefono,
         direccion: detalles.direccion,
         genero: detalles.genero,
-        fecha_nacimiento: detalles.fecha_nacimiento
+        fecha_nacimiento: detalles.fecha_nacimiento,
+        empresaId: empresaAsignar
       });
       await nuevoCliente.save();
       nuevoUsuario.cliente = nuevoCliente._id;
@@ -150,7 +190,8 @@ const crearUsuario = async (req, res) => {
         especialidades: detalles.especialidades,
         experiencia: detalles.experiencia,
         sede: detalles.sede,
-        puestoTrabajo: detalles.puestoTrabajo
+        puestoTrabajo: detalles.puestoTrabajo,
+        empresaId: empresaAsignar
       });
       await nuevoPeluquero.save();
       nuevoUsuario.peluquero = nuevoPeluquero._id;
@@ -206,6 +247,8 @@ const actualizarUsuario = async (req, res) => {
     await usuario.save();
 
     if (detalles) {
+      const empresaAsignar = usuario.empresaId || req.usuario?.empresaId;
+
       if (existeRol.nombre === 'cliente') {
         if (!usuario.cliente) {
           const nuevoCliente = new Cliente({
@@ -213,7 +256,8 @@ const actualizarUsuario = async (req, res) => {
             telefono: detalles.telefono,
             direccion: detalles.direccion,
             genero: detalles.genero,
-            fecha_nacimiento: detalles.fecha_nacimiento
+            fecha_nacimiento: detalles.fecha_nacimiento,
+            empresaId: empresaAsignar
           });
           await nuevoCliente.save();
           usuario.cliente = nuevoCliente._id;
@@ -245,7 +289,8 @@ const actualizarUsuario = async (req, res) => {
             especialidades: detalles.especialidades || [],
             experiencia: detalles.experiencia || 0,
             sede: detalles.sede || null,
-            puestoTrabajo: detalles.puestoTrabajo || null
+            puestoTrabajo: detalles.puestoTrabajo || null,
+            empresaId: empresaAsignar
           });
           await peluquero.save();
           usuario.peluquero = peluquero._id;

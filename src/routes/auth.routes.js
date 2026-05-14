@@ -3,7 +3,8 @@ const { check } = require('express-validator');
 const {
   login,
   registro,
-  verificarCorreoExistente
+  verificarCorreoExistente,
+  verificarLogo
 } = require('../controllers/auth.controller');
 
 const validarCampos = require('../middlewares/validarCampos');
@@ -40,5 +41,14 @@ router.post(
 // 🔍 Verificar si el correo ya existe (asyncValidator desde Angular)
 router.post('/verificar-correo', verificarCorreoExistente);
 
+// 🔍 Verificar logo de empresa por correo
+router.post(
+  '/verificar-logo',
+  [
+    check('correo', 'El correo es obligatorio').isEmail(),
+    validarCampos
+  ],
+  verificarLogo
+);
 
 module.exports = router;
