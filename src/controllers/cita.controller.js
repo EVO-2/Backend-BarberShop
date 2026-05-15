@@ -23,6 +23,14 @@ const crearCita = async (req, res) => {
       return res.status(400).json({ mensaje: 'La fecha de la cita es obligatoria' });
     }
 
+    if (rol !== 'admin') {
+      const Empresa = require('../models/Empresa.model');
+      const empresa = await Empresa.findById(req.usuario.empresaId);
+      if (empresa && !empresa.agendamientoAbierto) {
+        return res.status(403).json({ mensaje: empresa.mensajeCierre || 'El agendamiento de citas se encuentra cerrado.' });
+      }
+    }
+
     const fechaCita = new Date(datosCita.fecha);
     const ahora = new Date();
 

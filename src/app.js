@@ -112,6 +112,7 @@ app.use('/api/permisos', permisosRoutes);
 app.use('/api/historial', historialRoutes);
 app.use('/api/suscripciones', suscripcionesRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/empresa', require('./routes/empresa.routes'));
 app.use('/api/wompi', require('./routes/wompi.routes'));
 
 // =================== Manejo de errores 404 ===================

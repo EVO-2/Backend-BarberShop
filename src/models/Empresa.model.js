@@ -33,6 +33,14 @@ const EmpresaSchema = new Schema({
     type: String,
     default: 'assets/sede.png'
   },
+  agendamientoAbierto: {
+    type: Boolean,
+    default: true
+  },
+  mensajeCierre: {
+    type: String,
+    default: 'El agendamiento de citas se encuentra temporalmente cerrado.'
+  },
   // ==========================================
   // 🏢 SaaS & Facturación (Suscripciones)
   // ==========================================
