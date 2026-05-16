@@ -57,7 +57,7 @@ const verificarLimitePeluqueros = async (empresaId) => {
   }
 
   if (countPeluqueros >= caracteristicas.maxPeluqueros) {
-    throw new Error(`Tu plan actual (${caracteristicas.maxPeluqueros} profesionales max.) no permite agregar más barberos/peluqueros. Mejora tu plan.`);
+    throw new Error(`Tu plan actual (${caracteristicas.maxPeluqueros} profesionales max.) no permite agregar más profesionales. Mejora tu plan.`);
   }
 
   return true;
