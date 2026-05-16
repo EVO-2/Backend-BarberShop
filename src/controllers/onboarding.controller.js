@@ -28,7 +28,7 @@ const registrarEmpresa = async (req, res) => {
            VALIDAR EMPRESA
         ===================================================== */
         const empresaExistente = await Empresa.findOne({
-            nombre: empresa.nombre
+            nombre: { $regex: new RegExp(`^${empresa.nombre}$`, 'i') }
         }).session(session);
 
         if (empresaExistente) {
@@ -46,7 +46,7 @@ const registrarEmpresa = async (req, res) => {
            VALIDAR USUARIO
         ===================================================== */
         const usuarioExistente = await Usuario.findOne({
-            correo: usuario.correo
+            correo: { $regex: new RegExp(`^${usuario.correo}$`, 'i') }
         }).session(session);
 
         if (usuarioExistente) {

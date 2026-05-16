@@ -60,7 +60,9 @@ const webhookWompi = async (req, res) => {
         return res.status(200).send('No es una suscripción');
       }
 
-      const empresaId = referencia.split('-')[1];
+      const partes = referencia.split('-');
+      const empresaId = partes[1];
+      const planElegido = partes[2] ? partes[2].toLowerCase() : 'basico';
 
       // Actualizar la empresa
       const fechaActual = new Date();
@@ -68,6 +70,7 @@ const webhookWompi = async (req, res) => {
 
       await Empresa.findByIdAndUpdate(empresaId, {
         suscripcionEstado: 'activa',
+        plan: planElegido,
         fechaProximoCobro: fechaActual,
         pasarelaClienteId: transaccion.customer_email
       });

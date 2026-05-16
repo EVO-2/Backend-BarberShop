@@ -181,6 +181,13 @@ const crearUsuario = async (req, res) => {
       nuevoUsuario.cliente = nuevoCliente._id;
 
     } else if (existeRol.nombre === 'barbero' || existeRol.nombre === 'manicurista') {
+      const planService = require('../services/plan.service');
+      try {
+        await planService.verificarLimitePeluqueros(empresaAsignar);
+      } catch (limiteError) {
+        return res.status(403).json({ error: limiteError.message });
+      }
+
       const nuevoPeluquero = new Peluquero({
         usuario: nuevoUsuario._id,
         telefono_profesional: detalles.telefono,

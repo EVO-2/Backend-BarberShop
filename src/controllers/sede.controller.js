@@ -15,9 +15,20 @@ exports.obtenerSedes = async (req, res) => {
 // POST
 exports.crearSede = async (req, res) => {
   try {
+    const empresaId = req.usuario?.empresaId;
+    if (empresaId) {
+      const planService = require('../services/plan.service');
+      try {
+        await planService.verificarLimiteSucursales(empresaId);
+      } catch (limiteError) {
+        return res.status(403).json({ mensaje: limiteError.message });
+      }
+    }
+
     const { nombre, direccion, telefono, estado } = req.body;
 
     const nuevaSede = new Sede({
+      empresa: empresaId,
       nombre,
       direccion,
       telefono,
