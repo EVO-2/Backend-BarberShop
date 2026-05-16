@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { check } = require('express-validator');
 const validarCampos = require('../middlewares/validarCampos');
-const { registrarEmpresa } = require('../controllers/onboarding.controller');
+const { registrarEmpresa, verificarEmpresa, verificarCorreo } = require('../controllers/onboarding.controller');
 
 const { createUploadMiddleware } = require('../middlewares/upload');
 const uploadLogo = createUploadMiddleware('logos');
@@ -11,6 +11,9 @@ const router = Router();
 // ==========================================
 // 🏢 RUTAS DE ONBOARDING (PÚBLICAS)
 // ==========================================
+
+router.get('/check-empresa', verificarEmpresa);
+router.get('/check-correo', verificarCorreo);
 
 // POST: /api/onboarding/registrar
 router.post('/registrar', [

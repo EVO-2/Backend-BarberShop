@@ -230,6 +230,38 @@ const registrarEmpresa = async (req, res) => {
 };
 
 
+const verificarEmpresa = async (req, res) => {
+    try {
+        const { nombre } = req.query;
+        if (!nombre) return res.json({ disponible: true });
+
+        const empresa = await Empresa.findOne({ 
+            nombre: { $regex: new RegExp(`^${nombre}$`, 'i') } 
+        }).setOptions({ bypassTenant: true });
+
+        return res.json({ disponible: !empresa });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+const verificarCorreo = async (req, res) => {
+    try {
+        const { correo } = req.query;
+        if (!correo) return res.json({ disponible: true });
+
+        const usuario = await Usuario.findOne({ 
+            correo: { $regex: new RegExp(`^${correo}$`, 'i') } 
+        }).setOptions({ bypassTenant: true });
+
+        return res.json({ disponible: !usuario });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
-    registrarEmpresa
+    registrarEmpresa,
+    verificarEmpresa,
+    verificarCorreo
 };
