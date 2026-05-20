@@ -46,6 +46,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL
 ];
 
+
+
 // 🔥 Configuración CORS dinámica (PRO)
 const corsOptions = {
   origin: function (origin, callback) {
