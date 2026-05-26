@@ -69,7 +69,76 @@ const obtenerEstadoAgendamiento = async (req, res) => {
   }
 };
 
+const obtenerInfoEmpresa = async (req, res) => {
+  try {
+    const empresaId = req.usuario?.empresaId;
+
+    if (!empresaId) {
+      return res.status(400).json({ msg: 'Empresa no identificada' });
+    }
+
+    const empresa = await Empresa.findById(empresaId);
+    if (!empresa) {
+      return res.status(404).json({ msg: 'Empresa no encontrada' });
+    }
+
+    res.json({
+      success: true,
+      empresa
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Error al obtener información de la empresa' });
+  }
+};
+
+const actualizarInfoEmpresa = async (req, res) => {
+  try {
+    const empresaId = req.usuario?.empresaId;
+    const { nombre, nit, direccion, telefono, email, logo, horarios } = req.body;
+
+    if (!empresaId) {
+      return res.status(400).json({ msg: 'Empresa no identificada' });
+    }
+
+    const empresa = await Empresa.findById(empresaId);
+    if (!empresa) {
+      return res.status(404).json({ msg: 'Empresa no encontrada' });
+    }
+
+    // Actualizar campos si se proporcionan (con sanitización)
+    if (nombre) empresa.nombre = nombre;
+    if (nit !== undefined) empresa.nit = nit;
+    if (direccion !== undefined) empresa.direccion = direccion;
+    if (telefono !== undefined) empresa.telefono = telefono;
+    if (email !== undefined) empresa.email = email;
+    if (logo !== undefined) empresa.logo = logo;
+    if (horarios !== undefined) {
+      if (Array.isArray(horarios)) {
+        empresa.horarios = horarios;
+      } else {
+        return res.status(400).json({ msg: 'El formato de horarios es inválido' });
+      }
+    }
+
+    await empresa.save();
+
+    res.json({
+      success: true,
+      msg: 'Información de la empresa actualizada correctamente',
+      empresa
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Error al actualizar información de la empresa', error: error.message });
+  }
+};
+
 module.exports = {
   toggleAgendamiento,
-  obtenerEstadoAgendamiento
+  obtenerEstadoAgendamiento,
+  obtenerInfoEmpresa,
+  actualizarInfoEmpresa
 };

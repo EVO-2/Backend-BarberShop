@@ -41,6 +41,23 @@ const EmpresaSchema = new Schema({
     type: String,
     default: 'El agendamiento de citas se encuentra temporalmente cerrado.'
   },
+  horarios: {
+    type: [{
+      dia: { type: String, enum: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] },
+      abierto: { type: Boolean, default: true },
+      apertura: { type: String, default: '08:00' },
+      cierre: { type: String, default: '20:00' }
+    }],
+    default: [
+      { dia: 'lunes', abierto: true, apertura: '08:00', cierre: '20:00' },
+      { dia: 'martes', abierto: true, apertura: '08:00', cierre: '20:00' },
+      { dia: 'miercoles', abierto: true, apertura: '08:00', cierre: '20:00' },
+      { dia: 'jueves', abierto: true, apertura: '08:00', cierre: '20:00' },
+      { dia: 'viernes', abierto: true, apertura: '08:00', cierre: '20:00' },
+      { dia: 'sabado', abierto: true, apertura: '09:00', cierre: '18:00' },
+      { dia: 'domingo', abierto: false, apertura: '09:00', cierre: '14:00' }
+    ]
+  },
   // ==========================================
   // 🏢 SaaS & Facturación (Suscripciones)
   // ==========================================
