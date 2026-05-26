@@ -493,7 +493,8 @@ const obtenerPerfil = async (req, res) => {
           rol: usuario.rol.nombre,
           foto: usuario.foto,
           empresaLogo,
-          empresaNombre
+          empresaNombre,
+          empresaId: usuario.empresaId
         }
       });
     }
@@ -509,7 +510,8 @@ const obtenerPerfil = async (req, res) => {
           rol: usuario.rol.nombre,
           foto: usuario.foto,
           empresaLogo,
-          empresaNombre
+          empresaNombre,
+          empresaId: usuario.empresaId
         }
       });
     }
@@ -523,7 +525,8 @@ const obtenerPerfil = async (req, res) => {
         rol: usuario.rol.nombre,
         foto: usuario.foto,
         empresaLogo,
-        empresaNombre
+        empresaNombre,
+        empresaId: usuario.empresaId
       }
     });
 

@@ -1,6 +1,6 @@
 // db.js
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 let conectado = false;
 
@@ -39,6 +39,9 @@ const conectarDB = async () => {
 
     conectado = true;
 
+    // Auto-seed de planes si es necesario
+    await inicializarPlanes();
+
     console.log(`🟢 Conexión a MongoDB exitosa: ${mongoose.connection.name}`);
 
     mongoose.connection.on('connected', () => {
@@ -76,6 +79,45 @@ const conectarDB = async () => {
 
     // reintento automático
     setTimeout(conectarDB, 5000);
+  }
+};
+
+const inicializarPlanes = async () => {
+  try {
+    const PlanSuscripcion = require('../models/PlanSuscripcion.model');
+    const count = await PlanSuscripcion.countDocuments();
+    if (count === 0) {
+      console.log('🌱 Inicializando planes de suscripción por defecto en MongoDB...');
+      await PlanSuscripcion.insertMany([
+        {
+          nombre: 'TRIAL',
+          descripcion: 'Prueba gratuita de 14 días con límite de 3 profesionales.',
+          precioMensual: 0,
+          caracteristicas: { maxPeluqueros: 3, maxSucursales: 1, incluyeBotWhatsApp: false }
+        },
+        {
+          nombre: 'BASICO',
+          descripcion: 'Ideal para barberías pequeñas.',
+          precioMensual: 45000,
+          caracteristicas: { maxPeluqueros: 3, maxSucursales: 1, incluyeBotWhatsApp: false }
+        },
+        {
+          nombre: 'PRO',
+          descripcion: 'Para barberías en crecimiento.',
+          precioMensual: 89000,
+          caracteristicas: { maxPeluqueros: 10, maxSucursales: 3, incluyeBotWhatsApp: false }
+        },
+        {
+          nombre: 'PREMIUM',
+          descripcion: 'El paquete completo con automatización.',
+          precioMensual: 150000,
+          caracteristicas: { maxPeluqueros: 999, maxSucursales: 999, incluyeBotWhatsApp: true }
+        }
+      ]);
+      console.log('✅ Planes de suscripción inicializados con éxito');
+    }
+  } catch (err) {
+    console.error('❌ Error al inicializar los planes de suscripción:', err);
   }
 };
 

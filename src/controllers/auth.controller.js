@@ -119,7 +119,8 @@ const login = async (req, res) => {
         ? toId(datosExtra)
         : undefined,
         
-      empresaLogo: usuario.empresaId?.logo || 'assets/sede.png'
+      empresaLogo: usuario.empresaId?.logo || 'assets/sede.png',
+      empresaId: toId(usuario.empresaId)
     };
 
     // 6. RESPUESTA

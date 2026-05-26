@@ -10,7 +10,7 @@ const Sede = require('../models/Sede.model');
 const DEFAULT_PLANS = {
   'trial': { maxPeluqueros: 3, maxSucursales: 1, incluyeBotWhatsApp: false },
   'basico': { maxPeluqueros: 3, maxSucursales: 1, incluyeBotWhatsApp: false },
-  'pro': { maxPeluqueros: 10, maxSucursales: 3, incluyeBotWhatsApp: true },
+  'pro': { maxPeluqueros: 10, maxSucursales: 3, incluyeBotWhatsApp: false },
   'premium': { maxPeluqueros: 999, maxSucursales: 999, incluyeBotWhatsApp: true }
 };
 
