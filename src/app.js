@@ -116,6 +116,7 @@ app.use('/api/suscripciones', suscripcionesRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/empresa', require('./routes/empresa.routes'));
 app.use('/api/wompi', require('./routes/wompi.routes'));
+app.use('/api/whatsapp', require('./routes/whatsapp.routes'));
 
 // =================== Manejo de errores 404 ===================
 app.use((req, res) => {
