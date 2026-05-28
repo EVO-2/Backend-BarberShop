@@ -28,6 +28,52 @@ const CITA_POPULATE = [
 const ESTADOS_ACTIVOS = ['pendiente', 'confirmada', 'en_proceso'];
 
 // ===================== funciones auxiliares =====================
+async function validarHorarioAtencion(sedeId, fecha) {
+  if (!sedeId || !fecha) return;
+  
+  const Sede = require('../models/Sede.model');
+  const Empresa = require('../models/Empresa.model');
+  
+  const sed = await Sede.findOne({ _id: sedeId, estado: true }).lean();
+  if (!sed) return;
+  
+  const empresa = await Empresa.findById(sed.empresaId).lean();
+  if (!empresa || !empresa.horarios) return;
+
+  const fechaCita = new Date(fecha);
+  const options = { timeZone: 'America/Bogota', weekday: 'long' };
+  const nombreDiaRaw = new Intl.DateTimeFormat('es-CO', options).format(fechaCita);
+  const nombreDia = nombreDiaRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const horarioDia = empresa.horarios.find(h => h.dia === nombreDia);
+  if (horarioDia) {
+    if (!horarioDia.abierto) {
+      throw { status: 400, message: `La agenda de la empresa está cerrada los días ${nombreDia}.` };
+    }
+    
+    const horaMinutoStr = new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(fechaCita);
+    
+    const [horaCita, minutoCita] = horaMinutoStr.split(':').map(Number);
+    const [horaApertura, minutoApertura] = horarioDia.apertura.split(':').map(Number);
+    const [horaCierre, minutoCierre] = horarioDia.cierre.split(':').map(Number);
+    
+    const minutosCita = horaCita * 60 + minutoCita;
+    const minutosApertura = horaApertura * 60 + minutoApertura;
+    const minutosCierre = horaCierre * 60 + minutoCierre;
+    
+    if (minutosCita < minutosApertura || minutosCita > minutosCierre) {
+      throw { 
+        status: 400, 
+        message: `La cita está fuera del horario de atención. El horario para los días ${nombreDia} es de ${horarioDia.apertura} a ${horarioDia.cierre}.` 
+      };
+    }
+  }
+}
 async function calcularDuracionTotal(serviciosIds = []) {
   if (!Array.isArray(serviciosIds) || serviciosIds.length === 0) return 0;
 
@@ -144,6 +190,10 @@ const crearCita = async ({
   // ⏱️ CALCULAR DURACIÓN
   const duracionMin = await calcularDuracionTotal(servicios);
   const fechaInicio = new Date(fecha);
+
+  // ⏰ VALIDAR HORARIO DE ATENCIÓN DE LA EMPRESA
+  await validarHorarioAtencion(sede, fechaInicio);
+
   const fechaFin = new Date(
     fechaInicio.getTime() + (duracionMin || 30) * 60 * 1000
   );
@@ -409,6 +459,9 @@ const actualizarCita = async (id, data) => {
   let fechaInicio = fecha ? new Date(fecha) : new Date(citaBase.fechaInicio || citaBase.fecha);
   let fechaFin = citaBase.fechaFin;
 
+  // ⏰ VALIDAR HORARIO DE ATENCIÓN DE LA EMPRESA
+  await validarHorarioAtencion(sede ?? citaBase.sede, fechaInicio);
+
   // Recalcular siempre si cambian los servicios, la fecha o si falta fechaFin
   if (servicios || fecha || !fechaFin) {
     const serviciosFinales = servicios ?? citaBase.servicios;
@@ -636,6 +689,10 @@ const repetirCita = async ({ id, fecha }) => {
 
   const duracionMin = await calcularDuracionTotal(citaOriginal.servicios);
   const fechaInicio = new Date(fecha);
+
+  // ⏰ VALIDAR HORARIO DE ATENCIÓN DE LA EMPRESA
+  await validarHorarioAtencion(citaOriginal.sede, fechaInicio);
+
   const fechaFin = new Date(fechaInicio.getTime() + (duracionMin || 30) * 60 * 1000);
 
   const haySolape = await existeSolape({
