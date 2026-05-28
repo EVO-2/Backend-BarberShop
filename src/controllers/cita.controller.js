@@ -249,6 +249,29 @@ const actualizarCita = async (req, res) => {
     const citaActualizada = await CitaService.actualizarCita(id, data);
     if (!citaActualizada) return res.status(404).json({ mensaje: 'Cita no encontrada' });
     
+    // Notificar en tiempo real
+    try {
+      const clienteId = citaActualizada.cliente?._id || citaActualizada.cliente;
+      const peluqueroId = citaActualizada.peluquero?._id || citaActualizada.peluquero;
+      const nombreCliente = citaActualizada.cliente?.usuario?.nombre || 'Cliente';
+      const fechaObj = new Date(citaActualizada.fechaInicio || citaActualizada.fecha);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+      
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: citaActualizada._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: citaActualizada.estado,
+        mensaje: `La cita de ${nombreCliente} del ${fechaFormateada} a las ${horaFormateada} ha sido actualizada.`
+      }).catch(err => console.error('Error notificando cita actualizada:', err.message));
+    } catch (notifyErr) {
+      console.error('Error al preparar notificación cita actualizada:', notifyErr.message);
+    }
+
     HistorialService.registrarAccion({
       usuario: req.uid,
       accion: 'ACTUALIZAR',
@@ -279,6 +302,30 @@ const reprogramarCita = async (req, res) => {
     });
 
     if (!citaActualizada) return res.status(404).json({ message: 'Cita no encontrada' });
+
+    // Notificar en tiempo real
+    try {
+      const clienteId = citaActualizada.cliente?._id || citaActualizada.cliente;
+      const peluqueroId = citaActualizada.peluquero?._id || citaActualizada.peluquero;
+      const nombreCliente = citaActualizada.cliente?.usuario?.nombre || 'Cliente';
+      const fechaObj = new Date(citaActualizada.fechaInicio || citaActualizada.fecha);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+      
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: citaActualizada._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: citaActualizada.estado,
+        mensaje: `La cita de ${nombreCliente} ha sido reprogramada para el ${fechaFormateada} a las ${horaFormateada}.`
+      }).catch(err => console.error('Error notificando cita reprogramada:', err.message));
+    } catch (notifyErr) {
+      console.error('Error al preparar notificación cita reprogramada:', notifyErr.message);
+    }
+
     res.json(citaActualizada);
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message || 'Error interno del servidor' });
@@ -291,6 +338,29 @@ const iniciarCita = async (req, res) => {
     const { hora } = req.body;
 
     const cita = await CitaService.iniciarCita(id, hora);
+
+    // Notificar en tiempo real
+    try {
+      const clienteId = cita.cliente?._id || cita.cliente;
+      const peluqueroId = cita.peluquero?._id || cita.peluquero;
+      const nombreCliente = cita.cliente?.usuario?.nombre || 'Cliente';
+      const fechaObj = new Date(cita.fechaInicio || cita.fecha);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: cita._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: cita.estado,
+        mensaje: `La cita de ${nombreCliente} ha iniciado.`
+      }).catch(err => console.error('Error notificando cita iniciada:', err.message));
+    } catch (notifyErr) {
+      console.error('Error al preparar notificación cita iniciada:', notifyErr.message);
+    }
 
     return res.json({
       success: true,
@@ -325,6 +395,29 @@ const finalizarCita = async (req, res) => {
 
     const cita = await CitaService.finalizarCita(id, hora);
 
+    // Notificar en tiempo real
+    try {
+      const clienteId = cita.cliente?._id || cita.cliente;
+      const peluqueroId = cita.peluquero?._id || cita.peluquero;
+      const nombreCliente = cita.cliente?.usuario?.nombre || 'Cliente';
+      const fechaObj = new Date(cita.fechaInicio || cita.fecha);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: cita._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: cita.estado,
+        mensaje: `La cita de ${nombreCliente} ha finalizado. El pago se encuentra pendiente.`
+      }).catch(err => console.error('Error notificando cita finalizada:', err.message));
+    } catch (notifyErr) {
+      console.error('Error al preparar notificación cita finalizada:', notifyErr.message);
+    }
+
     return res.json({
       success: true,
       mensaje: 'Cita finalizada correctamente',
@@ -346,6 +439,29 @@ const cancelarCita = async (req, res) => {
     const cita = await CitaService.cancelarCita(id);
     if (!cita) return res.status(404).json({ mensaje: 'Cita no encontrada' });
     
+    // Notificar en tiempo real
+    try {
+      const clienteId = cita.cliente?._id || cita.cliente;
+      const peluqueroId = cita.peluquero?._id || cita.peluquero;
+      const nombreCliente = cita.cliente?.usuario?.nombre || 'Cliente';
+      const fechaObj = new Date(cita.fechaInicio || cita.fecha);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: cita._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: cita.estado,
+        mensaje: `La cita de ${nombreCliente} del ${fechaFormateada} a las ${horaFormateada} ha sido cancelada.`
+      }).catch(err => console.error('Error notificando cita cancelada:', err.message));
+    } catch (notifyErr) {
+      console.error('Error al preparar notificación cita cancelada:', notifyErr.message);
+    }
+
     HistorialService.registrarAccion({
       usuario: req.uid,
       accion: 'ELIMINAR',
@@ -445,16 +561,35 @@ const pagarCita = async (req, res) => {
 
     const cita = await pagarCitaService(id, monto, metodo);
 
-    // Notificar al cliente
+    // Notificar en tiempo real
     try {
       const clienteId = cita.cliente?._id || cita.cliente;
+      const peluqueroId = cita.peluquero?._id || cita.peluquero;
+      const nombreCliente = cita.cliente?.usuario?.nombre || 'Cliente';
+      const fechaObj = new Date(cita.fechaInicio || cita.fecha);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      // 1. Confirmar pago a Pusher como evento genérico
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: cita._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: cita.estado,
+        mensaje: `El pago de la cita de ${nombreCliente} de $${monto} ha sido confirmado.`
+      }).catch(err => console.error('Error notificando pago en CITA_ACTUALIZADA:', err.message));
+
+      // 2. Notificación directa al cliente (Pago confirmado)
       NotificationService.notify('PAGO_CONFIRMADO', {
         clienteId,
         citaId: cita._id,
         mensaje: `Tu pago de $${monto} por la cita ha sido confirmado exitosamente.`
-      });
+      }).catch(err => console.error('Error notificando PAGO_CONFIRMADO:', err.message));
     } catch (notifyErr) {
-      console.log('Error notificando PAGO_CONFIRMADO:', notifyErr.message);
+      console.log('Error preparando notificaciones de pago:', notifyErr.message);
     }
 
     return res.json({
@@ -496,22 +631,42 @@ const reportarPago = async (req, res) => {
 
     const cita = await CitaService.reportarPago(id, metodo, observaciones, urlComprobante);
 
-    // Notificar al barbero
+    // Notificar en tiempo real
     try {
       const nombreCliente = cita.cliente?.usuario?.nombre || 'Un cliente';
       const fechaCita = cita.fechaInicio || cita.fecha;
+      const fechaObj = new Date(fechaCita);
+      const fechaFormateada = fechaObj.toLocaleDateString('es-CO');
+      const horaFormateada = fechaObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const clienteId = cita.cliente?._id || cita.cliente;
+      const peluqueroId = cita.peluquero?._id || cita.peluquero;
+
+      // 1. Notificar al barbero del pago reportado
       const payload = {
         nombreCliente,
-        fecha: new Date(fechaCita).toLocaleDateString('es-CO'),
-        hora: new Date(fechaCita).toLocaleTimeString('es-CO'),
-        peluqueroId: cita.peluquero?._id || cita.peluquero,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        peluqueroId,
         metodo,
         observaciones,
         urlComprobante
       };
       NotificationService.notify('PAGO_REPORTADO', payload).catch(e => console.log('Error notificando PAGO_REPORTADO:', e.message));
+
+      // 2. Notificar actualización de cita para recarga en tiempo real
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: cita._id,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        fecha: fechaFormateada,
+        hora: horaFormateada,
+        nuevoEstado: cita.estado,
+        mensaje: `${nombreCliente} ha reportado un pago por ${metodo}.`
+      }).catch(err => console.error('Error notificando reporte pago en CITA_ACTUALIZADA:', err.message));
+
     } catch (notifyErr) {
-      console.log('Error preparando notificacion PAGO_REPORTADO:', notifyErr.message);
+      console.log('Error preparando notificaciones de reporte de pago:', notifyErr.message);
     }
 
     return res.json({

@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 
 const modelsDir = path.join(__dirname, 'src', 'models');
-const Empresa = require('./src/models/Empresa.model');
+const Empresa = require('../src/models/Empresa.model');
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {

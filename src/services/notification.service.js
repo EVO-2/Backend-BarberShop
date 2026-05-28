@@ -29,6 +29,10 @@ class NotificationService {
           await this.handlePagoConfirmado(payload);
           break;
 
+        case 'CITA_ACTUALIZADA':
+          await this.handleCitaActualizada(payload);
+          break;
+
         default:
           console.warn(`⚠️ Evento no manejado: ${event}`);
       }
@@ -223,6 +227,28 @@ class NotificationService {
         console.log(`⚡ [Pusher] Evento 'pago-confirmado' enviado en tiempo real.`);
       } catch (error) {
         console.error('❌ Error enviando evento Pusher:', error.message);
+      }
+    }
+  }
+
+  // 🔄 ACTUALIZACIÓN DE CITA (CAMBIO DE ESTADO) EN TIEMPO REAL
+  async handleCitaActualizada(data) {
+    const { citaId, clienteId, peluqueroId, nombreCliente, fecha, hora, nuevoEstado, mensaje } = data;
+    if (pusher) {
+      try {
+        pusher.trigger('barberia-channel', 'cita-actualizada', {
+          citaId,
+          clienteId,
+          peluqueroId,
+          nombreCliente,
+          fecha,
+          hora,
+          nuevoEstado,
+          mensaje
+        });
+        console.log(`⚡ [Pusher] Evento 'cita-actualizada' enviado en tiempo real: ${mensaje}`);
+      } catch (error) {
+        console.error('❌ Error enviando evento Pusher (cita-actualizada):', error.message);
       }
     }
   }

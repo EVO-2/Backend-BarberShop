@@ -1,10 +1,10 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const mongoose = require('mongoose');
-const Empresa = require('./src/models/Empresa.model');
-const Usuario = require('./src/models/Usuario.model');
-const Rol = require('./src/models/Rol.model');
-const Peluquero = require('./src/models/Peluquero.model');
+const Empresa = require('../src/models/Empresa.model');
+const Usuario = require('../src/models/Usuario.model');
+const Rol = require('../src/models/Rol.model');
+const Peluquero = require('../src/models/Peluquero.model');
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {

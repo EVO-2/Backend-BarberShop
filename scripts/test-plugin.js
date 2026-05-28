@@ -3,13 +3,13 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const mongoose = require('mongoose');
 
 // Cargar plugin antes de compilar modelos
-const { tenantPlugin, tenantStorage } = require('./src/plugins/tenant');
+const { tenantPlugin, tenantStorage } = require('../src/plugins/tenant');
 mongoose.plugin(tenantPlugin);
 
 // Cargar modelos
-const Usuario = require('./src/models/Usuario.model');
-const Producto = require('./src/models/Producto.model');
-const Cita = require('./src/models/Cita.model');
+const Usuario = require('../src/models/Usuario.model');
+const Producto = require('../src/models/Producto.model');
+const Cita = require('../src/models/Cita.model');
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {

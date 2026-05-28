@@ -1,6 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Empresa = require('./src/models/Empresa.model');
+const Empresa = require('../src/models/Empresa.model');
 
 const desbloquearEmpresas = async () => {
   try {

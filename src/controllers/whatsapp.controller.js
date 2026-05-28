@@ -157,7 +157,7 @@ async function procesarInicio(session, empresa, texto, telefono, nombre) {
   // Si dice 1 o quiere agendar
   if (input === '1' || input.includes('agendar') || input.includes('reserva') || input.includes('cita')) {
     // Buscar sedes
-    const sedes = await Sede.find({ empresa: empresa._id, estado: true });
+    const sedes = await Sede.find({ empresaId: empresa._id, estado: true });
     if (sedes.length === 0) {
       await WhatsAppService.enviarMensaje({
         telefono,
@@ -255,7 +255,7 @@ async function procesarInicio(session, empresa, texto, telefono, nombre) {
 
 // 2. SELECCIONAR SEDE
 async function procesarSelectSede(session, empresa, texto, telefono) {
-  const sedes = await Sede.find({ empresa: empresa._id, estado: true });
+  const sedes = await Sede.find({ empresaId: empresa._id, estado: true });
   const index = parseInt(texto) - 1;
 
   if (isNaN(index) || index < 0 || index >= sedes.length) {
@@ -275,7 +275,7 @@ async function procesarSelectSede(session, empresa, texto, telefono) {
 
 // 3. SELECCIONAR SERVICIO
 async function procesarSelectServicio(session, empresa, texto, telefono) {
-  const servicios = await Servicio.find({ empresa: empresa._id, estado: true });
+  const servicios = await Servicio.find({ empresaId: empresa._id, estado: true });
   const index = parseInt(texto) - 1;
 
   if (isNaN(index) || index < 0 || index >= servicios.length) {
@@ -444,15 +444,45 @@ async function procesarConfirmacion(session, empresa, texto, telefono, nombre) {
     try {
       // 1. Verificar o crear cliente en BD
       const celularSimple = telefono.slice(-10); // Últimos 10 dígitos para evitar líos de prefijo
-      let cliente = await Cliente.findOne({ telefono: { $regex: new RegExp(celularSimple, 'i') } });
+      let cliente = await Cliente.findOne({ telefono: celularSimple });
 
       if (!cliente) {
+        // Encontrar rol de cliente
+        const Rol = require('../models/Rol.model');
+        let rolCliente = await Rol.findOne({ nombre: { $regex: /cliente/i } });
+        if (!rolCliente) {
+          rolCliente = await Rol.findOne() || { _id: new mongoose.Types.ObjectId() };
+        }
+
+        // Limpiar el nombre para cumplir la validación regex (solo letras y espacios)
+        const nombreLimpio = (nombre || 'Cliente WhatsApp')
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // quitar tildes
+          .replace(/[^A-Za-z\s]/g, '') // dejar solo letras y espacios
+          .trim() || 'Cliente WhatsApp';
+
+        // Crear primero el Usuario requerido por el Cliente
+        const nuevoUsuario = new Usuario({
+          nombre: nombreLimpio,
+          correo: `${celularSimple}@whatsapp.stylemanager.com`,
+          password: 'tempPassword123!', // se hashea en save hook
+          rol: rolCliente._id,
+          empresaId: empresa._id,
+          estado: true
+        });
+        await nuevoUsuario.save();
+
         cliente = new Cliente({
-          nombre: nombre || 'Cliente WhatsApp',
-          telefono: telefono,
-          genero: 'Otro'
+          usuario: nuevoUsuario._id,
+          telefono: celularSimple, // 10 dígitos exactamente
+          genero: 'otro', // minúsculas para cumplir el enum
+          empresaId: empresa._id
         });
         await cliente.save();
+
+        // Vincular el cliente de vuelta al usuario
+        nuevoUsuario.cliente = cliente._id;
+        await nuevoUsuario.save();
       }
 
       // 2. Si el peluquero es 'ANY', buscar el primer profesional calificado
@@ -475,6 +505,20 @@ async function procesarConfirmacion(session, empresa, texto, telefono, nombre) {
       }
 
       // 3. Crear la Cita
+      const sede = await Sede.findById(session.datosCita.sedeId);
+      
+      // Buscar o crear un puesto de trabajo disponible en la sede (es un campo requerido por el modelo Cita)
+      let puesto = await SedePuesto.findOne({ sede: session.datosCita.sedeId, estado: true });
+      if (!puesto) {
+        puesto = new SedePuesto({
+          nombre: 'Puesto Estándar WhatsApp',
+          sede: session.datosCita.sedeId,
+          empresaId: empresa._id,
+          estado: true
+        });
+        await puesto.save();
+      }
+
       const fechaBase = new Date(session.datosCita.fecha);
       const [h, m] = session.datosCita.hora.split(':').map(Number);
       const fechaFinal = new Date(fechaBase.getFullYear(), fechaBase.getMonth(), fechaBase.getDate(), h, m, 0);
@@ -482,6 +526,7 @@ async function procesarConfirmacion(session, empresa, texto, telefono, nombre) {
       const nuevaCita = new Cita({
         cliente: cliente._id,
         sede: session.datosCita.sedeId,
+        puestoTrabajo: puesto._id,
         peluquero: peluqueroId,
         servicios: [session.datosCita.servicioId],
         fecha: fechaFinal,
@@ -537,7 +582,7 @@ async function enviarMenuPrincipal(telefono, empresaNombre, clienteNombre) {
 }
 
 async function enviarListaServicios(telefono, empresaId) {
-  const servicios = await Servicio.find({ empresa: empresaId, estado: true });
+  const servicios = await Servicio.find({ empresaId, estado: true });
   let msg = `✂ *Paso 2/5: Selecciona el Servicio*\n\nResponde únicamente con el número de la opción:\n\n`;
   servicios.forEach((s, idx) => {
     msg += `${idx + 1}️⃣ *${s.nombre}* — $${s.precio || '0'}\n⏱ Duración: ${s.duracion || 30} mins\n\n`;
@@ -558,8 +603,8 @@ async function procesarPreguntaAI(telefono, empresa, pregunta, clienteNombre) {
     }
 
     // 1. Recopilar contexto real del negocio desde la DB para inyectar en el Prompt
-    const sedes = await Sede.find({ empresa: empresa._id, estado: true });
-    const servicios = await Servicio.find({ empresa: empresa._id, estado: true });
+    const sedes = await Sede.find({ empresaId: empresa._id, estado: true });
+    const servicios = await Servicio.find({ empresaId: empresa._id, estado: true });
 
     const sedesContext = sedes.map(s => `- ${s.nombre}: ${s.direccion || 'Sin dirección'}`).join('\n');
     const serviciosContext = servicios.map(s => `- ${s.nombre}: $${s.precio || 0} (${s.duracion || 30} mins)`).join('\n');
@@ -579,7 +624,7 @@ Servicios y Precios:\n${serviciosContext || 'Servicios generales de corte y barb
 Consulta del cliente: "${pregunta}"`;
 
     // 2. Realizar petición nativa a Google Gemini API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -603,6 +648,7 @@ Consulta del cliente: "${pregunta}"`;
     if (answer) {
       await WhatsAppService.enviarMensaje({ telefono, mensaje: answer });
     } else {
+      console.warn('⚠️ [WhatsApp AI] Gemini API no devolvió respuesta esperada. Respuesta:', JSON.stringify(data));
       // Fallback
       await enviarMenuPrincipal(telefono, empresa.nombre, clienteNombre);
     }

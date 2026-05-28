@@ -8,13 +8,13 @@ const run = async () => {
     console.log('🟢 Conectado a MongoDB');
 
     // Cargar todos los modelos para que Mongoose registre sus esquemas
-    const Rol = require('./src/models/Rol.model');
-    const Empresa = require('./src/models/Empresa.model');
-    const Cliente = require('./src/models/Cliente.model');
-    const Peluquero = require('./src/models/Peluquero.model');
-    const Sede = require('./src/models/Sede.model');
-    const PuestoTrabajo = require('./src/models/PuestoTrabajo.model');
-    const Usuario = require('./src/models/Usuario.model');
+    const Rol = require('../src/models/Rol.model');
+    const Empresa = require('../src/models/Empresa.model');
+    const Cliente = require('../src/models/Cliente.model');
+    const Peluquero = require('../src/models/Peluquero.model');
+    const Sede = require('../src/models/Sede.model');
+    const PuestoTrabajo = require('../src/models/PuestoTrabajo.model');
+    const Usuario = require('../src/models/Usuario.model');
 
     const emailTest = 'edwardvalencia6218@hotmail.com';
     const usuarioPre = await Usuario.findOne({ correo: emailTest });
