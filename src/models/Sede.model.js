@@ -36,8 +36,5 @@ const SedeSchema = new Schema({
   versionKey: false
 });
 
-// 🔎 Índice para búsquedas
-SedeSchema.index({ nombre: 1 });
-
 // ✅ Evita OverwriteModelError
 module.exports = models.Sede || model('Sede', SedeSchema);

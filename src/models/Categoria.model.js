@@ -30,8 +30,5 @@ const CategoriaSchema = new Schema({
     versionKey: false
 });
 
-// 🔎 Índice para búsquedas rápidas
-CategoriaSchema.index({ nombre: 1 });
-
 // ✅ Evita OverwriteModelError
 module.exports = models.Categoria || model('Categoria', CategoriaSchema);

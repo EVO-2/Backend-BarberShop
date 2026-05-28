@@ -96,8 +96,5 @@ const EmpresaSchema = new Schema({
   versionKey: false
 });
 
-// 🔎 Índice para búsquedas
-EmpresaSchema.index({ nombre: 1 });
-
 // ✅ Evita OverwriteModelError
 module.exports = models.Empresa || model('Empresa', EmpresaSchema);
