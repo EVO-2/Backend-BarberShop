@@ -12,58 +12,38 @@ const path = require('path');
 // Función utilitaria para procesar imágenes con marca de agua y subir a MinIO
 // ============================================================
 const procesarYSubirImagenesServicio = async (req) => {
-  console.log('🧪 [Watermark] Iniciando procesarYSubirImagenesServicio');
-  console.log('🧪 [Watermark] req.files recibidos:', req.files ? req.files.length : 0);
-  
   if (!req.files || req.files.length === 0) return [];
 
   const urlsSubidas = [];
-  // Asegurar que obtenemos el empresaId, que podría estar en req.usuario o directamente en el token parsed
   const empresaId = req.usuario?.empresaId;
-  console.log('🧪 [Watermark] empresaId de req.usuario:', empresaId);
 
   // 1. Intentar obtener el logo de la empresa como marca de agua
   let logoBuffer = null;
   if (empresaId) {
     try {
       const empresa = await Empresa.findById(empresaId);
-      console.log('🧪 [Watermark] Empresa encontrada en BD:', empresa ? empresa.nombre : 'No encontrada');
       if (empresa && empresa.logo) {
         const logoUrl = empresa.logo;
-        console.log('🧪 [Watermark] Logo URL de la empresa:', logoUrl);
         if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
-          console.log('🧪 [Watermark] Descargando logo remoto:', logoUrl);
           const response = await fetch(logoUrl);
           if (response.ok) {
             const arrayBuffer = await response.arrayBuffer();
             logoBuffer = Buffer.from(arrayBuffer);
-            console.log('🧪 [Watermark] Logo remoto descargado con éxito. Tamaño:', logoBuffer.length, 'bytes');
-          } else {
-            console.error('🧪 [Watermark] Error descargando logo remoto:', response.statusText);
           }
         } else if (logoUrl.startsWith('assets/')) {
           const fs = require('fs');
           let localPath = path.join(__dirname, '../..', logoUrl);
-          console.log('🧪 [Watermark] Buscando logo local en backend:', localPath);
           if (!fs.existsSync(localPath)) {
             localPath = path.join(__dirname, '../../..', 'Frontend-BarberShop/src', logoUrl);
-            console.log('🧪 [Watermark] Logo local backend no existe, buscando en frontend:', localPath);
           }
           if (fs.existsSync(localPath)) {
             logoBuffer = fs.readFileSync(localPath);
-            console.log('🧪 [Watermark] Logo local cargado con éxito. Tamaño:', logoBuffer.length, 'bytes');
-          } else {
-            console.warn('🧪 [Watermark] Logo local no se encontró en ninguna de las rutas');
           }
         }
-      } else {
-        console.log('🧪 [Watermark] La empresa no tiene ningún logo definido en la BD');
       }
     } catch (logoError) {
-      console.error('⚠️ [Watermark] Error al cargar el logo de la empresa:', logoError);
+      console.error('⚠️ Error al cargar el logo de la empresa para marca de agua:', logoError);
     }
-  } else {
-    console.log('🧪 [Watermark] Omitiendo marca de agua: empresaId es nulo o indefinido (SuperAdmin o sin empresa)');
   }
 
   // 2. Procesar cada archivo en memoria
@@ -74,31 +54,23 @@ const procesarYSubirImagenesServicio = async (req) => {
       // Aplicar marca de agua si el logo se cargó exitosamente
       if (logoBuffer) {
         try {
-          console.log('🧪 [Watermark] Aplicando marca de agua al archivo:', file.originalname);
           const baseImage = sharp(file.buffer);
           const metadata = await baseImage.metadata();
-          console.log('🧪 [Watermark] Dimensiones imagen base:', metadata.width, 'x', metadata.height);
 
           if (metadata.width && metadata.height) {
             // El logo ocupará el 16% del ancho de la imagen
             const logoWidth = Math.round(metadata.width * 0.16);
-            console.log('🧪 [Watermark] Redimensionando logo a ancho:', logoWidth);
             
             const resizedLogo = await sharp(logoBuffer)
               .resize({ width: logoWidth })
               .toBuffer();
 
-            const logoMetadata = await sharp(resizedLogo).metadata();
-            const lWidth = logoMetadata.width || logoWidth;
-            const lHeight = logoMetadata.height || logoWidth;
-
             // Margen proporcional del 3%
             const margin = Math.round(metadata.width * 0.03);
 
-            // Coordenadas para esquina inferior derecha
-            const left = metadata.width - lWidth - margin;
-            const top = metadata.height - lHeight - margin;
-            console.log('🧪 [Watermark] Coordenadas calculadas -> left:', left, 'top:', top, 'margin:', margin);
+            // Coordenadas para esquina superior izquierda
+            const left = margin;
+            const top = margin;
 
             if (left > 0 && top > 0) {
               bufferFinal = await baseImage
@@ -109,17 +81,12 @@ const procesarYSubirImagenesServicio = async (req) => {
                   blend: 'over'
                 }])
                 .toBuffer();
-              console.log('🧪 [Watermark] Marca de agua estampada con éxito con sharp');
-            } else {
-              console.warn('🧪 [Watermark] Coordenadas inválidas (la imagen base es muy pequeña para el logo)');
             }
           }
         } catch (watermarkError) {
-          console.error('❌ [Watermark] Error aplicando marca de agua con sharp:', watermarkError);
+          console.error('❌ Error aplicando marca de agua con sharp:', watermarkError);
           // Si falla, se sube la imagen original sin marca de agua
         }
-      } else {
-        console.log('🧪 [Watermark] Omitiendo sharp: logoBuffer es nulo');
       }
 
       // 3. Subir a MinIO
