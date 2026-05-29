@@ -30,6 +30,7 @@ const onboardingRoutes = require('./routes/onboarding.routes');
 // 🔥 NUEVA RUTA (PERMISOS)
 const permisosRoutes = require('./routes/permisos.routes');
 const historialRoutes = require('./routes/historial.routes');
+const superadminRoutes = require('./routes/superadmin.routes');
 
 // =================== Middlewares ===================
 
@@ -117,6 +118,7 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/empresa', require('./routes/empresa.routes'));
 app.use('/api/wompi', require('./routes/wompi.routes'));
 app.use('/api/whatsapp', require('./routes/whatsapp.routes'));
+app.use('/api/superadmin', superadminRoutes);
 
 // =================== Manejo de errores 404 ===================
 app.use((req, res) => {

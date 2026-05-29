@@ -11,6 +11,11 @@ const tieneRol = (...rolesPermitidos) => {
       ? rolUsuarioRaw.toLowerCase()
       : rolUsuarioRaw?.nombre?.toLowerCase();
 
+    // 👑 Excepción para Súper Administrador: Acceso total
+    if (rolUsuario === 'superadmin') {
+      return next();
+    }
+
     // Normalizar roles permitidos
     const rolesNormalizados = rolesPermitidos.map(r => r.toLowerCase());
 

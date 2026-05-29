@@ -121,8 +121,6 @@ const obtenerProductos = async (req, res) => {
             filtros.estado = estado === 'true';
         }
 
-        console.log('📡 FILTROS BACKEND:', filtros);
-
         const productos = await Producto.find(filtros)
             .populate('categoria', 'nombre')
             .populate('proveedor', 'nombre')

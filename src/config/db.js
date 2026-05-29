@@ -41,6 +41,7 @@ const conectarDB = async () => {
 
     // Auto-seed de planes si es necesario
     await inicializarPlanes();
+    await inicializarSuperAdmin();
 
     console.log(`🟢 Conexión a MongoDB exitosa: ${mongoose.connection.name}`);
 
@@ -118,6 +119,51 @@ const inicializarPlanes = async () => {
     }
   } catch (err) {
     console.error('❌ Error al inicializar los planes de suscripción:', err);
+  }
+};
+
+const inicializarSuperAdmin = async () => {
+  try {
+    const Rol = require('../models/Rol.model');
+    const Usuario = require('../models/Usuario.model');
+
+    // 1. Buscar o crear el rol 'superadmin' (global, sin empresaId)
+    let rolSuperAdmin = await Rol.findOne({ nombre: 'superadmin', empresaId: null });
+    if (!rolSuperAdmin) {
+      console.log('🌱 Creando rol global de superadmin...');
+      rolSuperAdmin = new Rol({
+        nombre: 'superadmin',
+        descripcion: 'Rol de administración global de la plataforma SaaS',
+        empresaId: null,
+        permisos: []
+      });
+      await rolSuperAdmin.save();
+      console.log('✅ Rol superadmin creado con éxito');
+    }
+
+    // 2. Buscar o crear el usuario superadmin (sin empresaId)
+    const emailSuper = (process.env.SUPERADMIN_EMAIL || 'superadmin@jevo.com').toLowerCase().trim();
+    let usuarioSuper = await Usuario.findOne({ correo: emailSuper }).setOptions({ bypassTenant: true });
+
+    if (!usuarioSuper) {
+      console.log(`🌱 Creando usuario superadmin por defecto: ${emailSuper}...`);
+      
+      const passSuper = process.env.SUPERADMIN_PASSWORD || 'SuperAdminJevo2026!';
+      
+      usuarioSuper = new Usuario({
+        nombre: 'Plataforma SuperAdmin',
+        correo: emailSuper,
+        password: passSuper, // se encripta automáticamente en el pre-save del modelo
+        rol: rolSuperAdmin._id,
+        empresaId: null,
+        estado: true
+      });
+
+      await usuarioSuper.save();
+      console.log('✅ Usuario superadmin creado con éxito');
+    }
+  } catch (err) {
+    console.error('❌ Error al inicializar el SuperAdmin:', err);
   }
 };
 

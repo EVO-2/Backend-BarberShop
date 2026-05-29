@@ -8,7 +8,6 @@ const { tenantStorage } = require('../plugins/tenant');
 const validarJWT = async (req, res, next) => {
 
   const authHeader = req.header('Authorization') || req.header('authorization');
-  console.log(`[validarJWT] Path: ${req.originalUrl}, AuthHeader: ${authHeader}`);
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log(`[validarJWT] 401 - Header missing or bad format`);
