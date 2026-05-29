@@ -32,7 +32,11 @@ const procesarYSubirImagenesServicio = async (req) => {
           }
         } else if (logoUrl.startsWith('assets/')) {
           const fs = require('fs');
-          const localPath = path.join(__dirname, '../..', logoUrl);
+          let localPath = path.join(__dirname, '../..', logoUrl);
+          if (!fs.existsSync(localPath)) {
+            // Desarrollo local: buscar en la carpeta de assets del frontend
+            localPath = path.join(__dirname, '../../..', 'Frontend-BarberShop/src', logoUrl);
+          }
           if (fs.existsSync(localPath)) {
             logoBuffer = fs.readFileSync(localPath);
           }

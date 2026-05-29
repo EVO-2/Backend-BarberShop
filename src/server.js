@@ -12,7 +12,7 @@ const { initSubscriptionCron } = require('./schedulers/subscription.scheduler');
 const app = express();
 
 // archivos estáticos
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // app principal
 const mainApp = require('./app');

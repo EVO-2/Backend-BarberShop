@@ -74,7 +74,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // =================== Archivos estáticos ===================
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // =================== Ruta raíz ===================
 app.get('/', (req, res) => {
