@@ -271,8 +271,6 @@ exports.actualizarServicio = async (req, res) => {
     // ✅ Normalizar roles
     rolesAsignados = rolesAsignados.map(r => r.toLowerCase().trim());
 
-    console.log('🧪 Roles asignados:', rolesAsignados);
-
     servicioExistente.nombre = nombre?.trim() || servicioExistente.nombre;
     servicioExistente.descripcion = descripcion?.trim() || servicioExistente.descripcion;
     servicioExistente.precio = precio ?? servicioExistente.precio;

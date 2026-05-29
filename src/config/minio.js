@@ -62,8 +62,6 @@ const eliminarArchivoMinio = async (fileUrl) => {
         });
 
         await s3Client.send(command);
-
-        console.log(`🗑️ Archivo eliminado de MinIO: ${key}`);
     } catch (error) {
         console.error('⚠️ Error eliminando archivo de MinIO:', error.message);
     }
