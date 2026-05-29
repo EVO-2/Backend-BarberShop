@@ -97,14 +97,14 @@ const obtenerEmpresas = async (req, res) => {
 
         // Mapear info consolidada
         const empresasConsolidadas = empresas.map(empresa => {
-            const dueño = admins.find(adm => adm.empresaId?.toString() === empresa._id.toString());
+            const dueno = admins.find(adm => adm.empresaId?.toString() === empresa._id.toString());
             const sedesCount = sedes.filter(sd => sd.empresaId?.toString() === empresa._id.toString()).length;
 
             return {
                 ...empresa,
-                dueño: dueño ? {
-                    nombre: dueño.nombre,
-                    correo: dueño.correo
+                dueno: dueno ? {
+                    nombre: dueno.nombre,
+                    correo: dueno.correo
                 } : null,
                 sedesCount
             };
