@@ -3,16 +3,105 @@
 // ===============================================
 
 const Servicio = require('../models/Servicio.model');
-const { eliminarArchivoMinio } = require('../config/minio');
+const { subirArchivoMinio, eliminarArchivoMinio } = require('../config/minio');
+const Empresa = require('../models/Empresa.model');
+const sharp = require('sharp');
+const path = require('path');
 
 // ============================================================
-// Función utilitaria para obtener rutas de imágenes subidas
+// Función utilitaria para procesar imágenes con marca de agua y subir a MinIO
 // ============================================================
-const obtenerRutasDeImagenes = (req) => {
+const procesarYSubirImagenesServicio = async (req) => {
   if (!req.files || req.files.length === 0) return [];
 
-  // Con MinIO multerS3 nos proporciona directamente el URL público en file.location
-  return req.files.map((file) => file.location);
+  const urlsSubidas = [];
+  const empresaId = req.usuario?.empresaId;
+
+  // 1. Intentar obtener el logo de la empresa como marca de agua
+  let logoBuffer = null;
+  if (empresaId) {
+    try {
+      const empresa = await Empresa.findById(empresaId);
+      if (empresa && empresa.logo) {
+        const logoUrl = empresa.logo;
+        if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+          const response = await fetch(logoUrl);
+          if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            logoBuffer = Buffer.from(arrayBuffer);
+          }
+        } else if (logoUrl.startsWith('assets/')) {
+          const fs = require('fs');
+          const localPath = path.join(__dirname, '../..', logoUrl);
+          if (fs.existsSync(localPath)) {
+            logoBuffer = fs.readFileSync(localPath);
+          }
+        }
+      }
+    } catch (logoError) {
+      console.error('⚠️ Error al cargar el logo de la empresa para marca de agua:', logoError);
+    }
+  }
+
+  // 2. Procesar cada archivo en memoria
+  for (const file of req.files) {
+    try {
+      let bufferFinal = file.buffer;
+
+      // Aplicar marca de agua si el logo se cargó exitosamente
+      if (logoBuffer) {
+        try {
+          const baseImage = sharp(file.buffer);
+          const metadata = await baseImage.metadata();
+
+          if (metadata.width && metadata.height) {
+            // El logo ocupará el 16% del ancho de la imagen
+            const logoWidth = Math.round(metadata.width * 0.16);
+            
+            const resizedLogo = await sharp(logoBuffer)
+              .resize({ width: logoWidth })
+              .toBuffer();
+
+            const logoMetadata = await sharp(resizedLogo).metadata();
+            const lWidth = logoMetadata.width || logoWidth;
+            const lHeight = logoMetadata.height || logoWidth;
+
+            // Margen proporcional del 3%
+            const margin = Math.round(metadata.width * 0.03);
+
+            // Coordenadas para esquina inferior derecha
+            const left = metadata.width - lWidth - margin;
+            const top = metadata.height - lHeight - margin;
+
+            if (left > 0 && top > 0) {
+              bufferFinal = await baseImage
+                .composite([{
+                  input: resizedLogo,
+                  top: top,
+                  left: left,
+                  blend: 'over'
+                }])
+                .toBuffer();
+            }
+          }
+        } catch (watermarkError) {
+          console.error('❌ Error aplicando marca de agua con sharp:', watermarkError);
+          // Si falla, se sube la imagen original sin marca de agua
+        }
+      }
+
+      // 3. Subir a MinIO
+      const ext = path.extname(file.originalname);
+      const uniqueName = `servicios/${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+      const url = await subirArchivoMinio(bufferFinal, uniqueName, file.mimetype);
+      urlsSubidas.push(url);
+
+    } catch (uploadError) {
+      console.error('❌ Error al subir imagen de servicio:', uploadError);
+    }
+  }
+
+  return urlsSubidas;
 };
 
 
@@ -31,7 +120,7 @@ exports.crearServicio = async (req, res) => {
     }
 
     // ✅ Procesar imágenes con multer
-    const imagenes = obtenerRutasDeImagenes(req);
+    const imagenes = await procesarYSubirImagenesServicio(req);
 
     let rolesAsignados = ['barbero'];
     if (asignadoA) {
@@ -135,7 +224,7 @@ exports.actualizarServicio = async (req, res) => {
       return res.status(404).json({ mensaje: '❌ Servicio no encontrado' });
     }
 
-    const nuevasImagenes = obtenerRutasDeImagenes(req);
+    const nuevasImagenes = await procesarYSubirImagenesServicio(req);
 
     const imagenesEliminadas = servicioExistente.imagenes.filter(
       (img) => !imagenesExistentes.includes(img)

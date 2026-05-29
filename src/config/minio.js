@@ -1,4 +1,4 @@
-const { S3Client, DeleteObjectCommand, CreateBucketCommand, HeadBucketCommand, PutBucketPolicyCommand } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectCommand, CreateBucketCommand, HeadBucketCommand, PutBucketPolicyCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 require('dotenv').config();
 
 // 🔹 Nombre del bucket centralizado
@@ -69,9 +69,34 @@ const eliminarArchivoMinio = async (fileUrl) => {
     }
 };
 
+const subirArchivoMinio = async (buffer, filename, mimetype) => {
+    try {
+        const command = new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: filename,
+            Body: buffer,
+            ContentType: mimetype,
+            ACL: 'public-read'
+        });
+
+        await s3Client.send(command);
+
+        const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+        const port = process.env.MINIO_PORT && process.env.MINIO_PORT !== '443' && process.env.MINIO_PORT !== '80' ? `:${process.env.MINIO_PORT}` : '';
+        const minioPublicUrl = process.env.MINIO_PUBLIC_URL || `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${endpoint}${port}`;
+        const fileUrl = `${minioPublicUrl}/${BUCKET_NAME}/${filename}`;
+
+        return fileUrl;
+    } catch (error) {
+        console.error('❌ Error al subir archivo a MinIO:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     s3Client,
     eliminarArchivoMinio,
+    subirArchivoMinio,
     BUCKET_NAME,
 };
 

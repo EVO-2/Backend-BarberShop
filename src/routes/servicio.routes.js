@@ -24,19 +24,9 @@ const ROLES = {
 };
 
 // ============================================================
-// Configuración de Multer para subir imágenes de servicios
+// Configuración de Multer para subir imágenes de servicios en memoria
 // ============================================================
-const storage = multerS3({
-  s3: s3Client,
-  bucket: process.env.MINIO_BUCKET_NAME || 'BACKEND-BARBERSHOP',
-  acl: 'public-read',
-  contentType: multerS3.AUTO_CONTENT_TYPE,
-  key: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, `servicios/${uniqueName}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
