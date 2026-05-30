@@ -294,9 +294,20 @@ const verificarLogo = async (req, res) => {
   }
 };
 
+const obtenerEmpresasPublicas = async (req, res) => {
+  try {
+    const empresas = await Empresa.find({ estado: true }, 'nombre logo').sort({ nombre: 1 });
+    res.json({ empresas });
+  } catch (error) {
+    console.error('Error al obtener empresas públicas:', error);
+    res.status(500).json({ mensaje: 'Error al obtener las empresas' });
+  }
+};
+
 module.exports = {
   login,
   registro,
   verificarCorreoExistente,
-  verificarLogo
+  verificarLogo,
+  obtenerEmpresasPublicas
 };

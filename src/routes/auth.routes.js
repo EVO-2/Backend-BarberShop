@@ -4,7 +4,8 @@ const {
   login,
   registro,
   verificarCorreoExistente,
-  verificarLogo
+  verificarLogo,
+  obtenerEmpresasPublicas
 } = require('../controllers/auth.controller');
 
 const validarCampos = require('../middlewares/validarCampos');
@@ -50,5 +51,8 @@ router.post(
   ],
   verificarLogo
 );
+
+// 🏢 Obtener empresas públicas (para dropdown de registro)
+router.get('/empresas', obtenerEmpresasPublicas);
 
 module.exports = router;
