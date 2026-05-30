@@ -207,9 +207,195 @@ const toggleEmpresaEstado = async (req, res) => {
     }
 };
 
+const listarSuperAdmins = async (req, res) => {
+    try {
+        const rolSuperAdmin = await Rol.findOne({ nombre: 'superadmin', empresaId: null });
+        if (!rolSuperAdmin) {
+            return res.status(404).json({ ok: false, mensaje: 'Rol superadmin no encontrado' });
+        }
+        const admins = await Usuario.find({ rol: rolSuperAdmin._id })
+            .setOptions({ bypassTenant: true })
+            .select('nombre correo createdAt estado')
+            .lean();
+        res.json({ ok: true, admins });
+    } catch (error) {
+        console.error('❌ Error en listarSuperAdmins:', error);
+        res.status(500).json({ ok: false, mensaje: 'Error al listar superadministradores', error: error.message });
+    }
+};
+
+const obtenerSuperAdminPorId = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ ok: false, mensaje: 'ID de administrador no válido' });
+        }
+        const rolSuperAdmin = await Rol.findOne({ nombre: 'superadmin', empresaId: null });
+        const admin = await Usuario.findOne({ _id: id, rol: rolSuperAdmin._id })
+            .setOptions({ bypassTenant: true })
+            .select('nombre correo createdAt estado')
+            .lean();
+        if (!admin) {
+            return res.status(404).json({ ok: false, mensaje: 'Superadministrador no encontrado' });
+        }
+        res.json({ ok: true, admin });
+    } catch (error) {
+        console.error('❌ Error en obtenerSuperAdminPorId:', error);
+        res.status(500).json({ ok: false, mensaje: 'Error al obtener superadministrador', error: error.message });
+    }
+};
+
+const crearSuperAdmin = async (req, res) => {
+    try {
+        const { nombre, correo, password } = req.body;
+        if (!nombre || !correo || !password) {
+            return res.status(400).json({ ok: false, mensaje: 'Todos los campos (nombre, correo, contraseña) son obligatorios' });
+        }
+        
+        const rolSuperAdmin = await Rol.findOne({ nombre: 'superadmin', empresaId: null });
+        if (!rolSuperAdmin) {
+            return res.status(404).json({ ok: false, mensaje: 'Rol superadmin no encontrado' });
+        }
+        
+        const usuarioExistente = await Usuario.findOne({ correo: correo.toLowerCase().trim() })
+            .setOptions({ bypassTenant: true });
+        if (usuarioExistente) {
+            return res.status(400).json({ ok: false, mensaje: 'El correo ya está registrado en la plataforma' });
+        }
+        
+        const nuevoAdmin = new Usuario({
+            nombre,
+            correo: correo.toLowerCase().trim(),
+            password,
+            rol: rolSuperAdmin._id,
+            empresaId: null,
+            estado: true
+        });
+        
+        await nuevoAdmin.save();
+        res.status(201).json({
+            ok: true,
+            mensaje: 'Superadministrador creado con éxito',
+            admin: {
+                _id: nuevoAdmin._id,
+                nombre: nuevoAdmin.nombre,
+                correo: nuevoAdmin.correo,
+                createdAt: nuevoAdmin.createdAt,
+                estado: nuevoAdmin.estado
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error en crearSuperAdmin:', error);
+        res.status(500).json({ ok: false, mensaje: 'Error al crear superadministrador', error: error.message });
+    }
+};
+
+const actualizarSuperAdmin = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, correo, password } = req.body;
+        
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ ok: false, mensaje: 'ID de administrador no válido' });
+        }
+        
+        const rolSuperAdmin = await Rol.findOne({ nombre: 'superadmin', empresaId: null });
+        const admin = await Usuario.findOne({ _id: id, rol: rolSuperAdmin._id }).setOptions({ bypassTenant: true });
+        if (!admin) {
+            return res.status(404).json({ ok: false, mensaje: 'Superadministrador no encontrado' });
+        }
+        
+        if (correo && correo.toLowerCase().trim() !== admin.correo) {
+            const correoExistente = await Usuario.findOne({ correo: correo.toLowerCase().trim() })
+                .setOptions({ bypassTenant: true });
+            if (correoExistente) {
+                return res.status(400).json({ ok: false, mensaje: 'El correo ya está en uso por otro usuario' });
+            }
+            admin.correo = correo.toLowerCase().trim();
+        }
+        
+        if (nombre) admin.nombre = nombre;
+        if (password) {
+            admin.password = password;
+        }
+        
+        await admin.save();
+        res.json({
+            ok: true,
+            mensaje: 'Superadministrador actualizado con éxito',
+            admin: {
+                _id: admin._id,
+                nombre: admin.nombre,
+                correo: admin.correo,
+                createdAt: admin.createdAt,
+                estado: admin.estado
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error en actualizarSuperAdmin:', error);
+        res.status(500).json({ ok: false, mensaje: 'Error al actualizar superadministrador', error: error.message });
+    }
+};
+
+const toggleSuperAdminEstado = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { estado } = req.body;
+        
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ ok: false, mensaje: 'ID de administrador no válido' });
+        }
+        
+        if (typeof estado !== 'boolean') {
+            return res.status(400).json({ ok: false, mensaje: 'El campo estado es obligatorio y debe ser boolean' });
+        }
+        
+        if (req.usuario._id.toString() === id) {
+            return res.status(400).json({ ok: false, mensaje: 'No puedes cambiar el estado de tu propia cuenta de superadministrador' });
+        }
+        
+        const rolSuperAdmin = await Rol.findOne({ nombre: 'superadmin', empresaId: null });
+        
+        if (estado === false) {
+            const activosCount = await Usuario.countDocuments({ rol: rolSuperAdmin._id, estado: true })
+                .setOptions({ bypassTenant: true });
+            if (activosCount <= 1) {
+                return res.status(400).json({ ok: false, mensaje: 'No se puede desactivar el último superadministrador activo de la plataforma' });
+            }
+        }
+        
+        const admin = await Usuario.findOne({ _id: id, rol: rolSuperAdmin._id }).setOptions({ bypassTenant: true });
+        if (!admin) {
+            return res.status(404).json({ ok: false, mensaje: 'Superadministrador no encontrado' });
+        }
+        
+        admin.estado = estado;
+        await admin.save();
+        
+        res.json({
+            ok: true,
+            mensaje: `Superadministrador ${estado ? 'activado' : 'desactivado'} con éxito`,
+            admin: {
+                _id: admin._id,
+                nombre: admin.nombre,
+                correo: admin.correo,
+                estado: admin.estado
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error en toggleSuperAdminEstado:', error);
+        res.status(500).json({ ok: false, mensaje: 'Error al cambiar estado del superadministrador', error: error.message });
+    }
+};
+
 module.exports = {
     obtenerEstadisticasGlobales,
     obtenerEmpresas,
     actualizarSuscripcionEmpresa,
-    toggleEmpresaEstado
+    toggleEmpresaEstado,
+    listarSuperAdmins,
+    obtenerSuperAdminPorId,
+    crearSuperAdmin,
+    actualizarSuperAdmin,
+    toggleSuperAdminEstado
 };

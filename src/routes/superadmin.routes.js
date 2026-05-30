@@ -7,7 +7,12 @@ const {
     obtenerEstadisticasGlobales,
     obtenerEmpresas,
     actualizarSuscripcionEmpresa,
-    toggleEmpresaEstado
+    toggleEmpresaEstado,
+    listarSuperAdmins,
+    obtenerSuperAdminPorId,
+    crearSuperAdmin,
+    actualizarSuperAdmin,
+    toggleSuperAdminEstado
 } = require('../controllers/superadmin.controller');
 
 const router = Router();
@@ -41,6 +46,41 @@ router.patch(
         validarCampos
     ],
     toggleEmpresaEstado
+);
+
+// 🛠️ CRUD para Administradores de la Plataforma (SuperAdmins)
+router.get('/admins', listarSuperAdmins);
+router.get('/admins/:id', obtenerSuperAdminPorId);
+
+router.post(
+    '/admins',
+    [
+        check('nombre', 'El nombre es obligatorio').notEmpty(),
+        check('correo', 'El correo debe ser un email válido').isEmail(),
+        check('password', 'La contraseña debe tener al menos 8 caracteres').isLength({ min: 8 }),
+        validarCampos
+    ],
+    crearSuperAdmin
+);
+
+router.put(
+    '/admins/:id',
+    [
+        check('nombre', 'El nombre no puede estar vacío').optional().notEmpty(),
+        check('correo', 'El correo debe ser un email válido').optional().isEmail(),
+        check('password', 'La contraseña debe tener al menos 8 caracteres').optional().isLength({ min: 8 }),
+        validarCampos
+    ],
+    actualizarSuperAdmin
+);
+
+router.patch(
+    '/admins/:id/estado',
+    [
+        check('estado', 'El campo estado es obligatorio y debe ser boolean').isBoolean(),
+        validarCampos
+    ],
+    toggleSuperAdminEstado
 );
 
 module.exports = router;
