@@ -479,7 +479,7 @@ const obtenerPerfil = async (req, res) => {
     }
 
     const rolNombre = usuario.rol?.nombre?.toLowerCase();
-    const empresaLogo = usuario.empresaId?.logo || 'assets/sede.png';
+    const empresaLogo = rolNombre === 'superadmin' ? 'assets/sede.png' : (usuario.empresaId?.logo || 'assets/sede.png');
     const empresaNombre = usuario.empresaId?.nombre || 'Style Manager';
 
     if (rolNombre === 'cliente' && usuario.cliente) {

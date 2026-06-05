@@ -119,7 +119,7 @@ const login = async (req, res) => {
         ? toId(datosExtra)
         : undefined,
         
-      empresaLogo: usuario.empresaId?.logo || 'assets/sede.png',
+      empresaLogo: nombreRol === 'superadmin' ? 'assets/sede.png' : (usuario.empresaId?.logo || 'assets/sede.png'),
       empresaId: toId(usuario.empresaId)
     };
 
@@ -283,7 +283,15 @@ const verificarLogo = async (req, res) => {
   const { correo } = req.body;
 
   try {
-    const usuario = await Usuario.findOne({ correo }).setOptions({ bypassTenant: true }).populate({ path: 'empresaId', options: { bypassTenant: true } });
+    const usuario = await Usuario.findOne({ correo })
+      .setOptions({ bypassTenant: true })
+      .populate({ path: 'empresaId', options: { bypassTenant: true } })
+      .populate({ path: 'rol', select: 'nombre' });
+
+    if (usuario && usuario.rol?.nombre?.toLowerCase() === 'superadmin') {
+      return res.json({ logo: 'assets/sede.png' });
+    }
+
     if (usuario && usuario.empresaId && usuario.empresaId.logo) {
       return res.json({ logo: usuario.empresaId.logo });
     }
