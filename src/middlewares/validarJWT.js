@@ -58,7 +58,10 @@ const validarJWT = async (req, res, next) => {
     // ✅ ENVOLVER NEXT() EN EL CONTEXTO DEL TENANT Y VALIDAR SUSCRIPCIÓN
     const { validarSuscripcion } = require('./validarSuscripcion');
     
-    if (usuario.empresaId) {
+    // 👑 Excepción para Súper Administrador: Acceso total sin validar suscripción ni forzar tenant
+    const esSuperAdmin = req.rol === 'superadmin';
+
+    if (usuario.empresaId && !esSuperAdmin) {
       return tenantStorage.run(usuario.empresaId, () => {
         return validarSuscripcion(req, res, next);
       });

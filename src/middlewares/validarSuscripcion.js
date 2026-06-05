@@ -3,9 +3,13 @@ const Empresa = require('../models/Empresa.model');
 const validarSuscripcion = async (req, res, next) => {
     try {
         const empresaId = req.usuario?.empresaId;
+        const rolUsuarioRaw = req.usuario?.rol;
+        const rolUsuario = typeof rolUsuarioRaw === 'string'
+            ? rolUsuarioRaw.toLowerCase()
+            : rolUsuarioRaw?.nombre?.toLowerCase();
 
         // Si es un SuperAdmin o un usuario sin empresa, dejar pasar (para paneles maestros)
-        if (!empresaId) {
+        if (!empresaId || rolUsuario === 'superadmin' || req.rol === 'superadmin') {
             return next();
         }
 
