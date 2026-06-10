@@ -5,6 +5,7 @@
 const Servicio = require('../models/Servicio.model');
 const { subirArchivoMinio, eliminarArchivoMinio } = require('../config/minio');
 const Empresa = require('../models/Empresa.model');
+const HistorialService = require('../services/historial.service');
 const sharp = require('sharp');
 const path = require('path');
 
@@ -141,6 +142,17 @@ exports.crearServicio = async (req, res) => {
     });
 
     const servicioGuardado = await nuevoServicio.save();
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'CREAR',
+      modulo: 'SERVICIOS',
+      descripcion: `Creó el servicio: ${nombre}`,
+      entidadId: servicioGuardado._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     // ✅ Respuesta uniforme
     return res.status(201).json({
@@ -281,6 +293,17 @@ exports.actualizarServicio = async (req, res) => {
 
     const servicioActualizado = await servicioExistente.save();
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'SERVICIOS',
+      descripcion: `Actualizó el servicio: ${servicioActualizado.nombre}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.status(200).json({
       mensaje: '✅ Servicio actualizado exitosamente',
       data: servicioActualizado,
@@ -314,6 +337,17 @@ exports.cambiarEstadoServicio = async (req, res) => {
 
     servicio.estado = estado;
     await servicio.save();
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'SERVICIOS',
+      descripcion: `Cambió estado del servicio: ${servicio.nombre} a ${estado ? 'Activo' : 'Inactivo'}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     res.status(200).json({
       mensaje: `✅ Servicio ${estado ? 'activado' : 'desactivado'} correctamente`,

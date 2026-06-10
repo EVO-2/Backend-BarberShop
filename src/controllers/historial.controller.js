@@ -7,15 +7,25 @@ const getHistorial = async (req, res) => {
         
         let filtros = {};
         
+        // Multi-tenant isolation: enforce filtering by user's company
+        if (req.usuario && req.usuario.empresaId) {
+            filtros.empresaId = req.usuario.empresaId;
+        }
+        
         if (req.query.modulo) filtros.modulo = req.query.modulo;
         if (req.query.accion) filtros.accion = req.query.accion;
         if (req.query.usuario) filtros.usuario = req.query.usuario;
         
-        if (req.query.fechaInicio && req.query.fechaFin) {
-            filtros.fecha = {
-                $gte: new Date(req.query.fechaInicio),
-                $lte: new Date(req.query.fechaFin)
-            };
+        if (req.query.fechaInicio || req.query.fechaFin) {
+            filtros.fecha = {};
+            if (req.query.fechaInicio) {
+                filtros.fecha.$gte = new Date(req.query.fechaInicio);
+            }
+            if (req.query.fechaFin) {
+                const fechaFin = new Date(req.query.fechaFin);
+                fechaFin.setHours(23, 59, 59, 999);
+                filtros.fecha.$lte = fechaFin;
+            }
         }
 
         const data = await HistorialService.obtenerHistorial(filtros, limite, saltar);

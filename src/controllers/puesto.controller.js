@@ -1,6 +1,7 @@
 // controllers/puesto.controller.js
 const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const Peluquero = require('../models/Peluquero.model');
+const HistorialService = require('../services/historial.service');
 
 // =================== OBTENER TODOS LOS PUESTOS ===================
 const obtenerPuestos = async (req, res) => {
@@ -66,6 +67,17 @@ const crearPuesto = async (req, res) => {
 
     await nuevoPuesto.save();
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'CREAR',
+      modulo: 'CONFIGURACION',
+      descripcion: `Creó el puesto de trabajo: ${nombre}`,
+      entidadId: nuevoPuesto._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     return res.status(201).json({
       message: 'Puesto creado correctamente',
       puesto: nuevoPuesto
@@ -97,10 +109,21 @@ const crearPuesto = async (req, res) => {
 
       const puestoActualizado = await puesto.save();
 
-      return res.json({
-        message: 'Puesto actualizado correctamente',
-        puesto: puestoActualizado,
-      });
+      // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'CONFIGURACION',
+      descripcion: `Actualizó el puesto de trabajo: ${puesto.nombre}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
+    return res.json({
+      message: 'Puesto actualizado correctamente',
+      puesto: puestoActualizado,
+    });
     } catch (error) {
       console.error('❌ Error en actualizarPuesto:', error);
       return res.status(500).json({
@@ -122,6 +145,17 @@ const eliminarPuesto = async (req, res) => {
 
     puesto.estado = false;
     await puesto.save();
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ELIMINAR',
+      modulo: 'CONFIGURACION',
+      descripcion: `Eliminó el puesto de trabajo (soft delete): ${puesto.nombre}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     return res.json({ message: 'Puesto eliminado correctamente (soft delete)', puesto });
   } catch (error) {
@@ -164,6 +198,17 @@ const asignarPuesto = async (req, res) => {
     peluquero.puestoTrabajo = puesto._id;
     await peluquero.save();
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'CONFIGURACION',
+      descripcion: `Asignó al peluquero ID ${peluqueroId} al puesto de trabajo: ${puesto.nombre}`,
+      entidadId: puesto._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     return res.json({ message: 'Peluquero asignado correctamente', peluquero });
   } catch (error) {
     return res.status(500).json({ message: 'Error al asignar el puesto de trabajo' });
@@ -183,6 +228,17 @@ const liberarPuesto = async (req, res) => {
 
     puesto.peluquero = null;
     await puesto.save();
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'CONFIGURACION',
+      descripcion: `Liberó el puesto de trabajo: ${puesto.nombre}`,
+      entidadId: puesto._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     return res.json({ message: 'Puesto liberado exitosamente' });
   } catch (error) {

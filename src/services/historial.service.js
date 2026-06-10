@@ -16,6 +16,13 @@ class HistorialService {
      */
     static async registrarAccion(data) {
         try {
+            if (!data.empresaId && data.usuario) {
+                const Usuario = require('../models/Usuario.model');
+                const usuario = await Usuario.findById(data.usuario);
+                if (usuario && usuario.empresaId) {
+                    data.empresaId = usuario.empresaId;
+                }
+            }
             const nuevoRegistro = new HistorialAcceso(data);
             await nuevoRegistro.save();
             return nuevoRegistro;

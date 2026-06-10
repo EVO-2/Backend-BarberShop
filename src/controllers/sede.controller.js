@@ -1,6 +1,5 @@
-// controllers/sede.controller.js
-
 const Sede = require('../models/Sede.model');
+const HistorialService = require('../services/historial.service');
 
 // GET
 exports.obtenerSedes = async (req, res) => {
@@ -37,6 +36,17 @@ exports.crearSede = async (req, res) => {
 
     await nuevaSede.save();
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'CREAR',
+      modulo: 'SEDES',
+      descripcion: `Creó la sede: ${nombre}`,
+      entidadId: nuevaSede._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.status(201).json(nuevaSede);
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al crear sede' });
@@ -53,6 +63,19 @@ exports.actualizarSede = async (req, res) => {
       req.body,
       { new: true }
     );
+
+    if (sede) {
+      // Registrar acción en auditoría
+      HistorialService.registrarAccion({
+        usuario: req.usuario._id,
+        accion: 'ACTUALIZAR',
+        modulo: 'SEDES',
+        descripcion: `Actualizó la sede: ${sede.nombre}`,
+        entidadId: id,
+        ip: req.ip || req.connection.remoteAddress,
+        dispositivo: req.headers['user-agent']
+      });
+    }
 
     res.json(sede);
   } catch (error) {
@@ -71,6 +94,19 @@ exports.cambiarEstado = async (req, res) => {
       { estado },
       { new: true }
     );
+
+    if (sede) {
+      // Registrar acción en auditoría
+      HistorialService.registrarAccion({
+        usuario: req.usuario._id,
+        accion: 'ACTUALIZAR',
+        modulo: 'SEDES',
+        descripcion: `Cambió estado de la sede: ${sede.nombre} a ${estado ? 'Activo' : 'Inactivo'}`,
+        entidadId: id,
+        ip: req.ip || req.connection.remoteAddress,
+        dispositivo: req.headers['user-agent']
+      });
+    }
 
     res.json(sede);
   } catch (error) {

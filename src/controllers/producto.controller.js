@@ -1,6 +1,7 @@
 const Producto = require('../models/Producto.model');
 const Movimiento = require('../models/Movimientos.model');
 const mongoose = require('mongoose');
+const HistorialService = require('../services/historial.service');
 
 require('../models/Categoria.model');
 require('../models/Proveedor.model');
@@ -78,6 +79,17 @@ const crearProducto = async (req, res) => {
             .populate('proveedor', 'nombre')
             .populate('sede', 'nombre')
             .lean();
+
+        // Registrar acción en auditoría
+        HistorialService.registrarAccion({
+            usuario: req.usuario._id,
+            accion: 'CREAR',
+            modulo: 'PRODUCTOS',
+            descripcion: `Creó el producto: ${nombre} (${tipo || 'venta'})`,
+            entidadId: producto._id,
+            ip: req.ip || req.connection.remoteAddress,
+            dispositivo: req.headers['user-agent']
+        });
 
         res.status(201).json({
             ok: true,
@@ -249,6 +261,17 @@ const actualizarProducto = async (req, res) => {
             });
         }
 
+        // Registrar acción en auditoría
+        HistorialService.registrarAccion({
+            usuario: req.usuario._id,
+            accion: 'ACTUALIZAR',
+            modulo: 'PRODUCTOS',
+            descripcion: `Actualizó el producto: ${producto.nombre}`,
+            entidadId: id,
+            ip: req.ip || req.connection.remoteAddress,
+            dispositivo: req.headers['user-agent']
+        });
+
         res.json({
             ok: true,
             producto
@@ -295,6 +318,17 @@ const eliminarProducto = async (req, res) => {
             });
         }
 
+        // Registrar acción en auditoría
+        HistorialService.registrarAccion({
+            usuario: req.usuario._id,
+            accion: 'ELIMINAR',
+            modulo: 'PRODUCTOS',
+            descripcion: `Eliminó el producto (soft delete): ${producto.nombre}`,
+            entidadId: id,
+            ip: req.ip || req.connection.remoteAddress,
+            dispositivo: req.headers['user-agent']
+        });
+
         res.json({
             ok: true,
             mensaje: 'Producto eliminado (soft delete)',
@@ -335,6 +369,17 @@ const cambiarEstadoProducto = async (req, res) => {
                 mensaje: 'Producto no encontrado'
             });
         }
+
+        // Registrar acción en auditoría
+        HistorialService.registrarAccion({
+            usuario: req.usuario._id,
+            accion: 'ACTUALIZAR',
+            modulo: 'PRODUCTOS',
+            descripcion: `Cambió estado del producto: ${producto.nombre} a ${estado ? 'Activo' : 'Inactivo'}`,
+            entidadId: id,
+            ip: req.ip || req.connection.remoteAddress,
+            dispositivo: req.headers['user-agent']
+        });
 
         res.json({
             ok: true,
@@ -388,6 +433,17 @@ const subirImagenProducto = async (req, res) => {
         producto.imagen = imagenUrl;
         await producto.save();
 
+        // Registrar acción en auditoría
+        HistorialService.registrarAccion({
+            usuario: req.usuario._id,
+            accion: 'ACTUALIZAR',
+            modulo: 'PRODUCTOS',
+            descripcion: `Subió imagen para el producto: ${producto.nombre}`,
+            entidadId: id,
+            ip: req.ip || req.connection.remoteAddress,
+            dispositivo: req.headers['user-agent']
+        });
+
         res.json({
             ok: true,
             mensaje: "Imagen actualizada exitosamente",
@@ -434,6 +490,17 @@ const registrarVentaProducto = async (req, res) => {
             cantidad: cantidadVenta,
             motivo: 'Venta Directa',
             referencia: 'Venta registrada desde inventario'
+        });
+
+        // Registrar acción en auditoría
+        HistorialService.registrarAccion({
+            usuario: req.usuario._id,
+            accion: 'ACTUALIZAR',
+            modulo: 'INVENTARIO',
+            descripcion: `Registró venta de ${cantidadVenta} unidades del producto: ${producto.nombre}`,
+            entidadId: id,
+            ip: req.ip || req.connection.remoteAddress,
+            dispositivo: req.headers['user-agent']
         });
 
         res.json({ ok: true, msg: 'Venta registrada correctamente', producto });

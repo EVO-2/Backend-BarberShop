@@ -5,6 +5,7 @@ const Rol = require('../models/Rol.model');
 const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const HistorialService = require('../services/historial.service');
 
 // ==========================
 // Helper para actualizar puesto de peluquero
@@ -217,6 +218,17 @@ const crearUsuario = async (req, res) => {
 
     await nuevoUsuario.save();
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'CREAR',
+      modulo: 'USUARIOS',
+      descripcion: `Creó el usuario: ${nombre} con el rol: ${existeRol.nombre}`,
+      entidadId: nuevoUsuario._id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.status(201).json(nuevoUsuario);
   } catch (error) {
     res.status(500).json({ error: 'Error al crear usuario', detalles: error.message });
@@ -336,6 +348,17 @@ const actualizarUsuario = async (req, res) => {
       }
     }
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'USUARIOS',
+      descripcion: `Actualizó al usuario: ${usuario.nombre}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.status(200).json({ message: 'Usuario actualizado correctamente' });
   } catch (error) {
     console.error('❌ Error en actualizarUsuario:', error);
@@ -351,6 +374,18 @@ const eliminarUsuario = async (req, res) => {
     const { id } = req.params;
     const usuario = await Usuario.findByIdAndUpdate(id, { estado: false }, { new: true });
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ELIMINAR',
+      modulo: 'USUARIOS',
+      descripcion: `Desactivó al usuario: ${usuario.nombre} (soft delete)`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.status(200).json({ mensaje: 'Usuario desactivado exitosamente' });
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al desactivar usuario', error: error.message });
@@ -366,6 +401,18 @@ const cambiarEstadoUsuario = async (req, res) => {
     const { estado } = req.body;
     const usuario = await Usuario.findByIdAndUpdate(id, { estado }, { new: true });
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'USUARIOS',
+      descripcion: `Cambió estado del usuario: ${usuario.nombre} a ${estado ? 'Activo' : 'Inactivo'}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.status(200).json({ mensaje: 'Estado del usuario actualizado', usuario });
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al cambiar estado del usuario', error: error.message });
@@ -409,6 +456,17 @@ const subirFotoPerfil = async (req, res) => {
     // 🔹 Guardar nueva foto
     usuario.foto = fotoUrl;
     await usuario.save();
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario._id,
+      accion: 'ACTUALIZAR',
+      modulo: 'USUARIOS',
+      descripcion: `Subió foto de perfil para el usuario: ${usuario.nombre}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     res.status(200).json({
       foto: usuario.foto,
@@ -624,6 +682,17 @@ const actualizarPerfil = async (req, res) => {
       [usuarioActualizado.rol.nombre]: perfilExtra
     };
 
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario.id,
+      accion: 'ACTUALIZAR',
+      modulo: 'USUARIOS',
+      descripcion: `Actualizó su propio perfil: ${usuarioActualizado.nombre}`,
+      entidadId: usuarioId,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
+
     res.json({
       mensaje: "Perfil actualizado correctamente",
       usuario: perfilCompleto
@@ -660,6 +729,17 @@ const cambiarPassword = async (req, res) => {
     // Guardar nueva contraseña (se hashea automáticamente en el modelo)
     usuario.password = nueva;
     await usuario.save();
+
+    // Registrar acción en auditoría
+    HistorialService.registrarAccion({
+      usuario: req.usuario ? req.usuario._id : id,
+      accion: 'ACTUALIZAR',
+      modulo: 'USUARIOS',
+      descripcion: `Actualizó la contraseña del usuario: ${usuario.nombre}`,
+      entidadId: id,
+      ip: req.ip || req.connection.remoteAddress,
+      dispositivo: req.headers['user-agent']
+    });
 
     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente' });
   } catch (error) {
