@@ -260,6 +260,7 @@ const actualizarCita = async (req, res) => {
       
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: citaActualizada._id,
+        cita: citaActualizada,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -314,6 +315,7 @@ const reprogramarCita = async (req, res) => {
       
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: citaActualizada._id,
+        cita: citaActualizada,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -350,6 +352,7 @@ const iniciarCita = async (req, res) => {
 
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
+        cita: cita,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -406,6 +409,7 @@ const finalizarCita = async (req, res) => {
 
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
+        cita: cita,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -450,6 +454,7 @@ const cancelarCita = async (req, res) => {
 
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
+        cita: cita,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -573,6 +578,7 @@ const pagarCita = async (req, res) => {
       // 1. Confirmar pago a Pusher como evento genérico
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
+        cita: cita,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -656,6 +662,7 @@ const reportarPago = async (req, res) => {
       // 2. Notificar actualización de cita para recarga en tiempo real
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
+        cita: cita,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -690,6 +697,25 @@ const calificarCita = async (req, res) => {
     const { calificacion, comentario_calificacion } = req.body;
 
     const citaActualizada = await CitaService.calificarCita(id, calificacion, comentario_calificacion);
+
+    // Notificar en tiempo real al profesional
+    try {
+      const clienteId = citaActualizada.cliente?._id || citaActualizada.cliente;
+      const peluqueroId = citaActualizada.peluquero?._id || citaActualizada.peluquero;
+      const nombreCliente = citaActualizada.cliente?.usuario?.nombre || 'Un cliente';
+      
+      NotificationService.notify('CITA_ACTUALIZADA', {
+        citaId: citaActualizada._id,
+        cita: citaActualizada,
+        clienteId,
+        peluqueroId,
+        nombreCliente,
+        nuevoEstado: citaActualizada.estado,
+        mensaje: `${nombreCliente} ha calificado el servicio con ${calificacion} estrellas.`
+      }).catch(err => console.error('Error notificando calificación en CITA_ACTUALIZADA:', err.message));
+    } catch (notifyErr) {
+      console.error('Error al preparar notificación de calificación:', notifyErr.message);
+    }
 
     return res.json({
       mensaje: '¡Gracias por tu calificación!',
