@@ -140,7 +140,9 @@ const crearCita = async ({
   sede,
   puestoTrabajo,
   fecha,
-  observacion
+  observacion,
+  esDomicilio,
+  direccionDomicilio
 }) => {
 
   /**
@@ -249,7 +251,9 @@ const crearCita = async ({
     fechaBase,
     observacion: observacion || null,
     turno,
-    estado: 'pendiente'
+    estado: 'pendiente',
+    esDomicilio: !!esDomicilio,
+    direccionDomicilio: direccionDomicilio || null
   });
 
   // 📤 RESPUESTA FINAL
@@ -605,10 +609,11 @@ const finalizarCita = async (id, hora) => {
     cita.estado = 'finalizada';
 
     // 🔹 Calcular total
-    const total = (cita.servicios || []).reduce(
+    const subtotal = (cita.servicios || []).reduce(
       (acc, s) => acc + (s.precio || 0),
       0
     );
+    const total = cita.esDomicilio ? subtotal * 1.20 : subtotal;
 
     // 🔥 Crear pago SOLO si no existe
     if (!cita.pago) {

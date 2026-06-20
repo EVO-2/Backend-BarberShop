@@ -40,7 +40,11 @@ const CitaSchema = new Schema({
 
   // ⭐ Calificación del cliente
   calificacion: { type: Number, min: 1, max: 5, default: null },
-  comentario_calificacion: { type: String, maxlength: 500, default: null }
+  comentario_calificacion: { type: String, maxlength: 500, default: null },
+
+  // 🏠 Servicio a Domicilio
+  esDomicilio: { type: Boolean, default: false },
+  direccionDomicilio: { type: String, default: null, maxlength: 500 }
 }, {
   timestamps: true,
   versionKey: false
