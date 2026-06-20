@@ -618,8 +618,9 @@ const finalizarCita = async (id, hora) => {
     // 🔹 Calcular comisión del profesional
     if (cita.peluquero) {
       const peluqueroObj = await Peluquero.findById(cita.peluquero).lean();
-      if (peluqueroObj && peluqueroObj.tipoContrato) {
-        const porcentaje = peluqueroObj.tipoContrato === 'herramientas_propias' ? 0.60 : 0.50;
+      if (peluqueroObj) {
+        const tipoContrato = peluqueroObj.tipoContrato || 'herramientas_empresa';
+        const porcentaje = tipoContrato === 'herramientas_propias' ? 0.60 : 0.50;
         cita.comisionPeluquero = total * porcentaje;
         cita.porcentajeComisionAplicado = porcentaje;
       }
