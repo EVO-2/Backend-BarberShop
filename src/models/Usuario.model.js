@@ -45,7 +45,17 @@ const UsuarioSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Peluquero',
     default: null
-  }
+  },
+
+  // Suscripciones Web Push (Service Worker)
+  suscripcionesPush: [{
+    endpoint: String,
+    expirationTime: Date,
+    keys: {
+      p256dh: String,
+      auth: String
+    }
+  }]
 
 }, {
   timestamps: true,

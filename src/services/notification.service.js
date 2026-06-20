@@ -3,6 +3,8 @@ const generarTemplateRecordatorio = require('../templates/recordatorio.template'
 const generarTemplateCita = require('../templates/citaConfirmada.template');
 const enviarEmail = require('../helpers/enviarEmail');
 const pusher = require('../config/pusher');
+const webpush = require('web-push');
+const Usuario = require('../models/Usuario.model');
 
 // 🔥 NUEVO (WHATSAPP)
 const WhatsAppService = require('./whatsapp.service');
@@ -196,10 +198,13 @@ class NotificationService {
   // 💰 REPORTE DE PAGO
   async handlePagoReportado(data) {
     const { nombreCliente, fecha, hora, peluqueroId, metodo, observaciones, urlComprobante } = data;
+    const mensajePush = `${nombreCliente} ha reportado un pago por ${metodo}.`;
+
+    // 1️⃣ PUSHER (TIEMPO REAL SI ESTÁ ABIERTA LA APP)
     if (pusher) {
       try {
         pusher.trigger('barberia-channel', 'pago-reportado', {
-          mensaje: `${nombreCliente} ha reportado un pago por ${metodo}.`,
+          mensaje: mensajePush,
           fecha,
           hora,
           peluqueroId,
@@ -210,6 +215,52 @@ class NotificationService {
         console.log(`⚡ [Pusher] Evento 'pago-reportado' enviado en tiempo real.`);
       } catch (error) {
         console.error('❌ Error enviando evento Pusher:', error.message);
+      }
+    }
+
+    // 2️⃣ WEB PUSH (NOTIFICACIÓN EN SEGUNDO PLANO / MÓVIL)
+    if (peluqueroId && process.env.VAPID_PUBLIC_KEY) {
+      try {
+        // Buscar al usuario asociado a ese peluquero
+        const usuarioTarget = await Usuario.findOne({ peluquero: peluqueroId });
+        if (usuarioTarget && usuarioTarget.suscripcionesPush && usuarioTarget.suscripcionesPush.length > 0) {
+          
+          const payload = JSON.stringify({
+            notification: {
+              title: '¡Pago Reportado!',
+              body: mensajePush,
+              icon: '/assets/icons/icon-192x192.png',
+              vibrate: [100, 50, 100],
+              data: {
+                dateOfArrival: Date.now(),
+                primaryKey: '2'
+              },
+              actions: [{
+                action: 'explore',
+                title: 'Ver Citas'
+              }]
+            }
+          });
+
+          // Enviar a todas las suscripciones (múltiples dispositivos)
+          const promesasPush = usuarioTarget.suscripcionesPush.map(suscripcion => 
+            webpush.sendNotification(suscripcion, payload).catch(err => {
+              console.error('❌ Error enviando Push a un endpoint (posiblemente expirado):', err.statusCode);
+              // Aquí podríamos remover la suscripción expirada si err.statusCode === 410
+              if (err.statusCode === 410 || err.statusCode === 404) {
+                return Usuario.updateOne(
+                  { _id: usuarioTarget._id },
+                  { $pull: { suscripcionesPush: { endpoint: suscripcion.endpoint } } }
+                );
+              }
+            })
+          );
+
+          await Promise.all(promesasPush);
+          console.log(`🔔 [Web Push] Notificación enviada al peluquero ${peluqueroId}`);
+        }
+      } catch (error) {
+        console.error('❌ Error procesando Web Push:', error.message);
       }
     }
   }

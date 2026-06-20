@@ -105,6 +105,7 @@ app.use('/api', catalogoRoutes); // ⚠️ revisar si aquí ya existen categorí
 app.use('/api/pagos', pagoRoutes);
 app.use('/api/servicios', servicioRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/notificaciones', require('./routes/notificacion.routes')); // Web Push
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/equipos', equipoRoutes);
 app.use('/api/dashboard', dashboardRoutes);
