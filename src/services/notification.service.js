@@ -197,13 +197,14 @@ class NotificationService {
 
   // 💰 REPORTE DE PAGO
   async handlePagoReportado(data) {
-    const { nombreCliente, fecha, hora, peluqueroId, metodo, observaciones, urlComprobante } = data;
+    const { citaId, nombreCliente, fecha, hora, peluqueroId, metodo, observaciones, urlComprobante } = data;
     const mensajePush = `${nombreCliente} ha reportado un pago por ${metodo}.`;
 
     // 1️⃣ PUSHER (TIEMPO REAL SI ESTÁ ABIERTA LA APP)
     if (pusher) {
       try {
         pusher.trigger('barberia-channel', 'pago-reportado', {
+          citaId,
           mensaje: mensajePush,
           fecha,
           hora,

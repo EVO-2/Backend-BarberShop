@@ -649,6 +649,7 @@ const reportarPago = async (req, res) => {
 
       // 1. Notificar al barbero del pago reportado
       const payload = {
+        citaId: cita._id,
         nombreCliente,
         fecha: fechaFormateada,
         hora: horaFormateada,
