@@ -615,6 +615,16 @@ const finalizarCita = async (id, hora) => {
     );
     const total = cita.esDomicilio ? subtotal * 1.20 : subtotal;
 
+    // 🔹 Calcular comisión del profesional
+    if (cita.peluquero) {
+      const peluqueroObj = await Peluquero.findById(cita.peluquero).lean();
+      if (peluqueroObj && peluqueroObj.tipoContrato) {
+        const porcentaje = peluqueroObj.tipoContrato === 'herramientas_propias' ? 0.60 : 0.50;
+        cita.comisionPeluquero = total * porcentaje;
+        cita.porcentajeComisionAplicado = porcentaje;
+      }
+    }
+
     // 🔥 Crear pago SOLO si no existe
     if (!cita.pago) {
       const pago = new Pago({

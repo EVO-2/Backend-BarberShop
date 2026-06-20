@@ -51,6 +51,11 @@ const PeluqueroSchema = new Schema({
   estado: {
     type: Boolean,
     default: true
+  },
+  tipoContrato: {
+    type: String,
+    enum: ['herramientas_empresa', 'herramientas_propias'],
+    default: 'herramientas_empresa'
   }
 }, {
   timestamps: true,

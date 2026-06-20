@@ -199,7 +199,8 @@ const crearUsuario = async (req, res) => {
         experiencia: detalles.experiencia,
         sede: detalles.sede,
         puestoTrabajo: detalles.puestoTrabajo,
-        empresaId: empresaAsignar
+        empresaId: empresaAsignar,
+        tipoContrato: detalles.tipoContrato || 'herramientas_empresa'
       });
       await nuevoPeluquero.save();
       nuevoUsuario.peluquero = nuevoPeluquero._id;
@@ -309,7 +310,8 @@ const actualizarUsuario = async (req, res) => {
             experiencia: detalles.experiencia || 0,
             sede: detalles.sede || null,
             puestoTrabajo: detalles.puestoTrabajo || null,
-            empresaId: empresaAsignar
+            empresaId: empresaAsignar,
+            tipoContrato: detalles.tipoContrato || 'herramientas_empresa'
           });
           await peluquero.save();
           usuario.peluquero = peluquero._id;
@@ -330,6 +332,7 @@ const actualizarUsuario = async (req, res) => {
           peluquero.fecha_nacimiento = detalles.fecha_nacimiento || peluquero.fecha_nacimiento;
           peluquero.especialidades = detalles.especialidades ?? peluquero.especialidades;
           peluquero.experiencia = detalles.experiencia ?? peluquero.experiencia;
+          peluquero.tipoContrato = detalles.tipoContrato ?? peluquero.tipoContrato;
 
           if (detalles.sede) peluquero.sede = detalles.sede;
           peluquero.estado = estado !== undefined ? estado : peluquero.estado;
@@ -651,7 +654,8 @@ const actualizarPerfil = async (req, res) => {
             especialidades: datos.especialidades,
             experiencia: datos.experiencia,
             direccion_profesional: datos.direccion_profesional,
-            telefono_profesional: datos.telefono_profesional
+            telefono_profesional: datos.telefono_profesional,
+            tipoContrato: datos.tipoContrato
           },
           { new: true }
         ).populate({

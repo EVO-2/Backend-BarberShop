@@ -44,7 +44,11 @@ const CitaSchema = new Schema({
 
   // 🏠 Servicio a Domicilio
   esDomicilio: { type: Boolean, default: false },
-  direccionDomicilio: { type: String, default: null, maxlength: 500 }
+  direccionDomicilio: { type: String, default: null, maxlength: 500 },
+
+  // 💰 Comisiones del Profesional
+  comisionPeluquero: { type: Number, default: 0 },
+  porcentajeComisionAplicado: { type: Number, default: 0 }
 }, {
   timestamps: true,
   versionKey: false
