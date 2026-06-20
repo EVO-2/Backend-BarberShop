@@ -1,12 +1,16 @@
 const Usuario = require('../models/Usuario.model');
 const webpush = require('web-push');
 
-// Configuración de web-push con las llaves VAPID
-webpush.setVapidDetails(
-  'mailto:soporte@barbershop.com', // Puede ser cualquier correo
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+// Configuración de web-push con las llaves VAPID (solo si existen para evitar crasheos en entornos sin configurar)
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:soporte@barbershop.com', // Puede ser cualquier correo
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+} else {
+  console.warn('⚠️ No se han configurado las llaves VAPID (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY). Las notificaciones Web Push están deshabilitadas.');
+}
 
 // ===================== Suscribir a Web Push =====================
 const suscribir = async (req, res) => {
