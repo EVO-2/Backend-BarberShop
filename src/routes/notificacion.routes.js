@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { check } = require('express-validator');
-const { validarCampos } = require('../middlewares/validarCampos');
+const validarCampos = require('../middlewares/validarCampos');
 const { validarJWT } = require('../middlewares/validarJWT');
 const { suscribir, getPublicKey } = require('../controllers/notificacion.controller');
 
