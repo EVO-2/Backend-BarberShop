@@ -814,6 +814,7 @@ const reportarPago = async (id, metodo, observaciones, urlComprobante = null) =>
     const pago = await Pago.findById(cita.pago).session(session).setOptions({ bypassTenant: true });
     if (!pago) throw { status: 400, message: 'No existe un pago asociado a esta cita' };
     if (pago.estado === EstadosPago.PAGADO) throw { status: 400, message: 'Este pago ya fue confirmado' };
+    if (pago.estado === EstadosPago.REPORTADO) throw { status: 400, message: 'El comprobante ya fue enviado y está en revisión' };
 
     if (!metodo || !Object.values(MetodosPago).includes(metodo)) throw { status: 400, message: 'Método de pago inválido' };
 
