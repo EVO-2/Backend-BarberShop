@@ -54,7 +54,7 @@ const PeluqueroSchema = new Schema({
   },
   tipoContrato: {
     type: String,
-    enum: ['herramientas_empresa', 'herramientas_propias'],
+    enum: ['herramientas_empresa', 'herramientas_propias', 'propietario'],
     default: 'herramientas_empresa'
   }
 }, {
