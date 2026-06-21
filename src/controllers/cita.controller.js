@@ -578,7 +578,7 @@ const pagarCita = async (req, res) => {
       // 1. Confirmar pago a Pusher como evento genérico
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
-        cita: cita,
+        pago: cita.pago,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -663,7 +663,7 @@ const reportarPago = async (req, res) => {
       // 2. Notificar actualización de cita para recarga en tiempo real
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: cita._id,
-        cita: cita,
+        pago: cita.pago,
         clienteId,
         peluqueroId,
         nombreCliente,
@@ -707,7 +707,8 @@ const calificarCita = async (req, res) => {
       
       NotificationService.notify('CITA_ACTUALIZADA', {
         citaId: citaActualizada._id,
-        cita: citaActualizada,
+        calificacion: citaActualizada.calificacion,
+        comentario_calificacion: citaActualizada.comentario_calificacion,
         clienteId,
         peluqueroId,
         nombreCliente,
