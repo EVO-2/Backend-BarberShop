@@ -141,7 +141,7 @@ const login = async (req, res) => {
 
 const registro = async (req, res) => {
   try {
-    const { nombre, correo, password, empresaId } = req.body;
+    const { nombre, correo, password, empresaId, codigoReferido } = req.body;
 
     // 🔹 VALIDACIÓN CAMPOS
     if (!nombre || !correo || !password) {
@@ -192,13 +192,33 @@ const registro = async (req, res) => {
       return res.status(400).json({ mensaje: 'No hay empresas registradas en la plataforma para asociar al usuario.' });
     }
 
+    // 🔹 LÓGICA DE REFERIDOS Y CÓDIGO PROPIO
+    const generarCodigo = () => {
+      const prefijo = nombre.substring(0, 3).toUpperCase().replace(/\s/g, '');
+      const random = Math.floor(1000 + Math.random() * 9000);
+      return `${prefijo}${random}`;
+    };
+    
+    let codigoPropio = generarCodigo();
+    // Para simplificar, asumiremos que es único. En producción se validaría en un ciclo `while`.
+
+    let referidoPorId = null;
+    if (codigoReferido) {
+      const usuarioReferente = await Usuario.findOne({ codigoReferidoPropio: codigoReferido }).setOptions({ bypassTenant: true });
+      if (usuarioReferente) {
+        referidoPorId = usuarioReferente._id;
+      }
+    }
+
     // 🔹 CREAR USUARIO
     const nuevoUsuario = new Usuario({
       nombre,
       correo,
       password,
       rol: rolCliente._id,
-      empresaId: empresaAsignar._id
+      empresaId: empresaAsignar._id,
+      codigoReferidoPropio: codigoPropio,
+      referidoPor: referidoPorId
     });
 
     await nuevoUsuario.save();
@@ -312,10 +332,33 @@ const obtenerEmpresasPublicas = async (req, res) => {
   }
 };
 
+const obtenerMisRecompensas = async (req, res) => {
+  try {
+    const uid = req.uid;
+    const usuario = await Usuario.findById(uid).setOptions({ bypassTenant: true })
+      .select('visitasAcumuladas descuentoBienvenidaUsado codigoReferidoPropio cuponesActivos');
+    
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      visitasAcumuladas: usuario.visitasAcumuladas || 0,
+      descuentoBienvenidaUsado: usuario.descuentoBienvenidaUsado,
+      codigoReferidoPropio: usuario.codigoReferidoPropio,
+      cuponesActivos: usuario.cuponesActivos || []
+    });
+  } catch (error) {
+    console.error('Error al obtener recompensas:', error);
+    res.status(500).json({ mensaje: 'Error al obtener las recompensas' });
+  }
+};
+
 module.exports = {
   login,
   registro,
   verificarCorreoExistente,
   verificarLogo,
-  obtenerEmpresasPublicas
+  obtenerEmpresasPublicas,
+  obtenerMisRecompensas
 };

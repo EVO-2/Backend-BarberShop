@@ -55,6 +55,32 @@ const UsuarioSchema = new Schema({
       p256dh: String,
       auth: String
     }
+  }],
+
+  // --- Estrategias de Motivación ---
+  descuentoBienvenidaUsado: {
+    type: Boolean,
+    default: false
+  },
+  visitasAcumuladas: {
+    type: Number,
+    default: 0
+  },
+  codigoReferidoPropio: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  referidoPor: {
+    type: Schema.Types.ObjectId,
+    ref: 'Usuario',
+    default: null
+  },
+  cuponesActivos: [{
+    tipo: { type: String, enum: ['BIENVENIDA_10', 'LEALTAD_50', 'REFERIDO_AMIGO_10', 'REFERIDO_PROPIO_15'] },
+    descuentoPorcentaje: Number,
+    validoHasta: Date,
+    usado: { type: Boolean, default: false }
   }]
 
 }, {

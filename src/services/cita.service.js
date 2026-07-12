@@ -6,6 +6,7 @@ const Sede = require('../models/Sede.model');
 const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const Pago = require('../models/Pago.model');
 const Cita = require('../models/Cita.model');
+const Usuario = require('../models/Usuario.model');
 const mongoose = require('mongoose');
 const { EstadosPago, MetodosPago } = require('../constants');
 
@@ -795,6 +796,46 @@ const pagarCita = async (id, monto, metodo) => {
 
     cita.estado = 'pagada';
     await cita.save({ session });
+
+    // --- LOGICA DE MOTIVACION (LEALTAD Y REFERIDOS) ---
+    const clienteObj = await Cliente.findById(cita.cliente).session(session).lean();
+    if (clienteObj && clienteObj.usuario) {
+      const usuarioObj = await Usuario.findById(clienteObj.usuario).session(session).setOptions({ bypassTenant: true });
+      if (usuarioObj) {
+        // 1. Beneficio de Bienvenida y Referidos (Solo en el primer servicio pagado)
+        if (!usuarioObj.descuentoBienvenidaUsado) {
+          usuarioObj.descuentoBienvenidaUsado = true;
+          
+          if (usuarioObj.referidoPor) {
+            const referente = await Usuario.findById(usuarioObj.referidoPor).session(session).setOptions({ bypassTenant: true });
+            if (referente) {
+              referente.cuponesActivos.push({
+                tipo: 'REFERIDO_PROPIO_15',
+                descuentoPorcentaje: 15,
+                validoHasta: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 días
+                usado: false
+              });
+              await referente.save({ session });
+            }
+          }
+        }
+
+        // 2. Programa de Lealtad
+        usuarioObj.visitasAcumuladas = (usuarioObj.visitasAcumuladas || 0) + 1;
+        if (usuarioObj.visitasAcumuladas >= 10) {
+          usuarioObj.visitasAcumuladas = 0;
+          usuarioObj.cuponesActivos.push({
+            tipo: 'LEALTAD_50',
+            descuentoPorcentaje: 50,
+            validoHasta: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 días
+            usado: false
+          });
+        }
+
+        await usuarioObj.save({ session });
+      }
+    }
+    // ---------------------------------------------------
 
     await session.commitTransaction();
     session.endSession();

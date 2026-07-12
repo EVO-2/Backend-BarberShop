@@ -5,10 +5,12 @@ const {
   registro,
   verificarCorreoExistente,
   verificarLogo,
-  obtenerEmpresasPublicas
+  obtenerEmpresasPublicas,
+  obtenerMisRecompensas
 } = require('../controllers/auth.controller');
 
 const validarCampos = require('../middlewares/validarCampos');
+const { validarJWT } = require('../middlewares/validarJWT');
 
 
 const router = Router();
@@ -54,5 +56,8 @@ router.post(
 
 // 🏢 Obtener empresas públicas (para dropdown de registro)
 router.get('/empresas', obtenerEmpresasPublicas);
+
+// 🎁 Obtener recompensas del usuario (Lealtad y referidos)
+router.get('/mis-recompensas', validarJWT, obtenerMisRecompensas);
 
 module.exports = router;
