@@ -48,7 +48,11 @@ const CitaSchema = new Schema({
 
   // 💰 Comisiones del Profesional
   comisionPeluquero: { type: Number, default: 0 },
-  porcentajeComisionAplicado: { type: Number, default: 0 }
+  porcentajeComisionAplicado: { type: Number, default: 0 },
+  
+  // 💵 Pago de la comisión al profesional
+  comisionPagadaAlPeluquero: { type: Boolean, default: false },
+  pagoComision: { type: Schema.Types.ObjectId, ref: 'PagoComision', default: null }
 }, {
   timestamps: true,
   versionKey: false

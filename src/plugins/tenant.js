@@ -14,7 +14,7 @@ const tenantPlugin = function (schema, options) {
     const modelName = this.model?.modelName || this.mongooseCollection?.modelName || 'Desconocido';
     const options = this.getOptions ? this.getOptions() : {};
 
-    if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso' && !options.bypassTenant) {
+    if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso' && modelName !== 'PlanSuscripcion' && !options.bypassTenant) {
       if (empresaId) {
         this.where({ empresaId });
       } else {
@@ -37,7 +37,7 @@ const tenantPlugin = function (schema, options) {
     const empresaId = getTenantId();
     const modelName = this._model?.modelName || 'Desconocido';
 
-    if (modelName !== 'Empresa') {
+    if (modelName !== 'Empresa' && modelName !== 'PlanSuscripcion') {
       if (empresaId) {
         this.pipeline().unshift({ $match: { empresaId } });
       } else {
@@ -52,7 +52,7 @@ const tenantPlugin = function (schema, options) {
     const empresaId = getTenantId();
     const modelName = this.constructor.modelName || 'Desconocido';
 
-    if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso') {
+    if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso' && modelName !== 'PlanSuscripcion') {
       if (empresaId && !this.empresaId) {
         this.empresaId = empresaId;
       }
@@ -65,7 +65,7 @@ const tenantPlugin = function (schema, options) {
     if (empresaId && Array.isArray(docs)) {
       docs.forEach(doc => {
         const modelName = doc.constructor.modelName || 'Desconocido';
-        if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso') {
+        if (modelName !== 'Empresa' && modelName !== 'Rol' && modelName !== 'Permiso' && modelName !== 'PlanSuscripcion') {
           if (!doc.empresaId) {
             doc.empresaId = empresaId;
           }
