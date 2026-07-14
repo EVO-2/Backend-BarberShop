@@ -162,7 +162,7 @@ const getHistorialPagos = async (req, res) => {
     const historial = await PagoComision.find({ empresaId })
       .populate({
         path: 'peluquero',
-        populate: { path: 'usuario', select: 'nombre' }
+        populate: { path: 'usuario', select: 'nombre foto' }
       })
       .populate('administrador', 'nombre')
       .sort({ createdAt: -1 });
