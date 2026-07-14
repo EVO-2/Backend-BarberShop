@@ -7,6 +7,7 @@ const PuestoTrabajo = require('../models/PuestoTrabajo.model');
 const Pago = require('../models/Pago.model');
 const Cita = require('../models/Cita.model');
 const Usuario = require('../models/Usuario.model');
+const Empresa = require('../models/Empresa.model');
 const mongoose = require('mongoose');
 const { EstadosPago, MetodosPago } = require('../constants');
 
@@ -620,14 +621,17 @@ const finalizarCita = async (id, hora) => {
     if (cita.peluquero) {
       const peluqueroObj = await Peluquero.findById(cita.peluquero).lean();
       if (peluqueroObj) {
-        const tipoContrato = peluqueroObj.tipoContrato || 'herramientas_empresa';
-        let porcentaje = 0.50; // Default
-        
-        if (tipoContrato === 'propietario') {
-          porcentaje = 1.00;
-        } else if (tipoContrato === 'herramientas_propias') {
-          porcentaje = 0.60;
+        // Consultar configuración de comisiones de la empresa
+        let empresaConfig = { herramientas_empresa: 0.50, herramientas_propias: 0.60, propietario: 1.00 };
+        if (cita.empresaId) {
+          const empresa = await Empresa.findById(cita.empresaId).lean();
+          if (empresa && empresa.configuracionComisiones) {
+            empresaConfig = { ...empresaConfig, ...empresa.configuracionComisiones };
+          }
         }
+
+        const tipoContrato = peluqueroObj.tipoContrato || 'herramientas_empresa';
+        const porcentaje = empresaConfig[tipoContrato] !== undefined ? empresaConfig[tipoContrato] : 0.50;
         
         cita.comisionPeluquero = total * porcentaje;
         cita.porcentajeComisionAplicado = porcentaje;

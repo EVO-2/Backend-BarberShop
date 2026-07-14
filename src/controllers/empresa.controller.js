@@ -96,7 +96,7 @@ const obtenerInfoEmpresa = async (req, res) => {
 const actualizarInfoEmpresa = async (req, res) => {
   try {
     const empresaId = req.usuario?.empresaId;
-    const { nombre, nit, direccion, telefono, email, logo, horarios } = req.body;
+    const { nombre, nit, direccion, telefono, email, logo, horarios, configuracionComisiones } = req.body;
 
     if (!empresaId) {
       return res.status(400).json({ msg: 'Empresa no identificada' });
@@ -119,6 +119,14 @@ const actualizarInfoEmpresa = async (req, res) => {
         empresa.horarios = horarios;
       } else {
         return res.status(400).json({ msg: 'El formato de horarios es inválido' });
+      }
+    }
+    if (configuracionComisiones !== undefined) {
+      if (typeof configuracionComisiones === 'object') {
+        empresa.configuracionComisiones = {
+          ...empresa.configuracionComisiones,
+          ...configuracionComisiones
+        };
       }
     }
 

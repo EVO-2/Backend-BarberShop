@@ -58,6 +58,11 @@ const EmpresaSchema = new Schema({
       { dia: 'domingo', abierto: false, apertura: '09:00', cierre: '14:00' }
     ]
   },
+  configuracionComisiones: {
+    herramientas_empresa: { type: Number, default: 0.50 },
+    herramientas_propias: { type: Number, default: 0.60 },
+    propietario: { type: Number, default: 1.00 }
+  },
   // ==========================================
   // 🏢 SaaS & Facturación (Suscripciones)
   // ==========================================
