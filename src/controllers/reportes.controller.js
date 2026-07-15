@@ -3,6 +3,7 @@ const Pago = require('../models/Pago.model');
 const Producto = require('../models/Producto.model');
 const Usuario = require('../models/Usuario.model');
 const Equipo = require('../models/Equipo.model');
+const Venta = require('../models/Venta.model');
 const mongoose = require('mongoose');
 
 
@@ -53,7 +54,7 @@ const obtenerReporteIngresos = async (req, res) => {
       ventasMatch.sede = new mongoose.Types.ObjectId(sede);
     }
 
-    const ventas = await Pago.db.model('Venta').find(ventasMatch)
+    const ventas = await Venta.find(ventasMatch)
       .populate('sede')
       .populate({ path: 'cliente', populate: { path: 'usuario' } })
       .populate('usuario')
