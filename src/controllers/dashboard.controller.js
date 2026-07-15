@@ -392,7 +392,7 @@ const obtenerResumenDashboard = async (req, res) => {
                     _id: 0,
                     nombre: '$productoInfo.nombre',
                     total: '$totalVendidos',
-                    ingresos: { $multiply: ['$totalVendidos', { $ifNull: ['$productoInfo.precio_venta', 0] }] }
+                    ingresos: { $multiply: ['$totalVendidos', { $ifNull: ['$productoInfo.precio', 0] }] }
                 }
             }
         ]);
