@@ -398,13 +398,14 @@ const obtenerResumenDashboard = async (req, res) => {
 
         
         /* =====================================================
-           💰 INGRESOS PRODUCTOS HOY
+           💰 INGRESOS TIENDA HOY
         ===================================================== */
-        const ingresosProductosAgg = await Movimiento.aggregate([
+        const Venta = require('../models/Venta.model');
+        const ingresosTiendaAgg = await Venta.aggregate([
             {
                 $match: {
                     sede: sedeId,
-                    tipo: 'salida',
+                    estado: 'pagado',
                     createdAt: {
                         $gte: inicioHoy,
                         $lte: finHoy
@@ -412,25 +413,14 @@ const obtenerResumenDashboard = async (req, res) => {
                 }
             },
             {
-                $lookup: {
-                    from: 'productos',
-                    localField: 'producto',
-                    foreignField: '_id',
-                    as: 'productoInfo'
-                }
-            },
-            { $unwind: '$productoInfo' },
-            {
                 $group: {
                     _id: null,
-                    totalIngresos: { 
-                        $sum: { $multiply: ['$cantidad', '$productoInfo.precio'] } 
-                    }
+                    totalIngresos: { $sum: '$total' }
                 }
             }
         ]);
 
-        const ingresosProductosHoy = ingresosProductosAgg.length > 0 ? ingresosProductosAgg[0].totalIngresos : 0;
+        const ingresosTiendaHoy = ingresosTiendaAgg.length > 0 ? ingresosTiendaAgg[0].totalIngresos : 0;
 
         res.json({
             totalClientes,
@@ -453,17 +443,14 @@ const obtenerResumenDashboard = async (req, res) => {
             peluqueroTop,
             clienteTop,
             productosTop,
-            ingresosProductosHoy
+            ingresosTiendaHoy
         });
 
     } catch (error) {
-
         console.error('Error en dashboard:', error);
-
         res.status(500).json({
             msg: 'Error obteniendo resumen del dashboard'
         });
-
     }
 };
 

@@ -121,6 +121,7 @@ app.use('/api/wompi', require('./routes/wompi.routes'));
 app.use('/api/whatsapp', require('./routes/whatsapp.routes'));
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/comisiones', require('./routes/comision.routes'));
+app.use('/api/ventas', require('./routes/venta.routes'));
 
 // =================== Manejo de errores 404 ===================
 app.use((req, res) => {
