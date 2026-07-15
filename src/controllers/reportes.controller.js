@@ -127,7 +127,7 @@ const obtenerReporteIngresos = async (req, res) => {
         id: venta._id,
         fecha: venta.createdAt,
         sede: sedeNombre,
-        cliente: venta.cliente?.usuario?.nombre || 'N/D',
+        cliente: venta.cliente?.usuario?.nombre || 'Cliente General',
         vendedor: venta.usuario?.nombre || 'N/D',
         productos: (venta.productos || []).map(p => ({
           nombre: p.producto?.nombre || 'Producto Eliminado',
