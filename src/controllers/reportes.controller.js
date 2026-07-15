@@ -44,6 +44,23 @@ const obtenerReporteIngresos = async (req, res) => {
       .sort({ fecha: 1 })
       .lean();
 
+    // Consultar Ventas pagadas en el mismo rango de fechas
+    const ventasMatch = {
+      estado: 'pagado',
+      createdAt: rangoFechas
+    };
+    if (sede) {
+      ventasMatch.sede = new mongoose.Types.ObjectId(sede);
+    }
+
+    const ventas = await Pago.db.model('Venta').find(ventasMatch)
+      .populate('sede')
+      .populate({ path: 'cliente', populate: { path: 'usuario' } })
+      .populate('usuario')
+      .populate('productos.producto')
+      .sort({ createdAt: 1 })
+      .lean();
+
     // =========================
     // 🔎 Procesamiento final
     // =========================
@@ -87,6 +104,41 @@ const obtenerReporteIngresos = async (req, res) => {
     });
 
     // =========================
+    // 🔎 Procesamiento Ventas
+    // =========================
+    
+    let ingresosProductos = 0;
+    const detalleVentas = [];
+
+    ventas.forEach((venta) => {
+      const montoVenta = venta.total || 0;
+      ingresosProductos += montoVenta;
+      ingresosTotales += montoVenta;
+
+      const sedeNombre = venta.sede?.nombre || 'Sin sede';
+
+      if (!ingresosPorSede[sedeNombre]) {
+        ingresosPorSede[sedeNombre] = 0;
+      }
+      ingresosPorSede[sedeNombre] += montoVenta;
+
+      detalleVentas.push({
+        id: venta._id,
+        fecha: venta.createdAt,
+        sede: sedeNombre,
+        cliente: venta.cliente?.usuario?.nombre || 'N/D',
+        vendedor: venta.usuario?.nombre || 'N/D',
+        productos: (venta.productos || []).map(p => ({
+          nombre: p.producto?.nombre || 'Producto Eliminado',
+          cantidad: p.cantidad,
+          precioUnitario: p.precioUnitario,
+          subtotal: p.subtotal
+        })),
+        subtotal: montoVenta
+      });
+    });
+
+    // =========================
     // 📤 Respuesta
     // =========================
 
@@ -98,15 +150,19 @@ const obtenerReporteIngresos = async (req, res) => {
       },
       resumen: {
         cantidadCitas: detalleCitas.length,
+        cantidadVentas: detalleVentas.length,
         totalServicios,
         ingresosTotales,
+        ingresosServicios: ingresosTotales - ingresosProductos,
+        ingresosProductos,
         promedioPorCita:
           detalleCitas.length > 0
-            ? Number((ingresosTotales / detalleCitas.length).toFixed(2))
+            ? Number(((ingresosTotales - ingresosProductos) / detalleCitas.length).toFixed(2))
             : 0
       },
       ingresosPorSede,
-      detalle: detalleCitas
+      detalleCitas,
+      detalleVentas
     });
 
   } catch (error) {
