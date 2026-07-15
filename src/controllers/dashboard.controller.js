@@ -382,6 +382,201 @@ const obtenerResumenDashboard = async (req, res) => {
                 $lookup: {
                     from: 'productos',
                     localField: '_id',
+                        total: { $sum: '$monto' }
+                    }
+                }
+            ]),
+
+            /* ================= ESTADOS ================= */
+
+            Cita.aggregate([
+                { $match: { sede: sedeId } },
+                {
+                    $group: {
+                        _id: '$estado',
+                        total: { $sum: 1 }
+                    }
+                }
+            ]),
+
+            /* ================= SERVICIOS TOP ================= */
+
+            Cita.aggregate([
+                { $match: { sede: sedeId } },
+                { $unwind: '$servicios' },
+                {
+                    $group: {
+                        _id: '$servicios',
+                        total: { $sum: 1 }
+                    }
+                },
+                { $sort: { total: -1 } },
+                { $limit: 5 },
+                {
+                    $lookup: {
+                        from: 'servicios',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'servicioData'
+                    }
+                },
+                { $unwind: '$servicioData' },
+                {
+                    $project: {
+                        _id: 0,
+                        nombre: '$servicioData.nombre',
+                        total: 1
+                    }
+                }
+            ]),
+
+            Cita.distinct('cliente', { sede: sedeId }),
+
+            Cita.distinct('peluquero', { sede: sedeId }),
+
+            /* 🔥 PELUQUERO TOP */
+
+            Cita.aggregate([
+                { $match: { sede: sedeId } },
+                {
+                    $group: {
+                        _id: '$peluquero',
+                        totalServicios: { $sum: 1 }
+                    }
+                },
+                { $sort: { totalServicios: -1 } },
+                { $limit: 1 },
+                {
+                    $lookup: {
+                        from: 'peluqueros',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'peluqueroData'
+                    }
+                },
+                { $unwind: '$peluqueroData' },
+                {
+                    $lookup: {
+                        from: 'usuarios',
+                        localField: 'peluqueroData.usuario',
+                        foreignField: '_id',
+                        as: 'usuarioData'
+                    }
+                },
+                { $unwind: '$usuarioData' },
+                {
+                    $project: {
+                        _id: 0,
+                        nombre: '$usuarioData.nombre',
+                        totalServicios: 1
+                    }
+                }
+            ]),
+
+            /* 🔥 CLIENTE TOP */
+
+            Cita.aggregate([
+                { $match: { sede: sedeId } },
+
+                {
+                    $group: {
+                        _id: '$cliente',
+                        totalServicios: { $sum: 1 }
+                    }
+                },
+
+                { $sort: { totalServicios: -1 } },
+                { $limit: 1 },
+
+                // 1️⃣ Cliente
+                {
+                    $lookup: {
+                        from: 'clientes',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'clienteData'
+                    }
+                },
+
+                { $unwind: '$clienteData' },
+
+                // 2️⃣ Usuario
+                {
+                    $lookup: {
+                        from: 'usuarios',
+                        localField: 'clienteData.usuario',
+                        foreignField: '_id',
+                        as: 'usuarioData'
+                    }
+                },
+
+                { $unwind: '$usuarioData' },
+
+                // 3️⃣ Resultado
+                {
+                    $project: {
+                        _id: 0,
+                        nombre: '$usuarioData.nombre',
+                        totalServicios: 1
+                    }
+                }
+            ])
+
+        ]);
+
+        /* =====================================================
+           📊 CÁLCULOS
+        ===================================================== */
+
+        const totalClientes = clientesUnicos.length;
+        const peluquerosActivos = peluquerosUnicos.length;
+
+        const ingresosHoy = ingresosHoyAgg[0]?.total || 0;
+
+        const totalSemanaActual =
+            ingresosSemanaAgg.reduce((acc, item) => acc + item.total, 0);
+
+        const totalSemanaAnterior =
+            ingresosSemanaAnteriorAgg[0]?.total || 0;
+
+        const variacion = totalSemanaAnterior > 0
+            ? ((totalSemanaActual - totalSemanaAnterior) / totalSemanaAnterior) * 100
+            : (totalSemanaActual > 0 ? 100 : 0);
+
+        const peluqueroTop = peluqueroTopAgg[0] || null;
+        const clienteTop = clienteTopAgg[0] || null;
+
+        /* =====================================================
+           📤 RESPUESTA
+        ===================================================== */
+
+        
+        /* =====================================================
+           📦 PRODUCTOS MÁS VENDIDOS
+        ===================================================== */
+        const productosTop = await Movimiento.aggregate([
+            {
+                $match: {
+                    sede: sedeId,
+                    tipo: 'salida',
+                    createdAt: {
+                        $gte: inicioSemanaActual,
+                        $lte: finSemanaActual
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: '$producto',
+                    totalVendidos: { $sum: '$cantidad' }
+                }
+            },
+            { $sort: { totalVendidos: -1 } },
+            { $limit: 3 },
+            {
+                $lookup: {
+                    from: 'productos',
+                    localField: '_id',
                     foreignField: '_id',
                     as: 'productoInfo'
                 }
@@ -391,7 +586,8 @@ const obtenerResumenDashboard = async (req, res) => {
                 $project: {
                     _id: 0,
                     nombre: '$productoInfo.nombre',
-                    total: '$totalVendidos'
+                    total: '$totalVendidos',
+                    ingresos: { $multiply: ['$totalVendidos', { $ifNull: ['$productoInfo.precio_venta', 0] }] }
                 }
             }
         ]);
