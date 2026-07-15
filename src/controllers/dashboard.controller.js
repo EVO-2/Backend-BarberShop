@@ -444,7 +444,7 @@ const obtenerResumenDashboard = async (req, res) => {
             peluqueroTop,
             clienteTop,
             productosTop,
-            ingresosTiendaHoy
+            ingresosProductosHoy: ingresosTiendaHoy
         });
 
     } catch (error) {
